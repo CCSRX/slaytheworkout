@@ -4123,7 +4123,7 @@
       { id: "cable", name: "Cable machine", maps: "machine" },
       { id: "otherMachines", name: "Other machines", note: "Calf raise etc.", maps: "machine" }
     ];
-    const ONBOARDING_STEPS = 3;
+    const ONBOARDING_STEPS = 4;
     let obDraft = null;
 
     function normalizeOnboarding(raw) {
@@ -4186,6 +4186,16 @@
           const on = obDraft.equipment.includes(item.id);
           return '<button type="button" class="ob-option" data-ob-equipment="' + item.id + '" aria-pressed="' + on + '">' + escapeHtml(item.name) + (item.note ? '<small>' + escapeHtml(item.note) + '</small>' : '') + '</button>';
         }).join("") + '</div><p class="ob-note">Bodyweight exercises like leg raises and push-ups are always included. Pick nothing to keep all equipment on. You can change this later in Settings.</p>';
+      } else if (step === 3) {
+        if (!Object.hasOwn(PROGRAMS, obDraft.program)) obDraft.program = "ppl";
+        title.textContent = "Choose your split";
+        sub.textContent = "You can change this later in Settings.";
+        body.innerHTML = '<div class="ob-options" role="group" aria-label="Choose your split">' + Object.entries(PROGRAMS).map(([id, program]) => {
+          const on = obDraft.program === id;
+          const def = DEFAULT_DAYS_PER_WEEK[id];
+          const note = def + (def === 1 ? " day" : " days") + " per week by default";
+          return '<button type="button" class="ob-option" data-ob-program="' + id + '" aria-pressed="' + on + '">' + escapeHtml(program.name) + '<small>' + escapeHtml(note) + '</small></button>';
+        }).join("") + '</div>';
       } else {
         const options = WEEK_DAY_OPTIONS[obDraft.program];
         if (!options.includes(obDraft.days)) obDraft.days = DEFAULT_DAYS_PER_WEEK[obDraft.program];
@@ -5462,6 +5472,17 @@
         const id = eq.getAttribute("data-ob-equipment");
         obDraft.equipment = obDraft.equipment.includes(id) ? obDraft.equipment.filter(x => x !== id) : obDraft.equipment.concat([id]);
         eq.setAttribute("aria-pressed", String(obDraft.equipment.includes(id)));
+        return;
+      }
+      const program = event.target.closest("[data-ob-program]");
+      if (program) {
+        const id = program.getAttribute("data-ob-program");
+        if (!Object.hasOwn(PROGRAMS, id)) return;
+        if (obDraft.program !== id) {
+          obDraft.program = id;
+          obDraft.days = DEFAULT_DAYS_PER_WEEK[id];
+        }
+        renderOnboarding();
         return;
       }
       const days = event.target.closest("[data-ob-days]");
