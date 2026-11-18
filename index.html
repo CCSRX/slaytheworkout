@@ -1084,7 +1084,7 @@
   <nav class="bottom-nav" aria-label="Main navigation">
     <div class="bottom-nav-inner">
       <button type="button" class="nav-button" id="navHome" data-view="home">Home</button>
-      <button type="button" class="nav-button" id="navLog" data-view="workout">Rest</button>
+      <button type="button" class="nav-button" id="navLog" data-view="workout">SLAY</button>
       <button type="button" class="nav-button" id="navHistory" data-view="history">History</button>
     </div>
   </nav>
@@ -4442,8 +4442,8 @@
       const slot = todaysSlot();
       const button = document.getElementById("navLog");
       const name = slot && slot.dayKey ? DAY_META[slot.dayKey].name : "Rest";
-      button.textContent = name;
-      button.setAttribute("aria-label", name);
+      button.textContent = "SLAY";
+      button.setAttribute("aria-label", "SLAY: " + name);
       if (slot && slot.dayKey) button.removeAttribute("data-rest");
       else button.setAttribute("data-rest", "true");
     }
