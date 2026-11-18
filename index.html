@@ -489,6 +489,8 @@
     .dc-list li { padding: 9px 0; border-top: 1px solid var(--line); }
     .dc-list strong { display: block; font-size: 16px; }
     .dc-list span { color: var(--mute); font-size: 15px; }
+    .dc-breath-q { margin: 0 0 10px; color: var(--text); font-size: 15px; font-weight: 700; }
+    .dc-breath { width: 100%; min-height: 50px; margin: 0 0 10px; border: 1px solid var(--line); border-radius: 14px; background: var(--card-2); color: var(--text); font-size: 17px; font-weight: 800; }
     .dc-done { width: 100%; min-height: 50px; border: 0; border-radius: 14px; background: var(--acc); color: var(--acc-ink); font-size: 17px; font-weight: 800; }
     .swap-picker {
       position: fixed;
@@ -1090,6 +1092,8 @@
       <h2 id="dayCompleteTitle">Workout done</h2>
       <p class="dc-sub" id="dayCompleteSub"></p>
       <ul class="dc-list" id="dayCompleteList"></ul>
+      <p class="dc-breath-q">Want a short breathing exercise to help your recovery?</p>
+      <button type="button" class="dc-breath" id="dayCompleteBreath">Yes, start breathing</button>
       <button type="button" class="dc-done" id="dayCompleteDone">Done · back to home</button>
     </div>
   </div>
@@ -5929,6 +5933,10 @@
     document.getElementById("dayCompleteDone").addEventListener("click", () => {
       document.getElementById("dayComplete").hidden = true;
       goHome();
+    });
+    document.getElementById("dayCompleteBreath").addEventListener("click", () => {
+      document.getElementById("dayComplete").hidden = true;
+      goBreathing();
     });
     document.getElementById("exercises").addEventListener("input", function (event) {
       const input = event.target;
