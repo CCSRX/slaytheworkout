@@ -316,6 +316,7 @@
       font-size: 16px;
     }
     .data-btn:active { background: var(--card-2); }
+    .data-btn[hidden] { display: none; }
     .data-btn.danger {
       grid-column: 1 / -1;
       border-color: #5a2a22;
@@ -1019,7 +1020,9 @@
           <button type="button" class="data-btn" id="exportBtn">Export Logs</button>
           <button type="button" class="data-btn" id="importBtn">Import Logs</button>
           <button type="button" class="data-btn danger" id="clearLogsBtn">Clear All Logs</button>
+          <button type="button" class="data-btn" id="installBtn" hidden>Install app</button>
         </div>
+        <p class="equipment-note" id="installHint">On iPhone (Safari), tap Share, then Add to Home Screen.</p>
         <input type="file" id="importFile" accept="application/json,.json" hidden>
         <p class="io-status" id="ioStatus" hidden></p>
       </div>
@@ -5502,6 +5505,29 @@
     render();
     resumeRestTimerFromStore();
     if (FIRST_RUN && !state.onboardingDone) openOnboarding();
+    // v182: "Install app" in Settings. Shown only after the browser offers install (beforeinstallprompt);
+    // stays hidden when already installed or when the browser never offers it (iOS Safari, Firefox).
+    (function installButton() {
+      const btn = document.getElementById("installBtn");
+      let deferred = null;
+      const installed = () => (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) || window.navigator.standalone === true;
+      const hint = document.getElementById("installHint");
+      hint.hidden = installed();
+      window.addEventListener("beforeinstallprompt", event => {
+        event.preventDefault();
+        if (installed()) return;
+        deferred = event;
+        btn.hidden = false;
+      });
+      btn.addEventListener("click", async () => {
+        const prompt = deferred;
+        if (!prompt) { btn.hidden = true; return; }
+        deferred = null;
+        btn.hidden = true;
+        try { await prompt.prompt(); await prompt.userChoice; } catch (error) {}
+      });
+      window.addEventListener("appinstalled", () => { deferred = null; btn.hidden = true; hint.hidden = true; });
+    })();
     // v180: installable app. The service worker keeps a copy of the app so it opens with no signal.
     (function offlineIndicator() {
       const pill = document.getElementById("offlinePill");
