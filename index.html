@@ -4854,20 +4854,33 @@
       return breathAudio;
     }
 
+    // v194: smoother, bell-like tones (soft attack, long fade, gentle glide, low-pass, quiet harmonic).
     function breathBeep(ctx, startAt, freqStart, freqEnd, dur, gainVal) {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(freqStart, startAt);
-      if (freqEnd !== freqStart) osc.frequency.linearRampToValueAtTime(freqEnd, startAt + dur);
-      gain.gain.setValueAtTime(0, startAt);
-      gain.gain.linearRampToValueAtTime(gainVal, startAt + 0.02);
-      gain.gain.linearRampToValueAtTime(gainVal * 0.75, startAt + Math.max(0.03, dur - 0.04));
-      gain.gain.linearRampToValueAtTime(0, startAt + dur);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(startAt);
-      osc.stop(startAt + dur + 0.02);
+      const attack = 0.09;
+      const release = Math.max(0.6, dur);
+      const end = startAt + attack + release;
+      const out = ctx.createGain();
+      const filter = ctx.createBiquadFilter();
+      filter.type = "lowpass";
+      filter.frequency.setValueAtTime(1400, startAt);
+      filter.Q.setValueAtTime(0.5, startAt);
+      out.gain.setValueAtTime(0.0001, startAt);
+      out.gain.exponentialRampToValueAtTime(gainVal, startAt + attack);
+      out.gain.exponentialRampToValueAtTime(0.0001, end);
+      filter.connect(out);
+      out.connect(ctx.destination);
+      [[1, 1], [2, 0.12]].forEach(function (h) {
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(freqStart * h[0], startAt);
+        if (freqEnd !== freqStart) osc.frequency.exponentialRampToValueAtTime(freqEnd * h[0], startAt + attack + release * 0.6);
+        g.gain.setValueAtTime(h[1], startAt);
+        osc.connect(g);
+        g.connect(filter);
+        osc.start(startAt);
+        osc.stop(end + 0.05);
+      });
     }
 
     function playBreathCue(kind) {
@@ -4877,15 +4890,15 @@
       if (!breathSoundOn()) return;
       const ctx = breathAudio || ensureBreathAudio();
       if (ctx) {
-        const t0 = ctx.currentTime + 0.01;
-        const vol = 0.08;
-        if (kind === "in") breathBeep(ctx, t0, 440, 660, 0.22, vol);
-        else if (kind === "out") breathBeep(ctx, t0, 660, 392, 0.24, vol);
-        else if (kind === "hold") breathBeep(ctx, t0, 523.25, 523.25, 0.12, vol * 0.85);
+        const t0 = ctx.currentTime + 0.02;
+        const vol = 0.11;
+        if (kind === "in") breathBeep(ctx, t0, 349.23, 440, 1.1, vol);
+        else if (kind === "out") breathBeep(ctx, t0, 440, 329.63, 1.2, vol);
+        else if (kind === "hold") breathBeep(ctx, t0, 392, 392, 0.8, vol * 0.8);
         else if (kind === "end") {
-          breathBeep(ctx, t0, 523.25, 523.25, 0.16, vol);
-          breathBeep(ctx, t0 + 0.16, 659.25, 659.25, 0.16, vol);
-          breathBeep(ctx, t0 + 0.32, 783.99, 783.99, 0.34, vol);
+          breathBeep(ctx, t0, 392, 392, 1.0, vol);
+          breathBeep(ctx, t0 + 0.35, 493.88, 493.88, 1.0, vol * 0.9);
+          breathBeep(ctx, t0 + 0.7, 587.33, 587.33, 1.6, vol * 0.85);
         }
       }
       if (navigator.vibrate) {
