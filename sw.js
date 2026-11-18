@@ -1,7 +1,7 @@
 // Slay the workout: offline service worker (v182).
 // Cache-first for the app shell, so it opens with no signal. When online, each open also fetches
 // the newest index.html in the background, so the next open has updates. Bump VERSION to force a refresh.
-const VERSION = "slay-v189";
+const VERSION = "slay-v190";
 const SHELL = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./icon-maskable-512.png", "./apple-touch-icon.png"];
 
 self.addEventListener("install", event => {

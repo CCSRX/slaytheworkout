@@ -984,6 +984,16 @@
     .breath-actions { display: grid; width: min(260px, 72vw); }
     .breath-start { min-height: 52px; border-radius: 14px; background: var(--acc); color: var(--acc-ink); font-size: 16px; font-weight: 800; touch-action: manipulation; }
     .breath-start[data-running="true"] { background: var(--card-2); color: var(--text); border: 1px solid var(--line); }
+    .breath-remain { margin: 0; font-size: 16px; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--mute); text-align: center; }
+    .breath-settings { display: grid; gap: 10px; width: min(280px, 86vw); }
+    .breath-setting { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .breath-setting > span { font-size: 14px; font-weight: 700; color: var(--mute); }
+    .breath-stepper { display: flex; align-items: center; gap: 6px; }
+    .breath-stepper button { width: 44px; height: 44px; border-radius: 12px; background: var(--card-2); border: 1px solid var(--line); color: var(--text); font-size: 22px; font-weight: 800; line-height: 1; touch-action: manipulation; }
+    .breath-stepper button:disabled { opacity: 0.4; }
+    .breath-stepper output { min-width: 64px; text-align: center; font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; }
+    .breath-sound { width: 100%; min-height: 48px; border-radius: 14px; background: var(--card-2); border: 1px solid var(--line); color: var(--text); font-size: 16px; font-weight: 800; touch-action: manipulation; }
+    .breath-sound[aria-pressed="true"] { background: var(--acc); color: var(--acc-ink); border-color: var(--acc); }
     @media (prefers-reduced-motion: reduce) {
       .breath-box { transform: none; }
     }
@@ -1115,7 +1125,7 @@
       <button type="button" class="breath-back" id="breathBack">← Extra</button>
       <p class="eyebrow">Box breathing</p>
       <h1>Breathing</h1>
-      <p class="history-note">4 seconds in, hold, out, and hold.</p>
+      <p class="history-note" id="breathNote">4 seconds in, hold, out, and hold.</p>
     </header>
     <div class="breath-stage">
       <div class="breath-box-wrap">
@@ -1130,7 +1140,27 @@
       </div>
       <p class="breath-phase" id="breathPhase">Ready</p>
       <p class="breath-count" id="breathCount" aria-live="polite">4</p>
+      <p class="breath-remain" id="breathRemain">3:00</p>
       <p class="breath-hint" id="breathHint">Tap Start for a calm 4-4-4-4 cycle.</p>
+      <div class="breath-settings">
+        <div class="breath-setting">
+          <span id="breathMinutesLabel">Session</span>
+          <div class="breath-stepper">
+            <button type="button" id="breathMinMinus" aria-label="Shorter session">−</button>
+            <output id="breathMinutesValue" for="breathMinMinus breathMinPlus">3 min</output>
+            <button type="button" id="breathMinPlus" aria-label="Longer session">+</button>
+          </div>
+        </div>
+        <div class="breath-setting">
+          <span id="breathSideLabel">Each side</span>
+          <div class="breath-stepper">
+            <button type="button" id="breathSideMinus" aria-label="Shorter sides">−</button>
+            <output id="breathSideValue" for="breathSideMinus breathSidePlus">4 s</output>
+            <button type="button" id="breathSidePlus" aria-label="Longer sides">+</button>
+          </div>
+        </div>
+        <button type="button" class="breath-sound" id="breathSoundBtn" aria-pressed="true">Sound on</button>
+      </div>
       <div class="breath-actions">
         <button type="button" class="breath-start" id="breathToggle" data-running="false" aria-label="Start breathing exercise">Start</button>
       </div>
@@ -1692,6 +1722,9 @@
         lengthMode: "full",
         theme: "dark",
         weightUnit: "kg",
+        breathMinutes: 3,
+        breathSideSeconds: 4,
+        breathSound: true,
         bodyWeight: "",
         sessions: [],
         logDates: {},
@@ -1777,6 +1810,9 @@
           lengthMode: normalizeLengthMode(parsed.lengthMode),
           theme: parsed.theme === "light" ? "light" : "dark",
           weightUnit: normalizeWeightUnit(parsed.weightUnit),
+          breathMinutes: normalizeBreathMinutes(parsed.breathMinutes),
+          breathSideSeconds: normalizeBreathSideSeconds(parsed.breathSideSeconds),
+          breathSound: normalizeBreathSound(parsed.breathSound),
           bodyWeight: normalizeBodyWeight(parsed.bodyWeight),
           lastSavedAt: parsed.lastSavedAt ? String(parsed.lastSavedAt) : "",
           updatedAt: normalizeUpdatedAt(updatedAt),
@@ -1869,6 +1905,9 @@
         lengthMode: state.lengthMode,
         theme: state.theme,
         weightUnit: normalizeWeightUnit(state.weightUnit),
+        breathMinutes: normalizeBreathMinutes(state.breathMinutes),
+        breathSideSeconds: normalizeBreathSideSeconds(state.breathSideSeconds),
+        breathSound: normalizeBreathSound(state.breathSound),
         lastSavedAt: state.lastSavedAt || exportedAt,
         updatedAt: state.updatedAt,
         sessions: state.sessions,
@@ -1958,6 +1997,9 @@
         state.theme = payload.theme;
       }
       state.weightUnit = normalizeWeightUnit(payload.weightUnit);
+      state.breathMinutes = normalizeBreathMinutes(payload.breathMinutes);
+      state.breathSideSeconds = normalizeBreathSideSeconds(payload.breathSideSeconds);
+      state.breathSound = normalizeBreathSound(payload.breathSound);
       if (payload.customExercises || payload.dayCustom) {
         state.customExercises = normalizeCustomExercises(payload.customExercises);
         CUSTOM_EXERCISES = state.customExercises;
@@ -4169,6 +4211,7 @@
       document.getElementById("extraScreen").hidden = view !== "extra";
       document.getElementById("breathingScreen").hidden = view !== "breathing";
       if (view !== "breathing") stopBreathing();
+      else renderBreathSettings();
       const todayIsRest = !logDayKey();
       const extraViews = view === "extra" || view === "history" || view === "breathing";
       document.querySelectorAll(".nav-button").forEach(button => {
@@ -4687,20 +4730,69 @@
     }
 
     const BREATH_PHASES = [
-      { name: "Breathe in", side: "left" },
-      { name: "Hold", side: "top" },
-      { name: "Breathe out", side: "right" },
-      { name: "Hold", side: "bottom" }
+      { name: "Breathe in", side: "left", cue: "in" },
+      { name: "Hold", side: "top", cue: "hold" },
+      { name: "Breathe out", side: "right", cue: "out" },
+      { name: "Hold", side: "bottom", cue: "hold" }
     ];
-    const BREATH_SECONDS = 4;
     const BREATH_SCALE_MAX = 1.16;
     let breathRunning = false;
     let breathRaf = 0;
     let breathStartedAt = 0;
     let breathLastLabel = "";
+    let breathLastPhase = -1;
+    let breathFinished = false;
+    let breathAudio = null;
+
+    function normalizeBreathMinutes(value) {
+      const n = Math.round(Number(value));
+      if (!Number.isFinite(n)) return 3;
+      return Math.min(20, Math.max(1, n));
+    }
+
+    function normalizeBreathSideSeconds(value) {
+      const n = Math.round(Number(value));
+      if (!Number.isFinite(n)) return 4;
+      return Math.min(10, Math.max(2, n));
+    }
+
+    function normalizeBreathSound(value) {
+      if (value === false || value === "false" || value === 0 || value === "0") return false;
+      return true;
+    }
+
+    function breathSideSeconds() {
+      return normalizeBreathSideSeconds(state && state.breathSideSeconds);
+    }
+
+    function breathMinutes() {
+      return normalizeBreathMinutes(state && state.breathMinutes);
+    }
+
+    function breathDurationMs() {
+      const override = typeof window.__breathDurationMs === "number" && window.__breathDurationMs > 0 ? window.__breathDurationMs : 0;
+      return override || breathMinutes() * 60 * 1000;
+    }
+
+    function breathSoundOn() {
+      return normalizeBreathSound(state && state.breathSound);
+    }
 
     function breathReducedMotion() {
       return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    }
+
+    function formatBreathClock(ms) {
+      const total = Math.max(0, Math.ceil(ms / 1000));
+      return Math.floor(total / 60) + ":" + String(total % 60).padStart(2, "0");
+    }
+
+    function updateBreathRemain(msLeft, running, finished) {
+      const el = document.getElementById("breathRemain");
+      if (!el) return;
+      if (finished) el.textContent = "0:00 left";
+      else if (running) el.textContent = formatBreathClock(msLeft) + " left";
+      else el.textContent = formatBreathClock(breathMinutes() * 60 * 1000);
     }
 
     function setBreathChrome(phaseName, seconds, running) {
@@ -4708,15 +4800,71 @@
       const countEl = document.getElementById("breathCount");
       const hintEl = document.getElementById("breathHint");
       const toggle = document.getElementById("breathToggle");
-      const label = phaseName + "|" + seconds + "|" + running;
+      const side = breathSideSeconds();
+      const cycle = side + "-" + side + "-" + side + "-" + side;
+      const label = phaseName + "|" + seconds + "|" + running + "|" + side + "|" + breathFinished;
       if (label === breathLastLabel) return;
       breathLastLabel = label;
       phaseEl.textContent = phaseName;
       countEl.textContent = String(seconds);
-      hintEl.textContent = running ? "One side of the square per breath." : "Tap Start for a calm 4-4-4-4 cycle.";
+      hintEl.textContent = running
+        ? "One side of the square per breath."
+        : (breathFinished ? "Session complete. Tap Start to go again." : "Tap Start for a calm " + cycle + " cycle.");
       toggle.textContent = running ? "Stop" : "Start";
       toggle.setAttribute("data-running", running ? "true" : "false");
       toggle.setAttribute("aria-label", running ? "Stop breathing exercise" : "Start breathing exercise");
+    }
+
+    function ensureBreathAudio() {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      if (!breathAudio) breathAudio = new AC();
+      if (breathAudio.state === "suspended") {
+        const resume = breathAudio.resume();
+        if (resume && resume.catch) resume.catch(function () {});
+      }
+      return breathAudio;
+    }
+
+    function breathBeep(ctx, startAt, freqStart, freqEnd, dur, gainVal) {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freqStart, startAt);
+      if (freqEnd !== freqStart) osc.frequency.linearRampToValueAtTime(freqEnd, startAt + dur);
+      gain.gain.setValueAtTime(0, startAt);
+      gain.gain.linearRampToValueAtTime(gainVal, startAt + 0.02);
+      gain.gain.linearRampToValueAtTime(gainVal * 0.75, startAt + Math.max(0.03, dur - 0.04));
+      gain.gain.linearRampToValueAtTime(0, startAt + dur);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(startAt);
+      osc.stop(startAt + dur + 0.02);
+    }
+
+    function playBreathCue(kind) {
+      if (typeof window.__onBreathCue === "function") {
+        try { window.__onBreathCue(kind); } catch (error) {}
+      }
+      if (!breathSoundOn()) return;
+      const ctx = breathAudio || ensureBreathAudio();
+      if (ctx) {
+        const t0 = ctx.currentTime + 0.01;
+        const vol = 0.08;
+        if (kind === "in") breathBeep(ctx, t0, 440, 660, 0.22, vol);
+        else if (kind === "out") breathBeep(ctx, t0, 660, 392, 0.24, vol);
+        else if (kind === "hold") breathBeep(ctx, t0, 523.25, 523.25, 0.12, vol * 0.85);
+        else if (kind === "end") {
+          breathBeep(ctx, t0, 523.25, 523.25, 0.16, vol);
+          breathBeep(ctx, t0 + 0.16, 659.25, 659.25, 0.16, vol);
+          breathBeep(ctx, t0 + 0.32, 783.99, 783.99, 0.34, vol);
+        }
+      }
+      if (navigator.vibrate) {
+        try {
+          navigator.vibrate(kind === "end" ? [40, 50, 40, 50, 80] : kind === "hold" ? 20 : 30);
+        } catch (error) {}
+      }
     }
 
     function breathPoint(phaseIndex, t, size) {
@@ -4759,7 +4907,60 @@
       document.querySelectorAll("#breathBox .breath-side").forEach(side => side.classList.remove("is-on"));
     }
 
-    function stopBreathing() {
+    function renderBreathSettings() {
+      const minutes = breathMinutes();
+      const side = breathSideSeconds();
+      const running = breathRunning;
+      const minVal = document.getElementById("breathMinutesValue");
+      const sideVal = document.getElementById("breathSideValue");
+      const note = document.getElementById("breathNote");
+      const soundBtn = document.getElementById("breathSoundBtn");
+      if (minVal) minVal.textContent = minutes + " min";
+      if (sideVal) sideVal.textContent = side + " s";
+      if (note) note.textContent = side + " seconds in, hold, out, and hold.";
+      ["breathMinMinus", "breathMinPlus", "breathSideMinus", "breathSidePlus"].forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn) btn.disabled = running;
+      });
+      if (soundBtn) {
+        const on = breathSoundOn();
+        soundBtn.textContent = on ? "Sound on" : "Sound off";
+        soundBtn.setAttribute("aria-pressed", on ? "true" : "false");
+      }
+      if (!running) {
+        setBreathChrome(breathFinished ? "Done" : "Ready", side, false);
+        updateBreathRemain(breathMinutes() * 60 * 1000, false, breathFinished);
+      }
+    }
+
+    function changeBreathMinutes(delta) {
+      if (breathRunning) return;
+      const next = normalizeBreathMinutes(breathMinutes() + delta);
+      if (next === breathMinutes()) return;
+      state.breathMinutes = next;
+      breathFinished = false;
+      saveState();
+      renderBreathSettings();
+    }
+
+    function changeBreathSideSeconds(delta) {
+      if (breathRunning) return;
+      const next = normalizeBreathSideSeconds(breathSideSeconds() + delta);
+      if (next === breathSideSeconds()) return;
+      state.breathSideSeconds = next;
+      breathFinished = false;
+      saveState();
+      renderBreathSettings();
+    }
+
+    function toggleBreathSound() {
+      state.breathSound = !breathSoundOn();
+      if (state.breathSound) ensureBreathAudio();
+      saveState();
+      renderBreathSettings();
+    }
+
+    function stopBreathing(reason) {
       if (!breathRunning && !breathRaf) return;
       breathRunning = false;
       if (breathRaf) {
@@ -4767,29 +4968,48 @@
         breathRaf = 0;
       }
       breathStartedAt = 0;
+      breathLastPhase = -1;
+      breathFinished = reason === "end";
       resetBreathVisual();
-      setBreathChrome("Ready", 4, false);
+      setBreathChrome(breathFinished ? "Done" : "Ready", breathSideSeconds(), false);
+      updateBreathRemain(0, false, breathFinished);
+      renderBreathSettings();
+      if (breathFinished) playBreathCue("end");
     }
 
     function tickBreathing(now) {
       if (!breathRunning) return;
       const elapsed = Math.max(0, (typeof now === "number" ? now : performance.now()) - breathStartedAt);
-      const phaseMs = BREATH_SECONDS * 1000;
+      const duration = breathDurationMs();
+      if (elapsed >= duration) {
+        stopBreathing("end");
+        return;
+      }
+      const phaseMs = breathSideSeconds() * 1000;
       const cycle = phaseMs * BREATH_PHASES.length;
       const tCycle = elapsed % cycle;
       const phaseIndex = Math.floor(tCycle / phaseMs) % BREATH_PHASES.length;
       const t = (tCycle % phaseMs) / phaseMs;
-      const seconds = Math.max(1, Math.ceil(BREATH_SECONDS - (tCycle % phaseMs) / 1000));
+      const seconds = Math.max(1, Math.ceil(breathSideSeconds() - (tCycle % phaseMs) / 1000));
+      if (phaseIndex !== breathLastPhase) {
+        breathLastPhase = phaseIndex;
+        playBreathCue(BREATH_PHASES[phaseIndex].cue);
+      }
       paintBreathFrame(phaseIndex, t, breathReducedMotion());
       setBreathChrome(BREATH_PHASES[phaseIndex].name, seconds, true);
+      updateBreathRemain(duration - elapsed, true, false);
       breathRaf = requestAnimationFrame(tickBreathing);
     }
 
     function startBreathing() {
       if (breathRunning) return;
+      if (breathSoundOn()) ensureBreathAudio();
       breathRunning = true;
+      breathFinished = false;
       breathStartedAt = performance.now();
       breathLastLabel = "";
+      breathLastPhase = -1;
+      renderBreathSettings();
       tickBreathing(breathStartedAt);
     }
 
@@ -5392,6 +5612,11 @@
     document.getElementById("extraBreathing").addEventListener("click", goBreathing);
     document.getElementById("breathBack").addEventListener("click", goExtra);
     document.getElementById("breathToggle").addEventListener("click", toggleBreathing);
+    document.getElementById("breathMinMinus").addEventListener("click", function () { changeBreathMinutes(-1); });
+    document.getElementById("breathMinPlus").addEventListener("click", function () { changeBreathMinutes(1); });
+    document.getElementById("breathSideMinus").addEventListener("click", function () { changeBreathSideSeconds(-1); });
+    document.getElementById("breathSidePlus").addEventListener("click", function () { changeBreathSideSeconds(1); });
+    document.getElementById("breathSoundBtn").addEventListener("click", toggleBreathSound);
     document.getElementById("exercises").addEventListener("touchstart", function (event) {
       const setDot = event.target.closest("[data-action='select-set']");
       if (!setDot) {
