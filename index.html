@@ -965,7 +965,10 @@
     body[data-theme="light"] .extra-tile[data-extra="history"] .extra-icon { background: #eef6d4; border-color: #c6d88a; }
     body[data-theme="light"] .extra-tile[data-extra="breathing"] .extra-icon { background: #dcebff; border-color: #a9c8ea; }
     .extra-tile span { font-size: 14px; font-weight: 800; }
-    .breath-back { margin: 0 0 8px; color: var(--mute); font-size: 14px; font-weight: 800; min-height: 44px; padding: 0; text-align: left; touch-action: manipulation; }
+    .breath-top { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: calc(-16px - var(--sat)) calc(-16px - var(--sar)) 10px calc(-16px - var(--sal)); padding: calc(10px + var(--sat)) calc(16px + var(--sar)) 10px calc(16px + var(--sal)); background: var(--bg); border-bottom: 1px solid var(--line); }
+    .breath-back { width: 48px; height: 48px; display: inline-flex; align-items: center; justify-content: center; margin: 0; padding: 0; color: var(--mute); border-radius: 12px; touch-action: manipulation; }
+    .breath-back .back-arrow { width: 22px; height: 22px; display: block; flex: 0 0 22px; }
+    .breath-back:active { color: var(--text); background: var(--card); }
     .breath-stage { display: flex; flex-direction: column; align-items: center; gap: 18px; padding: 12px 0 8px; }
     .breath-box-wrap { width: min(260px, 72vw); aspect-ratio: 1; display: grid; place-items: center; }
     .breath-box { width: 78%; height: 78%; position: relative; transform: scale(var(--breath-scale, 1)); transform-origin: center center; }
@@ -985,7 +988,7 @@
     .breath-start { min-height: 52px; border-radius: 14px; background: var(--acc); color: var(--acc-ink); font-size: 16px; font-weight: 800; touch-action: manipulation; }
     .breath-start[data-running="true"] { background: var(--card-2); color: var(--text); border: 1px solid var(--line); }
     .breath-remain { margin: 0; font-size: 16px; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--mute); text-align: center; }
-    .breath-settings { display: grid; gap: 10px; width: min(280px, 86vw); }
+    .breath-settings { display: grid; gap: 14px; width: 100%; }
     .breath-setting { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
     .breath-setting > span { font-size: 14px; font-weight: 700; color: var(--mute); }
     .breath-stepper { display: flex; align-items: center; gap: 6px; }
@@ -1121,8 +1124,11 @@
     </div>
   </main>
   <main id="breathingScreen" class="wrap breathing-screen" hidden>
+    <div class="breath-top">
+      <button type="button" class="breath-back" id="breathBack" aria-label="Back"><svg class="back-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M15 8H2M7.5 2.5 2 8l5.5 5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <button type="button" class="settings-btn" id="breathSettingsBtn" aria-label="Breathing settings"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58a.5.5 0 0 0 .12-.61l-1.92-3.32a.5.5 0 0 0-.59-.22l-2.39.96c.5-.38-1.03-.7-1.62-.94L14.4 2.81a.5.5 0 0 0-.48-.41h-3.84a.5.5 0 0 0-.47.41L9.25 5.35c.59.24-1.13.56-1.62.94l-2.39-.96a.5.5 0 0 0-.59.22L2.74 8.87a.5.5 0 0 0 .12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58a.5.5 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.04.24.23.41.47.41h3.84c.24 0 .44-.17.48-.41l.36-2.54c.59-.24 1.12-.56 1.62-.94l2.39.96c.22.07.47 0 .59-.22l1.92-3.32a.5.5 0 0 0-.12-.61l-2.03-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z"/></svg></button>
+    </div>
     <header>
-      <button type="button" class="breath-back" id="breathBack">← Extra</button>
       <p class="eyebrow">Box breathing</p>
       <h1>Breathing</h1>
       <p class="history-note" id="breathNote">4 seconds in, hold, out, and hold.</p>
@@ -1142,6 +1148,18 @@
       <p class="breath-count" id="breathCount" aria-live="polite">4</p>
       <p class="breath-remain" id="breathRemain">2:00</p>
       <p class="breath-hint" id="breathHint">Tap Start for a calm 4-4-4-4 cycle.</p>
+      <div class="breath-actions">
+        <button type="button" class="breath-start" id="breathToggle" data-running="false" aria-label="Start breathing exercise">Start</button>
+      </div>
+    </div>
+  </main>
+  <div id="breathSettingsOverlay" class="settings-overlay" hidden>
+    <button type="button" class="settings-backdrop" id="breathSettingsBackdrop" aria-label="Close breathing settings"></button>
+    <div class="settings-panel" role="dialog" aria-labelledby="breathSettingsTitle">
+      <div class="settings-head">
+        <h2 id="breathSettingsTitle">Breathing settings</h2>
+        <button type="button" class="settings-close" id="breathSettingsClose" aria-label="Close breathing settings">×</button>
+      </div>
       <div class="breath-settings">
         <div class="breath-setting">
           <span id="breathMinutesLabel">Session</span>
@@ -1161,11 +1179,8 @@
         </div>
         <button type="button" class="breath-sound" id="breathSoundBtn" aria-pressed="true">Sound on</button>
       </div>
-      <div class="breath-actions">
-        <button type="button" class="breath-start" id="breathToggle" data-running="false" aria-label="Start breathing exercise">Start</button>
-      </div>
     </div>
-  </main>
+  </div>
   <aside id="restTimer" class="rest-timer" hidden aria-live="polite">
     <div class="rest-timer-inner">
       <div class="rest-head">
@@ -4210,8 +4225,10 @@
       document.getElementById("historyScreen").hidden = view !== "history";
       document.getElementById("extraScreen").hidden = view !== "extra";
       document.getElementById("breathingScreen").hidden = view !== "breathing";
-      if (view !== "breathing") stopBreathing();
-      else renderBreathSettings();
+      if (view !== "breathing") {
+        stopBreathing();
+        closeBreathSettings();
+      } else renderBreathSettings();
       const todayIsRest = !logDayKey();
       const extraViews = view === "extra" || view === "history" || view === "breathing";
       document.querySelectorAll(".nav-button").forEach(button => {
@@ -4268,6 +4285,17 @@
 
     function closeSettings() {
       document.getElementById("settingsOverlay").hidden = true;
+    }
+
+    function closeBreathSettings() {
+      const overlay = document.getElementById("breathSettingsOverlay");
+      if (overlay) overlay.hidden = true;
+    }
+
+    function openBreathSettings() {
+      renderBreathSettings();
+      const overlay = document.getElementById("breathSettingsOverlay");
+      if (overlay) overlay.hidden = false;
     }
 
     function renderEquipmentSettings() {
@@ -5611,6 +5639,10 @@
     document.getElementById("extraHistory").addEventListener("click", goHistory);
     document.getElementById("extraBreathing").addEventListener("click", goBreathing);
     document.getElementById("breathBack").addEventListener("click", goExtra);
+    document.getElementById("breathSettingsBtn").addEventListener("click", openBreathSettings);
+    document.getElementById("breathSettingsClose").addEventListener("click", closeBreathSettings);
+    document.getElementById("breathSettingsBackdrop").addEventListener("click", closeBreathSettings);
+    document.body.appendChild(document.getElementById("breathSettingsOverlay"));
     document.getElementById("breathToggle").addEventListener("click", toggleBreathing);
     document.getElementById("breathMinMinus").addEventListener("click", function () { changeBreathMinutes(-1); });
     document.getElementById("breathMinPlus").addEventListener("click", function () { changeBreathMinutes(1); });
@@ -6078,6 +6110,7 @@
     });
     document.addEventListener("keydown", function (event) {
       if (event.key === "Escape") {
+        closeBreathSettings();
         closeSettings();
       }
     });
