@@ -1142,6 +1142,9 @@
     </div>
   </div>
   <main id="historyScreen" class="wrap history-screen" hidden>
+    <div class="breath-top history-top">
+      <button type="button" class="home-back" id="historyBack" aria-label="Back"><svg class="back-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M15 8H2M7.5 2.5 2 8l5.5 5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Back</button>
+    </div>
     <header><p class="eyebrow">Your training log</p><h1>History</h1>
       <p class="history-note">Sessions saved by local date · newest first.</p></header>
     <div id="historySessions"></div>
@@ -4851,7 +4854,14 @@
       goHome();
     }
 
+    let historyReturnView = "extra";
+    function goHistoryBack() {
+      if (historyReturnView === "home") goHome();
+      else goExtra();
+    }
+
     function goHistory() {
+      if (view !== "history") historyReturnView = view === "home" ? "home" : "extra";
       rememberOnLeave();
       cancelLongPress();
       closeSettings();
@@ -6311,6 +6321,7 @@
     document.getElementById("navLog").addEventListener("click", goLog);
     document.getElementById("navExtra").addEventListener("click", goExtra);
     document.getElementById("extraHistory").addEventListener("click", goHistory);
+    document.getElementById("historyBack").addEventListener("click", goHistoryBack);
     document.getElementById("extraBreathing").addEventListener("click", goBreathing);
     document.getElementById("breathBack").addEventListener("click", goExtra);
     document.getElementById("breathSettingsBtn").addEventListener("click", openBreathSettings);
