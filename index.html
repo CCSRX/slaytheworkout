@@ -1140,14 +1140,14 @@
       </div>
       <p class="breath-phase" id="breathPhase">Ready</p>
       <p class="breath-count" id="breathCount" aria-live="polite">4</p>
-      <p class="breath-remain" id="breathRemain">3:00</p>
+      <p class="breath-remain" id="breathRemain">2:00</p>
       <p class="breath-hint" id="breathHint">Tap Start for a calm 4-4-4-4 cycle.</p>
       <div class="breath-settings">
         <div class="breath-setting">
           <span id="breathMinutesLabel">Session</span>
           <div class="breath-stepper">
             <button type="button" id="breathMinMinus" aria-label="Shorter session">−</button>
-            <output id="breathMinutesValue" for="breathMinMinus breathMinPlus">3 min</output>
+            <output id="breathMinutesValue" for="breathMinMinus breathMinPlus">2 min</output>
             <button type="button" id="breathMinPlus" aria-label="Longer session">+</button>
           </div>
         </div>
@@ -1722,7 +1722,7 @@
         lengthMode: "full",
         theme: "dark",
         weightUnit: "kg",
-        breathMinutes: 3,
+        breathMinutes: 2,
         breathSideSeconds: 4,
         breathSound: true,
         bodyWeight: "",
@@ -4746,7 +4746,7 @@
 
     function normalizeBreathMinutes(value) {
       const n = Math.round(Number(value));
-      if (!Number.isFinite(n)) return 3;
+      if (!Number.isFinite(n)) return 2;
       return Math.min(20, Math.max(1, n));
     }
 
