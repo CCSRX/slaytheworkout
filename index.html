@@ -4856,7 +4856,7 @@
 
     // v194: smoother, bell-like tones (soft attack, long fade, gentle glide, low-pass, quiet harmonic).
     function breathBeep(ctx, startAt, freqStart, freqEnd, dur, gainVal) {
-      const attack = 0.09;
+      const attack = 0.18;
       const release = Math.max(0.6, dur);
       const end = startAt + attack + release;
       const out = ctx.createGain();
@@ -4891,14 +4891,15 @@
       const ctx = breathAudio || ensureBreathAudio();
       if (ctx) {
         const t0 = ctx.currentTime + 0.02;
-        const vol = 0.11;
-        if (kind === "in") breathBeep(ctx, t0, 349.23, 440, 1.1, vol);
-        else if (kind === "out") breathBeep(ctx, t0, 440, 329.63, 1.2, vol);
-        else if (kind === "hold") breathBeep(ctx, t0, 392, 392, 0.8, vol * 0.8);
+        const vol = 0.055;
+        const cap = Math.max(1.2, breathSideSeconds() - 0.3);
+        if (kind === "in") breathBeep(ctx, t0, 349.23, 440, Math.min(2.4, cap), vol);
+        else if (kind === "out") breathBeep(ctx, t0, 440, 329.63, Math.min(2.6, cap), vol);
+        else if (kind === "hold") breathBeep(ctx, t0, 392, 392, Math.min(1.8, cap), vol * 0.8);
         else if (kind === "end") {
-          breathBeep(ctx, t0, 392, 392, 1.0, vol);
-          breathBeep(ctx, t0 + 0.35, 493.88, 493.88, 1.0, vol * 0.9);
-          breathBeep(ctx, t0 + 0.7, 587.33, 587.33, 1.6, vol * 0.85);
+          breathBeep(ctx, t0, 392, 392, 2.0, vol);
+          breathBeep(ctx, t0 + 0.5, 493.88, 493.88, 2.0, vol * 0.9);
+          breathBeep(ctx, t0 + 1.0, 587.33, 587.33, 3.0, vol * 0.85);
         }
       }
       if (navigator.vibrate) {
