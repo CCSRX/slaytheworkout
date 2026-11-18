@@ -950,6 +950,40 @@
       /* v181: offline pill. Never takes taps; sits at the top, clear of the bottom nav. */
     .offline-pill { position: fixed; top: calc(6px + var(--sat)); left: 50%; transform: translateX(-50%); z-index: 120; pointer-events: none; max-width: calc(100% - 24px); padding: 5px 12px; border-radius: 999px; background: rgba(23, 26, 32, 0.92); border: 1px solid var(--line); color: var(--mute); font-size: 12px; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: 0 4px 14px rgba(0,0,0,0.35); }
     .offline-pill[hidden] { display: none; }
+    /* v188: Extra screen tiles, plus box-breathing square */
+    .extra-screen h1, .breathing-screen h1 { color: var(--text); }
+    .extra-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px 12px; justify-items: center; margin-top: 8px; }
+    .extra-tile { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; padding: 4px; background: none; color: var(--text); touch-action: manipulation; }
+    .extra-tile:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; border-radius: 16px; }
+    .extra-icon { width: 72px; height: 72px; border-radius: 20px; display: grid; place-items: center; border: 1px solid var(--line); box-shadow: 0 8px 18px rgba(0,0,0,0.28); }
+    .extra-icon svg { width: 36px; height: 36px; display: block; }
+    .extra-tile[data-extra="history"] .extra-icon { color: var(--acc); background: #1c2410; border-color: #2e3c16; }
+    .extra-tile[data-extra="breathing"] .extra-icon { color: #4aa8ff; background: #15202c; border-color: #24364a; }
+    body[data-theme="light"] .extra-tile[data-extra="history"] .extra-icon { background: #eef6d4; border-color: #c6d88a; }
+    body[data-theme="light"] .extra-tile[data-extra="breathing"] .extra-icon { background: #dcebff; border-color: #a9c8ea; }
+    .extra-tile span { font-size: 14px; font-weight: 800; }
+    .breath-back { margin: 0 0 8px; color: var(--mute); font-size: 14px; font-weight: 800; min-height: 44px; padding: 0; text-align: left; touch-action: manipulation; }
+    .breath-stage { display: flex; flex-direction: column; align-items: center; gap: 18px; padding: 12px 0 8px; }
+    .breath-box-wrap { width: min(260px, 72vw); aspect-ratio: 1; display: grid; place-items: center; }
+    .breath-box { width: 78%; height: 78%; position: relative; transform: scale(var(--breath-scale, 1)); transform-origin: center center; }
+    .breath-square { position: absolute; inset: 0; border-radius: 6px; border: 3px solid var(--line); background: var(--card); box-shadow: 0 10px 28px rgba(0,0,0,0.28); }
+    .breath-side { position: absolute; background: var(--acc); opacity: 0; border-radius: 3px; pointer-events: none; }
+    .breath-side.is-on { opacity: 1; box-shadow: 0 0 10px color-mix(in srgb, var(--acc) 70%, transparent); }
+    .breath-side[data-side="left"] { left: -2px; top: 0; width: 4px; height: 100%; }
+    .breath-side[data-side="right"] { right: -2px; top: 0; width: 4px; height: 100%; }
+    .breath-side[data-side="top"] { top: -2px; left: 0; width: 100%; height: 4px; }
+    .breath-side[data-side="bottom"] { bottom: -2px; left: 0; width: 100%; height: 4px; }
+    .breath-dot { position: absolute; width: 16px; height: 16px; margin: 0; border-radius: 4px; background: var(--acc); box-shadow: 0 0 12px 3px color-mix(in srgb, var(--acc) 70%, transparent); left: 0; top: 0; transform: translate(-50%, -50%); pointer-events: none; }
+    .breath-dot[hidden] { display: none; }
+    .breath-phase { margin: 0; font-size: 28px; font-weight: 900; letter-spacing: 0.02em; text-align: center; }
+    .breath-count { margin: 0; font-size: 52px; font-weight: 900; font-variant-numeric: tabular-nums; line-height: 1; }
+    .breath-hint { margin: 0; color: var(--mute); font-size: 14px; text-align: center; }
+    .breath-actions { display: grid; width: min(260px, 72vw); }
+    .breath-start { min-height: 52px; border-radius: 14px; background: var(--acc); color: var(--acc-ink); font-size: 16px; font-weight: 800; touch-action: manipulation; }
+    .breath-start[data-running="true"] { background: var(--card-2); color: var(--text); border: 1px solid var(--line); }
+    @media (prefers-reduced-motion: reduce) {
+      .breath-box { transform: none; }
+    }
   </style>
 </head>
 <body>
@@ -1050,6 +1084,48 @@
       <p class="history-note">Sessions saved by local date · newest first.</p></header>
     <div id="historySessions"></div>
   </main>
+  <main id="extraScreen" class="wrap extra-screen" hidden>
+    <header>
+      <p class="eyebrow">More in the app</p>
+      <h1>Extra</h1>
+    </header>
+    <div class="extra-grid">
+      <button type="button" class="extra-tile" id="extraHistory" data-extra="history">
+        <span class="extra-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5z"/><path d="M8 7h8M8 11h6"/></svg></span>
+        <span>History</span>
+      </button>
+      <button type="button" class="extra-tile" id="extraBreathing" data-extra="breathing">
+        <span class="extra-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.7 7.7A2.5 2.5 0 1 1 19.5 12H2"/><path d="M9.6 4.6A2 2 0 1 1 11 8H2"/><path d="M12.6 19.4A2 2 0 1 0 14 16H2"/></svg></span>
+        <span>Breathing</span>
+      </button>
+    </div>
+  </main>
+  <main id="breathingScreen" class="wrap breathing-screen" hidden>
+    <header>
+      <button type="button" class="breath-back" id="breathBack">← Extra</button>
+      <p class="eyebrow">Box breathing</p>
+      <h1>Breathing</h1>
+      <p class="history-note">4 seconds in, hold, out, and hold.</p>
+    </header>
+    <div class="breath-stage">
+      <div class="breath-box-wrap">
+        <div class="breath-box" id="breathBox" style="--breath-scale: 1">
+          <div class="breath-square"></div>
+          <i class="breath-side" data-side="left"></i>
+          <i class="breath-side" data-side="top"></i>
+          <i class="breath-side" data-side="right"></i>
+          <i class="breath-side" data-side="bottom"></i>
+          <div class="breath-dot" id="breathDot" hidden></div>
+        </div>
+      </div>
+      <p class="breath-phase" id="breathPhase">Ready</p>
+      <p class="breath-count" id="breathCount" aria-live="polite">4</p>
+      <p class="breath-hint" id="breathHint">Tap Start for a calm 4-4-4-4 cycle.</p>
+      <div class="breath-actions">
+        <button type="button" class="breath-start" id="breathToggle" data-running="false" aria-label="Start breathing exercise">Start</button>
+      </div>
+    </div>
+  </main>
   <aside id="restTimer" class="rest-timer" hidden aria-live="polite">
     <div class="rest-timer-inner">
       <div class="rest-head">
@@ -1085,7 +1161,7 @@
     <div class="bottom-nav-inner">
       <button type="button" class="nav-button" id="navHome" data-view="home">Home</button>
       <button type="button" class="nav-button" id="navLog" data-view="workout">SLAY</button>
-      <button type="button" class="nav-button" id="navHistory" data-view="history">History</button>
+      <button type="button" class="nav-button" id="navExtra" data-view="extra">Extra</button>
     </div>
   </nav>
   <script>
@@ -4007,9 +4083,14 @@
       workoutScreen.classList.toggle("is-logging", view !== "home" && !!activeExerciseId);
       workoutScreen.hidden = view !== "workout";
       document.getElementById("historyScreen").hidden = view !== "history";
+      document.getElementById("extraScreen").hidden = view !== "extra";
+      document.getElementById("breathingScreen").hidden = view !== "breathing";
+      if (view !== "breathing") stopBreathing();
       const todayIsRest = !logDayKey();
+      const extraViews = view === "extra" || view === "history" || view === "breathing";
       document.querySelectorAll(".nav-button").forEach(button => {
-        if (button.dataset.view === view && !(button.id === "navLog" && todayIsRest)) button.setAttribute("aria-current", "page");
+        const on = (button.dataset.view === view || (button.id === "navExtra" && extraViews)) && !(button.id === "navLog" && todayIsRest);
+        if (on) button.setAttribute("aria-current", "page");
         else button.removeAttribute("aria-current");
       });
       updateLogNavLabel();
@@ -4466,6 +4547,136 @@
       view = "history";
       render();
       window.scrollTo(0, 0);
+    }
+
+    function goExtra() {
+      rememberOnLeave();
+      cancelLongPress();
+      closeSettings();
+      view = "extra";
+      render();
+      window.scrollTo(0, 0);
+    }
+
+    function goBreathing() {
+      rememberOnLeave();
+      cancelLongPress();
+      closeSettings();
+      view = "breathing";
+      render();
+      window.scrollTo(0, 0);
+    }
+
+    const BREATH_PHASES = [
+      { name: "Breathe in", side: "left" },
+      { name: "Hold", side: "top" },
+      { name: "Breathe out", side: "right" },
+      { name: "Hold", side: "bottom" }
+    ];
+    const BREATH_SECONDS = 4;
+    const BREATH_SCALE_MAX = 1.16;
+    let breathRunning = false;
+    let breathRaf = 0;
+    let breathStartedAt = 0;
+    let breathLastLabel = "";
+
+    function breathReducedMotion() {
+      return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    }
+
+    function setBreathChrome(phaseName, seconds, running) {
+      const phaseEl = document.getElementById("breathPhase");
+      const countEl = document.getElementById("breathCount");
+      const hintEl = document.getElementById("breathHint");
+      const toggle = document.getElementById("breathToggle");
+      const label = phaseName + "|" + seconds + "|" + running;
+      if (label === breathLastLabel) return;
+      breathLastLabel = label;
+      phaseEl.textContent = phaseName;
+      countEl.textContent = String(seconds);
+      hintEl.textContent = running ? "One side of the square per breath." : "Tap Start for a calm 4-4-4-4 cycle.";
+      toggle.textContent = running ? "Stop" : "Start";
+      toggle.setAttribute("data-running", running ? "true" : "false");
+      toggle.setAttribute("aria-label", running ? "Stop breathing exercise" : "Start breathing exercise");
+    }
+
+    function breathPoint(phaseIndex, t, size) {
+      if (phaseIndex === 0) return { x: 0, y: size * (1 - t) };
+      if (phaseIndex === 1) return { x: size * t, y: 0 };
+      if (phaseIndex === 2) return { x: size, y: size * t };
+      return { x: size * (1 - t), y: size };
+    }
+
+    function breathScaleFor(phaseIndex, t) {
+      if (phaseIndex === 0) return 1 + (BREATH_SCALE_MAX - 1) * t;
+      if (phaseIndex === 1) return BREATH_SCALE_MAX;
+      if (phaseIndex === 2) return BREATH_SCALE_MAX - (BREATH_SCALE_MAX - 1) * t;
+      return 1;
+    }
+
+    function paintBreathFrame(phaseIndex, t, reduced) {
+      const box = document.getElementById("breathBox");
+      const dot = document.getElementById("breathDot");
+      const phase = BREATH_PHASES[phaseIndex] || BREATH_PHASES[0];
+      document.querySelectorAll("#breathBox .breath-side").forEach(side => {
+        side.classList.toggle("is-on", side.getAttribute("data-side") === phase.side);
+      });
+      box.style.setProperty("--breath-scale", reduced ? "1" : String(breathScaleFor(phaseIndex, t)));
+      if (reduced) {
+        dot.hidden = true;
+        return;
+      }
+      const pos = breathPoint(phaseIndex, t, box.clientWidth);
+      dot.hidden = false;
+      dot.style.left = pos.x + "px";
+      dot.style.top = pos.y + "px";
+    }
+
+    function resetBreathVisual() {
+      const box = document.getElementById("breathBox");
+      const dot = document.getElementById("breathDot");
+      if (box) box.style.setProperty("--breath-scale", "1");
+      if (dot) dot.hidden = true;
+      document.querySelectorAll("#breathBox .breath-side").forEach(side => side.classList.remove("is-on"));
+    }
+
+    function stopBreathing() {
+      if (!breathRunning && !breathRaf) return;
+      breathRunning = false;
+      if (breathRaf) {
+        cancelAnimationFrame(breathRaf);
+        breathRaf = 0;
+      }
+      breathStartedAt = 0;
+      resetBreathVisual();
+      setBreathChrome("Ready", 4, false);
+    }
+
+    function tickBreathing(now) {
+      if (!breathRunning) return;
+      const elapsed = Math.max(0, (typeof now === "number" ? now : performance.now()) - breathStartedAt);
+      const phaseMs = BREATH_SECONDS * 1000;
+      const cycle = phaseMs * BREATH_PHASES.length;
+      const tCycle = elapsed % cycle;
+      const phaseIndex = Math.floor(tCycle / phaseMs) % BREATH_PHASES.length;
+      const t = (tCycle % phaseMs) / phaseMs;
+      const seconds = Math.max(1, Math.ceil(BREATH_SECONDS - (tCycle % phaseMs) / 1000));
+      paintBreathFrame(phaseIndex, t, breathReducedMotion());
+      setBreathChrome(BREATH_PHASES[phaseIndex].name, seconds, true);
+      breathRaf = requestAnimationFrame(tickBreathing);
+    }
+
+    function startBreathing() {
+      if (breathRunning) return;
+      breathRunning = true;
+      breathStartedAt = performance.now();
+      breathLastLabel = "";
+      tickBreathing(breathStartedAt);
+    }
+
+    function toggleBreathing() {
+      if (breathRunning) stopBreathing();
+      else startBreathing();
     }
 
     function openDay(dayKey) {
@@ -5057,7 +5268,11 @@
     document.getElementById("homeBtn").addEventListener("click", goBack);
     document.getElementById("navHome").addEventListener("click", goHome);
     document.getElementById("navLog").addEventListener("click", goLog);
-    document.getElementById("navHistory").addEventListener("click", goHistory);
+    document.getElementById("navExtra").addEventListener("click", goExtra);
+    document.getElementById("extraHistory").addEventListener("click", goHistory);
+    document.getElementById("extraBreathing").addEventListener("click", goBreathing);
+    document.getElementById("breathBack").addEventListener("click", goExtra);
+    document.getElementById("breathToggle").addEventListener("click", toggleBreathing);
     document.getElementById("exercises").addEventListener("touchstart", function (event) {
       const setDot = event.target.closest("[data-action='select-set']");
       if (!setDot) {
