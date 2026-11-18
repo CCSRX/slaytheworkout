@@ -5220,6 +5220,11 @@
       return override || slayerRecoverySeconds() * 1000;
     }
 
+    function slayerReleaseDurationMs() {
+      const override = typeof window.__slayerReleaseMs === "number" && window.__slayerReleaseMs > 0 ? window.__slayerReleaseMs : 0;
+      return override || 3000;
+    }
+
     let slayerRunning = false;
     let slayerRaf = 0;
     let slayerPhase = "idle";
@@ -5383,6 +5388,10 @@
       } else if (slayerPhase === "recovery") {
         if (phaseEl) phaseEl.textContent = "Recovery hold";
         if (hintEl) hintEl.textContent = "One big breath in, then hold.";
+      } else if (slayerPhase === "release") {
+        if (phaseEl) phaseEl.textContent = "Breathe out";
+        if (countEl) countEl.textContent = String(Math.max(1, Math.ceil(slayerReleaseDurationMs() / 1000)));
+        if (hintEl) hintEl.textContent = "Let it all go.";
       } else if (slayerPhase === "done") {
         if (phaseEl) phaseEl.textContent = "Done";
         if (countEl) countEl.textContent = "";
@@ -5480,8 +5489,15 @@
       updateSlayerHoldClock(slayerRecoveryDurationMs());
     }
 
-    function endSlayerRecovery() {
-      playSlayerCue("recover-end");
+    function startSlayerRelease() {
+      slayerPhase = "release";
+      slayerPhaseStartedAt = performance.now();
+      paintSlayerOrb(1.22, 1, true);
+      playSlayerCue("out");
+      renderSlayerChrome();
+    }
+
+    function endSlayerRelease() {
       if (slayerRoundIndex >= slayerRounds()) {
         finishSlayer();
         return;
@@ -5494,6 +5510,10 @@
       paintSlayerOrb(1, 0, true);
       playSlayerCue("in");
       renderSlayerChrome();
+    }
+
+    function endSlayerRecovery() {
+      startSlayerRelease();
     }
 
     function finishSlayer() {
@@ -5549,6 +5569,17 @@
         }
         updateSlayerHoldClock(dur - elapsed);
         paintSlayerOrb(1.22, 1 - Math.min(1, elapsed / dur), true);
+      } else if (slayerPhase === "release") {
+        const dur = slayerReleaseDurationMs();
+        if (elapsed >= dur) {
+          endSlayerRelease();
+          if (slayerRunning) slayerRaf = requestAnimationFrame(tickSlayer);
+          return;
+        }
+        const t = Math.min(1, elapsed / dur);
+        const countEl = document.getElementById("slayerCount");
+        if (countEl) countEl.textContent = String(Math.max(1, Math.ceil((dur - elapsed) / 1000)));
+        paintSlayerOrb(1.22 - 0.22 * t, 1 - t, true);
       }
       slayerRaf = requestAnimationFrame(tickSlayer);
     }
