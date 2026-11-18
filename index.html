@@ -55,6 +55,23 @@
     .unit-switch { display: flex; gap: 8px; }
     .unit-switch .data-btn { width: auto; min-width: 56px; padding: 0 16px; }
     .unit-switch .data-btn[aria-pressed="true"] { background: var(--acc); color: var(--acc-ink); border-color: var(--acc); }
+    .theme-row.home-range-row { flex-wrap: wrap; }
+    .theme-row.home-range-row .unit-switch { margin-left: auto; }
+    .home-range-switch .data-btn { padding: 0 12px; min-width: 0; }
+    .month-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; margin: 8px 0 0; }
+    .month-dow { text-align: center; font-size: 11px; font-weight: 700; color: var(--mute); padding: 2px 0 4px; letter-spacing: 0.02em; }
+    .month-cell { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; min-height: 54px; padding: 4px 2px 5px; border-radius: 10px; background: var(--card-2); text-align: center; color: inherit; font: inherit; touch-action: manipulation; }
+    .month-cell .month-num { font-size: 12px; font-weight: 800; line-height: 1.2; }
+    .month-cell .month-kind { font-size: 10px; font-weight: 800; line-height: 1.15; max-width: 100%; overflow-wrap: anywhere; }
+    .month-cell .month-mark { font-weight: 900; }
+    .month-cell.rest .month-kind { font-weight: 700; }
+    .month-cell.rest { color: var(--mute); }
+    .month-cell.workout { color: #101820; }
+    .month-cell.workout .month-num { opacity: 0.72; }
+    .month-cell.trained { border: 1px solid var(--acc); }
+    .month-cell.today { outline: 2px solid var(--text); outline-offset: 1px; }
+    .month-cell.outside { opacity: 0.4; }
+    button.month-cell { width: 100%; }
     .bodyweight-section { margin: 16px 0 4px; padding-top: 14px; border-top: 1px solid var(--line); }
     .bodyweight-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
     .bodyweight-row label { font-weight: 700; }
@@ -1087,6 +1104,13 @@
             <button type="button" class="data-btn" id="unitLbBtn" aria-pressed="false">lb</button>
           </div>
         </div>
+        <div class="theme-row home-range-row">
+          <span>Home view</span>
+          <div class="unit-switch home-range-switch" role="group" aria-label="Home view">
+            <button type="button" class="data-btn" id="homeWeekBtn" aria-pressed="true">This week</button>
+            <button type="button" class="data-btn" id="homeMonthBtn" aria-pressed="false">This month</button>
+          </div>
+        </div>
         <div class="weekdays-section program-section">
           <h3 id="programTitle">Program</h3>
           <p class="equipment-note">Your training split. Sets which workout days and exercises you get.</p>
@@ -1840,6 +1864,7 @@
         lengthMode: "full",
         theme: "dark",
         weightUnit: "kg",
+        homeRange: "week",
         breathMinutes: 2,
         breathSideSeconds: 4,
         breathSound: true,
@@ -1933,6 +1958,7 @@
           lengthMode: normalizeLengthMode(parsed.lengthMode),
           theme: parsed.theme === "light" ? "light" : "dark",
           weightUnit: normalizeWeightUnit(parsed.weightUnit),
+          homeRange: normalizeHomeRange(parsed.homeRange),
           breathMinutes: normalizeBreathMinutes(parsed.breathMinutes),
           breathSideSeconds: normalizeBreathSideSeconds(parsed.breathSideSeconds),
           breathSound: normalizeBreathSound(parsed.breathSound),
@@ -2033,6 +2059,7 @@
         lengthMode: state.lengthMode,
         theme: state.theme,
         weightUnit: normalizeWeightUnit(state.weightUnit),
+        homeRange: normalizeHomeRange(state.homeRange),
         breathMinutes: normalizeBreathMinutes(state.breathMinutes),
         breathSideSeconds: normalizeBreathSideSeconds(state.breathSideSeconds),
         breathSound: normalizeBreathSound(state.breathSound),
@@ -2130,6 +2157,7 @@
         state.theme = payload.theme;
       }
       state.weightUnit = normalizeWeightUnit(payload.weightUnit);
+      state.homeRange = normalizeHomeRange(payload.homeRange);
       state.breathMinutes = normalizeBreathMinutes(payload.breathMinutes);
       state.breathSideSeconds = normalizeBreathSideSeconds(payload.breathSideSeconds);
       state.breathSound = normalizeBreathSound(payload.breathSound);
@@ -2466,6 +2494,10 @@
 
     function normalizeWeightUnit(value) {
       return value === "lb" ? "lb" : "kg";
+    }
+
+    function normalizeHomeRange(value) {
+      return value === "month" ? "month" : "week";
     }
 
     function usesLb() {
@@ -3655,8 +3687,73 @@
       return slots.find(slot => slot.stamp >= today && slot.dayKey && !slot.trained && !slot.missed) || null;
     }
 
+    function monthProgress(now = new Date()) {
+      const today = fileStamp(now);
+      const first = new Date(now.getFullYear(), now.getMonth(), 1);
+      const last = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      const start = new Date(first.getFullYear(), first.getMonth(), first.getDate());
+      start.setDate(start.getDate() - (start.getDay() + 6) % 7);
+      const slots = [];
+      for (let monday = new Date(start.getFullYear(), start.getMonth(), start.getDate()); monday <= last; monday = addCalendarDays(monday, 7)) {
+        scheduleSlots(monday, today).forEach(slot => slots.push(slot));
+      }
+      return { first, last, start, today, slots };
+    }
+
+    function renderMonthlyView(week) {
+      const month = monthProgress();
+      let nextSlot = calendarNextUp(month.slots, month.today);
+      if (!nextSlot && month.slots.length) {
+        const end = new Date(month.slots[month.slots.length - 1].stamp + "T12:00:00");
+        const monday = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+        monday.setDate(monday.getDate() - (monday.getDay() + 6) % 7);
+        nextSlot = calendarNextUp(scheduleSlots(addCalendarDays(monday, 7), month.today), month.today);
+      }
+      const monthStart = fileStamp(month.first);
+      const monthEnd = fileStamp(month.last);
+      const monthLabel = month.first.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+      const shorts = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+      const headers = shorts.map(label => '<div class="month-dow">' + label + "</div>").join("");
+      const cells = month.slots.map(slot => {
+        const trained = slot.trained;
+        const today = slot.stamp === month.today;
+        const outside = slot.stamp < monthStart || slot.stamp > monthEnd;
+        const dayNum = Number(slot.stamp.slice(8, 10));
+        const partly = !trained && !outside && slot.stamp <= month.today && partlyTrainedOnDate(slot.stamp);
+        const mark = trained ? "✓" : (partly ? "·" : "");
+        const colorStyle = slot.dayKey ? ' style="background:' + DAY_META[slot.dayKey].color + ';color:#101820"' : "";
+        const classes = "month-cell" + (trained ? " trained" : "") + (today ? " today" : "") + (slot.dayKey ? " workout" : " rest") + (outside ? " outside" : "");
+        const inner = '<span class="month-num">' + dayNum + '</span><span class="month-kind">' + escapeHtml(slot.dayKey ? slot.name : "Rest") + (mark ? ' <span class="month-mark">' + mark + "</span>" : "") + "</span>";
+        if (slot.dayKey) {
+          return '<button type="button" class="' + classes + '" data-open-day="' + slot.dayKey + '" aria-label="Open ' + slot.name + " on " + displaySessionDate(slot.stamp, false) + (trained ? ", done" : "") + '"' + colorStyle + ">" + inner + "</button>";
+        }
+        return '<div class="' + classes + '" aria-label="' + displaySessionDate(slot.stamp, false) + ' · Rest"' + colorStyle + ">" + inner + "</div>";
+      }).join("");
+      const streak = dayStreak();
+      const streakLabel = streak === 1 ? "1 day" : streak + " days";
+      const thisTotals = weeklyMuscleSummary(week.monday);
+      const lastMonday = addCalendarDays(week.monday, -7);
+      const lastTotals = weeklyMuscleSummary(lastMonday);
+      const useLast = !summaryHasSets(thisTotals) && summaryHasSets(lastTotals);
+      const summary = useLast
+        ? renderMuscleSummary("Last week", lastMonday, lastTotals)
+        : renderMuscleSummary("Weekly summary", week.monday, thisTotals);
+      const nextName = nextSlot ? nextSlot.name : DAY_META[week.next].name;
+      const nextDayKey = nextSlot ? nextSlot.dayKey : week.next;
+      const view = document.getElementById("weeklyView");
+      view.setAttribute("aria-label", "This month");
+      view.innerHTML = '<p class="streak-banner">Streak: <span>' + streakLabel + '</span></p><h2>This month</h2><p class="week-dates">' + monthLabel + "</p>" +
+        '<p class="next-up">' + (resumeTarget(nextDayKey) ? "Resume" : "Next up") + ": " + nextName + '</p><div class="month-grid">' + headers + cells + '</div><p class="program-hint" id="programHint">' + escapeHtml(PROGRAMS[state.program].name) + ' · change in Settings</p>' + summary + '<p class="week-note">A check means that day’s workout is done. The outline marks today. Tap a workout to open it. Your streak counts training days in a row. Rest days do not break it.</p>' + (weekLayoutCustomized() ? '<button type="button" class="week-reset" data-action="reset-week-layout">Reset week layout</button>' : "");
+    }
+
     function renderWeeklyView() {
       const week = weeklyProgress();
+      const viewEl = document.getElementById("weeklyView");
+      if (state.homeRange === "month") {
+        renderMonthlyView(week);
+        return;
+      }
+      if (viewEl) viewEl.setAttribute("aria-label", "Weekly progress");
       const nextSlot = calendarNextUp(week.slots, week.today);
       const cards = week.slots.map((slot, slotIndex) => {
         const trained = slot.trained;
@@ -4336,6 +4433,7 @@
       slotCache.clear();
       applyTheme();
       renderUnitSetting();
+      renderHomeRangeSetting();
       renderBodyWeightSetting();
       renderProgramPicker();
       renderTodayShortcut();
@@ -4470,6 +4568,23 @@
       saveState();
       renderUnitSetting();
       renderBodyWeightSetting();
+      render();
+    }
+
+    function renderHomeRangeSetting() {
+      const weekBtn = document.getElementById("homeWeekBtn");
+      const monthBtn = document.getElementById("homeMonthBtn");
+      const month = state.homeRange === "month";
+      if (weekBtn) weekBtn.setAttribute("aria-pressed", String(!month));
+      if (monthBtn) monthBtn.setAttribute("aria-pressed", String(month));
+    }
+
+    function setHomeRange(range) {
+      const next = normalizeHomeRange(range);
+      if (state.homeRange === next) return;
+      state.homeRange = next;
+      saveState();
+      renderHomeRangeSetting();
       render();
     }
 
@@ -4688,6 +4803,7 @@
       renderWeekDaysSetting();
       renderEquipmentSettings();
       renderUnitSetting();
+      renderHomeRangeSetting();
       renderBodyWeightSetting();
       document.getElementById("settingsOverlay").hidden = false;
     }
@@ -6700,6 +6816,8 @@
     });
     document.getElementById("unitKgBtn").addEventListener("click", function () { setWeightUnit("kg"); });
     document.getElementById("unitLbBtn").addEventListener("click", function () { setWeightUnit("lb"); });
+    document.getElementById("homeWeekBtn").addEventListener("click", function () { setHomeRange("week"); });
+    document.getElementById("homeMonthBtn").addEventListener("click", function () { setHomeRange("month"); });
     document.getElementById("exportBtn").addEventListener("click", exportLogs);
     document.getElementById("importBtn").addEventListener("click", requestImport);
     document.getElementById("importFile").addEventListener("change", onImportFile);
