@@ -1013,7 +1013,17 @@
     .slayer-ring-track { fill: none; stroke: rgba(255, 154, 61, 0.24); stroke-width: 2.6; }
     .slayer-ring-progress { fill: none; stroke: #ff9a3d; stroke-width: 2.6; stroke-linecap: round; filter: drop-shadow(0 0 2.5px rgba(255, 154, 61, 0.85)); }
     .slayer-ring-dot { fill: #ffe0b0; stroke: #ff9a3d; stroke-width: 0.7; filter: drop-shadow(0 0 2px rgba(255, 224, 176, 0.95)); }
+    .slayer-ring-trail { fill: none; stroke: #ff9a3d; stroke-width: 3; stroke-linecap: round; }
+    #slayerRingTrail path:nth-child(1) { opacity: 1; }
+    #slayerRingTrail path:nth-child(2) { opacity: 0.78; }
+    #slayerRingTrail path:nth-child(3) { opacity: 0.58; }
+    #slayerRingTrail path:nth-child(4) { opacity: 0.4; }
+    #slayerRingTrail path:nth-child(5) { opacity: 0.26; }
+    #slayerRingTrail path:nth-child(6) { opacity: 0.16; }
+    #slayerRingTrail path:nth-child(7) { opacity: 0.09; }
+    #slayerRingTrail path:nth-child(8) { opacity: 0.04; }
     .slayer-orb { width: 62%; height: 62%; border-radius: 50%; position: relative; z-index: 0; transform: scale(var(--slayer-scale, 1)); transform-origin: center center; background: radial-gradient(circle at 38% 32%, #ffe0b0 0%, #ff9a3d 42%, #e04510 76%, #4a0d06 100%); box-shadow: 0 0 32px rgba(255, 122, 58, 0.48), 0 10px 28px rgba(0,0,0,0.28); }
+    .slayer-orb.is-empty { filter: brightness(0.68) saturate(0.78); box-shadow: 0 0 14px rgba(255, 122, 58, 0.2), 0 8px 18px rgba(0,0,0,0.28); }
     .slayer-orb::after { content: ""; position: absolute; inset: 18% 32% auto 22%; height: 28%; border-radius: 50%; background: rgba(255, 255, 255, 0.22); pointer-events: none; }
     .slayer-safety { margin: 0; color: var(--mute); font-size: 13px; line-height: 1.4; text-align: center; max-width: 300px; }
     .slayer-safety[hidden], .slayer-summary[hidden], .slayer-hold[hidden] { display: none; }
@@ -1022,8 +1032,10 @@
     .slayer-summary .slayer-best { color: #ff7a3a; font-weight: 800; }
     .slayer-hold { width: min(260px, 72vw); min-height: 64px; border-radius: 14px; background: #ff7a3a; color: #1a0a04; font-size: 18px; font-weight: 800; touch-action: manipulation; }
     @media (prefers-reduced-motion: reduce) {
-      .breath-box, .slayer-orb { transform: none; }
-      .slayer-ring-progress, .slayer-ring-dot { filter: none; }
+      .breath-box { transform: none; }
+      .slayer-orb:not(.is-empty) { transform: none; }
+      .slayer-ring-progress, .slayer-ring-dot, .slayer-ring-trail { filter: none; }
+      .slayer-orb.is-empty { filter: brightness(0.72); }
     }
   </style>
 </head>
@@ -1188,6 +1200,16 @@
         <svg class="slayer-ring" id="slayerRing" viewBox="0 0 100 100" aria-hidden="true">
           <circle class="slayer-ring-track" cx="50" cy="50" r="42"></circle>
           <circle class="slayer-ring-progress" id="slayerRingProgress" cx="50" cy="50" r="42" transform="rotate(-90 50 50)" stroke-dasharray="263.894" stroke-dashoffset="263.894"></circle>
+          <g id="slayerRingTrail" hidden>
+          <path class="slayer-ring-trail"></path>
+          <path class="slayer-ring-trail"></path>
+          <path class="slayer-ring-trail"></path>
+          <path class="slayer-ring-trail"></path>
+          <path class="slayer-ring-trail"></path>
+          <path class="slayer-ring-trail"></path>
+          <path class="slayer-ring-trail"></path>
+          <path class="slayer-ring-trail"></path>
+          </g>
           <circle class="slayer-ring-dot" id="slayerRingDot" cx="50" cy="8" r="2.5" visibility="hidden"></circle>
         </svg>
         <div class="slayer-orb" id="slayerOrb" style="--slayer-scale: 1" aria-hidden="true"></div>
@@ -5225,6 +5247,11 @@
       return override || 3000;
     }
 
+    function slayerHoldOutMs() {
+      const override = typeof window.__slayerHoldOutMs === "number" && window.__slayerHoldOutMs > 0 ? window.__slayerHoldOutMs : 0;
+      return override || 1800;
+    }
+
     let slayerRunning = false;
     let slayerRaf = 0;
     let slayerPhase = "idle";
@@ -5297,14 +5324,40 @@
     const SLAYER_RING_R = 42;
     const SLAYER_RING_C = 2 * Math.PI * SLAYER_RING_R;
     const SLAYER_HOLD_LAP_MS = 30000;
+    const SLAYER_EMPTY_SCALE = 0.86;
 
-    function paintSlayerRing(progress, showDot) {
+    function paintSlayerTrail(progress, on) {
+      const trail = document.getElementById("slayerRingTrail");
+      if (!trail) return;
+      if (!on) {
+        trail.setAttribute("hidden", "");
+        return;
+      }
+      trail.removeAttribute("hidden");
+      const segs = trail.querySelectorAll("path");
+      const n = segs.length || 1;
+      const tip = ((Number(progress) || 0) % 1) * 2 * Math.PI;
+      const span = 0.2 * 2 * Math.PI;
+      const step = span / n;
+      const r = SLAYER_RING_R;
+      segs.forEach(function (el, i) {
+        const a1 = tip - (i + 1) * step;
+        const a2 = tip - i * step;
+        const x1 = 50 + r * Math.sin(a1);
+        const y1 = 50 - r * Math.cos(a1);
+        const x2 = 50 + r * Math.sin(a2);
+        const y2 = 50 - r * Math.cos(a2);
+        el.setAttribute("d", "M " + x1.toFixed(3) + " " + y1.toFixed(3) + " A " + r + " " + r + " 0 0 1 " + x2.toFixed(3) + " " + y2.toFixed(3));
+      });
+    }
+
+    function paintSlayerRing(progress, showDot, trail) {
       const circ = document.getElementById("slayerRingProgress");
       const dot = document.getElementById("slayerRingDot");
       const p = Math.max(0, Math.min(1, Number(progress) || 0));
       if (circ) {
         circ.setAttribute("stroke-dasharray", String(SLAYER_RING_C));
-        circ.setAttribute("stroke-dashoffset", String(SLAYER_RING_C * (1 - p)));
+        circ.setAttribute("stroke-dashoffset", String(trail ? SLAYER_RING_C : SLAYER_RING_C * (1 - p)));
       }
       if (dot) {
         if (!showDot) {
@@ -5317,12 +5370,19 @@
           dot.removeAttribute("visibility");
         }
       }
+      paintSlayerTrail(p, !!trail);
     }
 
-    function paintSlayerOrb(scale, ringProgress, showDot) {
+    function paintSlayerOrb(scale, ringProgress, showDot, trail) {
       const orb = document.getElementById("slayerOrb");
-      if (orb) orb.style.setProperty("--slayer-scale", breathReducedMotion() ? "1" : String(scale));
-      paintSlayerRing(ringProgress == null ? 0 : ringProgress, !!showDot);
+      const empty = slayerPhase === "hold" || slayerPhase === "holdout";
+      if (orb) {
+        const reduced = breathReducedMotion();
+        const s = reduced ? (empty ? SLAYER_EMPTY_SCALE : "1") : String(scale);
+        orb.style.setProperty("--slayer-scale", String(s));
+        orb.classList.toggle("is-empty", empty);
+      }
+      paintSlayerRing(ringProgress == null ? 0 : ringProgress, !!showDot, !!trail);
     }
 
     function resetSlayerVisual() {
@@ -5382,9 +5442,13 @@
         if (phaseEl) phaseEl.textContent = slayerHalf === "out" ? "Breathe out" : "Breathe in";
         if (countEl) countEl.textContent = slayerBreathIndex + " / " + breaths;
         if (hintEl) hintEl.textContent = slayerHalf === "out" ? "Relaxed breath out, don't force it." : "A deep breath in, belly and chest.";
+      } else if (slayerPhase === "holdout") {
+        if (phaseEl) phaseEl.textContent = "Breathe out and hold";
+        if (countEl) countEl.textContent = "";
+        if (hintEl) hintEl.textContent = "Let all the air out, then hold with empty lungs. Relax.";
       } else if (slayerPhase === "hold") {
-        if (phaseEl) phaseEl.textContent = "Hold";
-        if (hintEl) hintEl.textContent = "Breathe out and hold. Tap Breathe in when you're ready.";
+        if (phaseEl) phaseEl.textContent = "Hold · lungs empty";
+        if (hintEl) hintEl.textContent = "Let all the air out, then hold with empty lungs. Relax.";
       } else if (slayerPhase === "recovery") {
         if (phaseEl) phaseEl.textContent = "Recovery hold";
         if (hintEl) hintEl.textContent = "One big breath in, then hold.";
@@ -5472,9 +5536,17 @@
     }
 
     function enterSlayerHold() {
-      slayerPhase = "hold";
+      slayerPhase = "holdout";
       slayerPhaseStartedAt = performance.now();
       paintSlayerOrb(1, 0, true);
+      playSlayerCue("out");
+      renderSlayerChrome();
+    }
+
+    function startSlayerTimedHold() {
+      slayerPhase = "hold";
+      slayerPhaseStartedAt = performance.now();
+      paintSlayerOrb(SLAYER_EMPTY_SCALE, 0, true, true);
       playSlayerCue("hold");
       renderSlayerChrome();
       updateSlayerHoldClock(0);
@@ -5557,9 +5629,18 @@
         }
         const ring = nextHalf === "in" ? t : 1 - t;
         paintSlayerOrb(nextHalf === "in" ? 1 + 0.22 * t : 1.22 - 0.22 * t, ring, true);
+      } else if (slayerPhase === "holdout") {
+        const dur = slayerHoldOutMs();
+        if (elapsed >= dur) {
+          startSlayerTimedHold();
+          slayerRaf = requestAnimationFrame(tickSlayer);
+          return;
+        }
+        const t = Math.min(1, elapsed / dur);
+        paintSlayerOrb(1 - (1 - SLAYER_EMPTY_SCALE) * t, 0, true);
       } else if (slayerPhase === "hold") {
         updateSlayerHoldClock(elapsed);
-        paintSlayerOrb(1, (elapsed % SLAYER_HOLD_LAP_MS) / SLAYER_HOLD_LAP_MS, true);
+        paintSlayerOrb(SLAYER_EMPTY_SCALE, (elapsed % SLAYER_HOLD_LAP_MS) / SLAYER_HOLD_LAP_MS, true, true);
       } else if (slayerPhase === "recovery") {
         const dur = slayerRecoveryDurationMs();
         if (elapsed >= dur) {
