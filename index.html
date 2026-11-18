@@ -1008,8 +1008,12 @@
     .breathing-screen .breath-stage { gap: 12px; padding: 4px 0 8px; }
     .breathing-screen .breath-box-wrap, .slayer-orb-wrap { width: min(200px, 56vw); }
     .slayer-stage { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 4px 0 8px; }
-    .slayer-orb-wrap { aspect-ratio: 1; display: grid; place-items: center; }
-    .slayer-orb { width: 62%; height: 62%; border-radius: 50%; position: relative; transform: scale(var(--slayer-scale, 1)); transform-origin: center center; background: radial-gradient(circle at 38% 32%, #ffe0b0 0%, #ff9a3d 42%, #e04510 76%, #4a0d06 100%); box-shadow: 0 0 32px rgba(255, 122, 58, 0.48), 0 10px 28px rgba(0,0,0,0.28); }
+    .slayer-orb-wrap { aspect-ratio: 1; display: grid; place-items: center; position: relative; overflow: visible; }
+    .slayer-ring { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; z-index: 1; }
+    .slayer-ring-track { fill: none; stroke: rgba(255, 154, 61, 0.24); stroke-width: 2.6; }
+    .slayer-ring-progress { fill: none; stroke: #ff9a3d; stroke-width: 2.6; stroke-linecap: round; filter: drop-shadow(0 0 2.5px rgba(255, 154, 61, 0.85)); }
+    .slayer-ring-dot { fill: #ffe0b0; stroke: #ff9a3d; stroke-width: 0.7; filter: drop-shadow(0 0 2px rgba(255, 224, 176, 0.95)); }
+    .slayer-orb { width: 62%; height: 62%; border-radius: 50%; position: relative; z-index: 0; transform: scale(var(--slayer-scale, 1)); transform-origin: center center; background: radial-gradient(circle at 38% 32%, #ffe0b0 0%, #ff9a3d 42%, #e04510 76%, #4a0d06 100%); box-shadow: 0 0 32px rgba(255, 122, 58, 0.48), 0 10px 28px rgba(0,0,0,0.28); }
     .slayer-orb::after { content: ""; position: absolute; inset: 18% 32% auto 22%; height: 28%; border-radius: 50%; background: rgba(255, 255, 255, 0.22); pointer-events: none; }
     .slayer-safety { margin: 0; color: var(--mute); font-size: 13px; line-height: 1.4; text-align: center; max-width: 300px; }
     .slayer-safety[hidden], .slayer-summary[hidden], .slayer-hold[hidden] { display: none; }
@@ -1019,6 +1023,7 @@
     .slayer-hold { width: min(260px, 72vw); min-height: 64px; border-radius: 14px; background: #ff7a3a; color: #1a0a04; font-size: 18px; font-weight: 800; touch-action: manipulation; }
     @media (prefers-reduced-motion: reduce) {
       .breath-box, .slayer-orb { transform: none; }
+      .slayer-ring-progress, .slayer-ring-dot { filter: none; }
     }
   </style>
 </head>
@@ -1180,6 +1185,11 @@
     </div>
     <div class="slayer-stage" id="slayerStage" hidden>
       <div class="slayer-orb-wrap">
+        <svg class="slayer-ring" id="slayerRing" viewBox="0 0 100 100" aria-hidden="true">
+          <circle class="slayer-ring-track" cx="50" cy="50" r="42"></circle>
+          <circle class="slayer-ring-progress" id="slayerRingProgress" cx="50" cy="50" r="42" transform="rotate(-90 50 50)" stroke-dasharray="263.894" stroke-dashoffset="263.894"></circle>
+          <circle class="slayer-ring-dot" id="slayerRingDot" cx="50" cy="8" r="2.5" visibility="hidden"></circle>
+        </svg>
         <div class="slayer-orb" id="slayerOrb" style="--slayer-scale: 1" aria-hidden="true"></div>
       </div>
       <p class="breath-phase" id="slayerPhase">Ready</p>
@@ -5279,13 +5289,39 @@
       }
     }
 
-    function paintSlayerOrb(scale) {
+    const SLAYER_RING_R = 42;
+    const SLAYER_RING_C = 2 * Math.PI * SLAYER_RING_R;
+    const SLAYER_HOLD_LAP_MS = 30000;
+
+    function paintSlayerRing(progress, showDot) {
+      const circ = document.getElementById("slayerRingProgress");
+      const dot = document.getElementById("slayerRingDot");
+      const p = Math.max(0, Math.min(1, Number(progress) || 0));
+      if (circ) {
+        circ.setAttribute("stroke-dasharray", String(SLAYER_RING_C));
+        circ.setAttribute("stroke-dashoffset", String(SLAYER_RING_C * (1 - p)));
+      }
+      if (dot) {
+        if (!showDot) {
+          dot.setAttribute("visibility", "hidden");
+        } else {
+          const x = 50 + SLAYER_RING_R * Math.sin(p * 2 * Math.PI);
+          const y = 50 - SLAYER_RING_R * Math.cos(p * 2 * Math.PI);
+          dot.setAttribute("cx", x.toFixed(3));
+          dot.setAttribute("cy", y.toFixed(3));
+          dot.removeAttribute("visibility");
+        }
+      }
+    }
+
+    function paintSlayerOrb(scale, ringProgress, showDot) {
       const orb = document.getElementById("slayerOrb");
       if (orb) orb.style.setProperty("--slayer-scale", breathReducedMotion() ? "1" : String(scale));
+      paintSlayerRing(ringProgress == null ? 0 : ringProgress, !!showDot);
     }
 
     function resetSlayerVisual() {
-      paintSlayerOrb(1);
+      paintSlayerOrb(1, 0, false);
     }
 
     function slayerHoldLabel(ms) {
@@ -5429,7 +5465,7 @@
     function enterSlayerHold() {
       slayerPhase = "hold";
       slayerPhaseStartedAt = performance.now();
-      paintSlayerOrb(1);
+      paintSlayerOrb(1, 0, true);
       playSlayerCue("hold");
       renderSlayerChrome();
       updateSlayerHoldClock(0);
@@ -5438,7 +5474,7 @@
     function startSlayerRecovery() {
       slayerPhase = "recovery";
       slayerPhaseStartedAt = performance.now();
-      paintSlayerOrb(1.22);
+      paintSlayerOrb(1.22, 1, true);
       playSlayerCue("recover");
       renderSlayerChrome();
       updateSlayerHoldClock(slayerRecoveryDurationMs());
@@ -5455,7 +5491,7 @@
       slayerHalf = "in";
       slayerPhase = "breaths";
       slayerPhaseStartedAt = performance.now();
-      paintSlayerOrb(1);
+      paintSlayerOrb(1, 0, true);
       playSlayerCue("in");
       renderSlayerChrome();
     }
@@ -5499,10 +5535,11 @@
           playSlayerCue(nextHalf);
           renderSlayerChrome();
         }
-        paintSlayerOrb(nextHalf === "in" ? 1 + 0.22 * t : 1.22 - 0.22 * t);
+        const ring = nextHalf === "in" ? t : 1 - t;
+        paintSlayerOrb(nextHalf === "in" ? 1 + 0.22 * t : 1.22 - 0.22 * t, ring, true);
       } else if (slayerPhase === "hold") {
         updateSlayerHoldClock(elapsed);
-        paintSlayerOrb(1);
+        paintSlayerOrb(1, (elapsed % SLAYER_HOLD_LAP_MS) / SLAYER_HOLD_LAP_MS, true);
       } else if (slayerPhase === "recovery") {
         const dur = slayerRecoveryDurationMs();
         if (elapsed >= dur) {
@@ -5511,7 +5548,7 @@
           return;
         }
         updateSlayerHoldClock(dur - elapsed);
-        paintSlayerOrb(1.22);
+        paintSlayerOrb(1.22, 1 - Math.min(1, elapsed / dur), true);
       }
       slayerRaf = requestAnimationFrame(tickSlayer);
     }
@@ -5529,7 +5566,7 @@
       slayerLastLabel = "";
       renderSlayerSettings();
       renderSlayerChrome();
-      paintSlayerOrb(1);
+      paintSlayerOrb(1, 0, true);
       playSlayerCue("in");
       tickSlayer(slayerPhaseStartedAt);
     }
