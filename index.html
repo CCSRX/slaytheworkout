@@ -52,6 +52,9 @@
     .set-dot.current { outline: 2px solid var(--acc); outline-offset: 3px; }
     .theme-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
     .theme-row .data-btn { width: auto; padding: 0 16px; }
+    .unit-switch { display: flex; gap: 8px; }
+    .unit-switch .data-btn { width: auto; min-width: 56px; padding: 0 16px; }
+    .unit-switch .data-btn[aria-pressed="true"] { background: var(--acc); color: var(--acc-ink); border-color: var(--acc); }
     .bodyweight-section { margin: 16px 0 4px; padding-top: 14px; border-top: 1px solid var(--line); }
     .bodyweight-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
     .bodyweight-row label { font-weight: 700; }
@@ -1027,6 +1030,13 @@
           <span>Appearance</span>
           <button type="button" class="data-btn" id="themeToggle" aria-pressed="false">Light theme</button>
         </div>
+        <div class="theme-row">
+          <span>Weight units</span>
+          <div class="unit-switch" role="group" aria-label="Weight units">
+            <button type="button" class="data-btn" id="unitKgBtn" aria-pressed="true">kg</button>
+            <button type="button" class="data-btn" id="unitLbBtn" aria-pressed="false">lb</button>
+          </div>
+        </div>
         <div class="weekdays-section program-section">
           <h3 id="programTitle">Program</h3>
           <p class="equipment-note">Your training split. Sets which workout days and exercises you get.</p>
@@ -1041,7 +1051,7 @@
         <div class="bodyweight-section">
           <div class="bodyweight-row">
             <label for="bodyWeightInput">Your body weight</label>
-            <span class="bodyweight-field"><input id="bodyWeightInput" type="text" inputmode="decimal" autocomplete="off" placeholder="—" aria-describedby="bodyWeightNote" aria-invalid="false"> kg</span>
+            <span class="bodyweight-field"><input id="bodyWeightInput" type="text" inputmode="decimal" autocomplete="off" placeholder="—" aria-describedby="bodyWeightNote" aria-invalid="false"> <span id="bodyWeightUnit">kg</span></span>
           </div>
           <p class="equipment-note" id="bodyWeightNote">Used to estimate kilos for pull-ups, chin-ups, leg raises, bodyweight skull crushers, dips and diamond push-ups in the weekly summary.</p>
         </div>
@@ -1681,6 +1691,7 @@
         lastExerciseId: null,
         lengthMode: "full",
         theme: "dark",
+        weightUnit: "kg",
         bodyWeight: "",
         sessions: [],
         logDates: {},
@@ -1765,6 +1776,7 @@
           ...normalizeLastLocation(parsed),
           lengthMode: normalizeLengthMode(parsed.lengthMode),
           theme: parsed.theme === "light" ? "light" : "dark",
+          weightUnit: normalizeWeightUnit(parsed.weightUnit),
           bodyWeight: normalizeBodyWeight(parsed.bodyWeight),
           lastSavedAt: parsed.lastSavedAt ? String(parsed.lastSavedAt) : "",
           updatedAt: normalizeUpdatedAt(updatedAt),
@@ -1856,6 +1868,7 @@
         lastExerciseId: state.lastExerciseId,
         lengthMode: state.lengthMode,
         theme: state.theme,
+        weightUnit: normalizeWeightUnit(state.weightUnit),
         lastSavedAt: state.lastSavedAt || exportedAt,
         updatedAt: state.updatedAt,
         sessions: state.sessions,
@@ -1944,6 +1957,7 @@
       if (payload.theme === "dark" || payload.theme === "light") {
         state.theme = payload.theme;
       }
+      state.weightUnit = normalizeWeightUnit(payload.weightUnit);
       if (payload.customExercises || payload.dayCustom) {
         state.customExercises = normalizeCustomExercises(payload.customExercises);
         CUSTOM_EXERCISES = state.customExercises;
@@ -2200,15 +2214,15 @@
       const mixed = weights.some(w => w !== weights[0]);
       if (!mixed) {
         const weight = weights.length ? weights[0] : firstWeight(rows);
-        return (weight !== "" ? weight + " kg" : emptyLabel) + " × " + upto.map(row => setHasReps(row) ? row.reps : "—").join(", ");
+        return (weight !== "" ? formatWeightWithUnit(weight) : emptyLabel) + " × " + upto.map(row => setHasReps(row) ? row.reps : "—").join(", ");
       }
-      return upto.map(row => setHasReps(row) ? ((row.weight ? row.weight + "×" : "BW×") + row.reps) : "—").join(", ") + " kg";
+      return upto.map(row => setHasReps(row) ? ((row.weight ? formatWeight(row.weight) + "×" : "BW×") + row.reps) : "—").join(", ") + " " + weightUnitLabel();
     }
 
     // Empty is allowed for bodyweight lifts; a trailing decimal supports typing 80.5.
     function isValidWeight(value) {
       value = normalizeWeightText(value);
-      return value === "" || (/^(?:\d+(?:\.\d{0,2})?|\.\d{1,2})$/.test(value) && Number.isFinite(Number(value)));
+      return value === "" || (/^(?:\d+(?:\.\d{0,4})?|\.\d{1,4})$/.test(value) && Number.isFinite(Number(value)));
     }
 
     // Settings body weight (v146): "" or a stored weight string between 1 and 400 kg.
@@ -2266,6 +2280,69 @@
       return Number.isInteger(rounded) ? String(rounded) : String(Number(rounded.toFixed(2)));
     }
 
+    // v189: logs stay in kg; the Settings unit only changes how weights are shown and typed.
+    const KG_TO_LB = 2.2046226218;
+    const LB_DISPLAY_STEP = 0.5;
+
+    function normalizeWeightUnit(value) {
+      return value === "lb" ? "lb" : "kg";
+    }
+
+    function usesLb() {
+      return !!(state && state.weightUnit === "lb");
+    }
+
+    function weightUnitLabel() {
+      return usesLb() ? "lb" : "kg";
+    }
+
+    function weightIncrementDisplay(exercise) {
+      if (usesLb()) return /dumbbell/i.test(exercise.name) ? 2.5 : 5;
+      return weightIncrement(exercise);
+    }
+
+    function storedKgFromNumber(kg) {
+      if (!Number.isFinite(kg)) return "";
+      const rounded = Math.round(kg * 10000) / 10000;
+      return String(Number(rounded.toFixed(4)));
+    }
+
+    function formatWeightNumber(n, unit) {
+      if (!Number.isFinite(n)) return "";
+      if (unit === "lb") {
+        const rounded = Math.round(n / LB_DISPLAY_STEP) * LB_DISPLAY_STEP;
+        const clean = Math.round(rounded * 10) / 10;
+        return Number.isInteger(clean) ? String(clean) : String(clean);
+      }
+      return formatKg(n);
+    }
+
+    function formatWeight(kgValue) {
+      if (kgValue == null || kgValue === "") return "";
+      const kg = Number(normalizeWeightText(kgValue));
+      if (!Number.isFinite(kg)) return "";
+      return formatWeightNumber(usesLb() ? kg * KG_TO_LB : kg, weightUnitLabel());
+    }
+
+    function formatWeightWithUnit(kgValue) {
+      const text = formatWeight(kgValue);
+      return text === "" ? "" : text + " " + weightUnitLabel();
+    }
+
+    function isValidWeightInput(value) {
+      value = normalizeWeightText(value);
+      return value === "" || (/^(?:\d+(?:\.\d{0,2})?|\.\d{1,2})$/.test(value) && Number.isFinite(Number(value)));
+    }
+
+    function parseDisplayWeight(value) {
+      const text = normalizeWeightText(value);
+      if (text === "" || !isValidWeightInput(text)) return "";
+      const trimmed = text.replace(/\.$/, "");
+      const n = Number(trimmed.charAt(0) === "." ? "0" + trimmed : trimmed);
+      if (!Number.isFinite(n)) return "";
+      return usesLb() ? storedKgFromNumber(n / KG_TO_LB) : storedWeight(text);
+    }
+
     // Heaviest weight among logged sets (or among planned rows when none are logged yet).
     function heaviestWeight(rows) {
       const list = (rows || []).filter(Boolean);
@@ -2283,7 +2360,9 @@
     function suggestedNextWeight(exercise, rows) {
       const weight = heaviestWeight(rows);
       if (weight === "" || !isValidWeight(weight)) return "";
-      return formatKg(Number(normalizeWeightText(weight)) + weightIncrement(exercise));
+      const current = Number(formatWeight(weight));
+      if (!Number.isFinite(current)) return "";
+      return formatWeightNumber(current + weightIncrementDisplay(exercise), weightUnitLabel());
     }
 
     function normalizeRestDuration(value) {
@@ -2534,8 +2613,8 @@
       if (anySetAtTop(exercise, rows, count)) {
         const next = suggestedNextWeight(exercise, rows);
         if (next) {
-          const step = formatKg(weightIncrement(exercise));
-          return "Next: " + next + " kg (add " + step + " kg).";
+          const step = formatWeightNumber(weightIncrementDisplay(exercise), weightUnitLabel());
+          return "Next: " + next + " " + weightUnitLabel() + " (add " + step + " " + weightUnitLabel() + ").";
         }
         return "Next: add the smallest increment of weight.";
       }
@@ -3322,9 +3401,10 @@
     }
 
     function formatVolume(value) {
-      const rounded = Math.round(Number(value) * 10) / 10;
-      if (!Number.isFinite(rounded)) return "0 kg";
-      return (Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1)) + " kg";
+      const display = usesLb() ? Number(value) * KG_TO_LB : Number(value);
+      const rounded = Math.round(display * 10) / 10;
+      if (!Number.isFinite(rounded)) return "0 " + weightUnitLabel();
+      return (Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1)) + " " + weightUnitLabel();
     }
 
     function renderMuscleSummary(title, monday, totals) {
@@ -3340,7 +3420,7 @@
           : setsText + (item.quarters !== item.direct * 4 ? ' (' + item.direct + ' direct)' : '') + ' · ' + item.reps + ' reps · ' + volumeText;
         return '<div class="summary-row" data-group="' + muscle.id + '"><div class="summary-meta"><strong>' + muscle.name + '</strong><span>' + meta + '</span></div><div class="summary-bar" aria-hidden="true"><i style="width:' + width + '%;background:' + muscle.color + '"></i></div></div>';
       }).join("");
-      return '<section class="week-summary" aria-label="' + title + '"><h3>' + title + '</h3><p class="week-dates">Mon–Sun · ' + displaySessionDate(fileStamp(monday), false) + ' – ' + displaySessionDate(fileStamp(end)) + '</p>' + rows + '<p class="summary-note">Sets, reps, and volume are totals from logged working sets this week. Volume is weight × reps. Bodyweight sets count toward sets and reps; bodyweight lifts use your body weight setting for estimated kilos when it’s set. Each set counts as 1 for its main muscle; helper muscles get ½ or ¼ set. Helper muscles get the same share of the volume. Reps count only for the main muscle, so the same kilos can show under more than one muscle.</p></section>';
+      return '<section class="week-summary" aria-label="' + title + '"><h3>' + title + '</h3><p class="week-dates">Mon–Sun · ' + displaySessionDate(fileStamp(monday), false) + ' – ' + displaySessionDate(fileStamp(end)) + '</p>' + rows + '<p class="summary-note">Sets, reps, and volume are totals from logged working sets this week. Volume is weight × reps. Bodyweight sets count toward sets and reps; bodyweight lifts use your body weight setting for estimated ' + (usesLb() ? "pounds" : "kilos") + ' when it’s set. Each set counts as 1 for its main muscle; helper muscles get ½ or ¼ set. Helper muscles get the same share of the volume. Reps count only for the main muscle, so the same weight can show under more than one muscle.</p></section>';
     }
 
     function slotForDate(date) {
@@ -3498,11 +3578,12 @@
       const last = points[points.length - 1];
       const weighed = last.weight !== "" && isValidWeight(last.weight) && first.weight !== "" && isValidWeight(first.weight);
       if (weighed) {
-        const delta = Math.round((Number(last.weight) - Number(first.weight)) * 100) / 100;
-        const now = last.weight + " kg";
+        const delta = Math.round((Number(formatWeight(last.weight)) - Number(formatWeight(first.weight))) * 100) / 100;
+        const now = formatWeightWithUnit(last.weight);
+        const unit = weightUnitLabel();
         if (points.length === 1) return now + " · " + displaySessionDate(last.date, false);
-        if (delta > 0) return now + " · up " + formatKg(delta) + " kg since " + displaySessionDate(first.date, false);
-        if (delta < 0) return now + " · down " + formatKg(Math.abs(delta)) + " kg since " + displaySessionDate(first.date, false);
+        if (delta > 0) return now + " · up " + formatWeightNumber(delta, unit) + " " + unit + " since " + displaySessionDate(first.date, false);
+        if (delta < 0) return now + " · down " + formatWeightNumber(Math.abs(delta), unit) + " " + unit + " since " + displaySessionDate(first.date, false);
         return now + " · holding since " + displaySessionDate(first.date, false);
       }
       if (points.length === 1) return last.minReps + " reps · " + displaySessionDate(last.date, false);
@@ -3525,10 +3606,10 @@
         const max = Math.max.apply(null, values.concat([0.01]));
         const bars = points.map((pt, i) => {
           const h = Math.max(5, Math.round((values[i] / max) * 36));
-          const label = displaySessionDate(pt.date, false) + " · " + (pt.weight !== "" ? pt.weight + " kg" : pt.minReps + " reps");
+          const label = displaySessionDate(pt.date, false) + " · " + (pt.weight !== "" ? formatWeightWithUnit(pt.weight) : pt.minReps + " reps");
           return '<span class="progress-bar" style="height:' + h + 'px" title="' + escapeHtml(label) + '"></span>';
         }).join("");
-        const entryText = pt => displaySessionDate(pt.date, false) + " · " + (pt.weight !== "" ? pt.weight + " kg" : "bodyweight") + " × " + pt.reps.join(", ");
+        const entryText = pt => displaySessionDate(pt.date, false) + " · " + (pt.weight !== "" ? formatWeightWithUnit(pt.weight) : "bodyweight") + " × " + pt.reps.join(", ");
         const recent = points.slice(-5).reverse();
         const latest = recent[0];
         const earlier = recent.slice(1).map(pt => "<li>" + escapeHtml(entryText(pt)) + "</li>").join("");
@@ -3550,11 +3631,11 @@
         if (previous && previous.exercises[exercise.id]) weight = firstWeight(previous.exercises[exercise.id].sets);
       }
       if (weight !== "" && isValidWeight(weight) && Number(weight) > 0) {
-        const half = Number(weight) / 2;
-        const step = weightIncrement(exercise) || 2.5;
+        const half = Number(formatWeight(weight)) / 2;
+        const step = weightIncrementDisplay(exercise) || (usesLb() ? 5 : 2.5);
         let suggested = Math.round(half / step) * step;
         if (!(suggested > 0)) suggested = half;
-        return "Warm-up: about " + formatKg(suggested) + " kg for 10–15 reps before your first working set.";
+        return "Warm-up: about " + formatWeightNumber(suggested, weightUnitLabel()) + " " + weightUnitLabel() + " for 10–15 reps before your first working set.";
       }
       return "Warm-up: do a lighter set of 10–15 reps before your first working set.";
     }
@@ -3572,7 +3653,7 @@
         const exercises = historyExercises(session.day).filter(ex => session.exercises[ex.id] && session.exercises[ex.id].sets.some(setHasReps));
         return '<section class="history-session"><h2><time datetime="' + session.date + '">' + displaySessionDate(session.date) + '</time> · ' + DAY_META[session.day].name + '</h2><ul class="history-list">' +
           exercises.map(ex => '<li><h3>' + escapeHtml(entryName(session.exercises[ex.id], session.day, ex.id)) + '</h3><p>' +
-            session.exercises[ex.id].sets.map((row, i) => setHasReps(row) ? 'Set ' + (i + 1) + ': ' + (row.weight !== '' ? escapeHtml(row.weight) + ' kg' : 'Bodyweight / no weight') + ' × ' + escapeHtml(row.reps) + ' reps' : '').filter(Boolean).join(' · ') +
+            session.exercises[ex.id].sets.map((row, i) => setHasReps(row) ? 'Set ' + (i + 1) + ': ' + (row.weight !== '' ? escapeHtml(formatWeightWithUnit(row.weight)) : 'Bodyweight / no weight') + ' × ' + escapeHtml(row.reps) + ' reps' : '').filter(Boolean).join(' · ') +
             '</p></li>').join('') + '</ul></section>';
       }).join('');
     }
@@ -3806,7 +3887,7 @@
         let label = "Set " + (s + 1);
         const loggedWeight = logged && row.weight !== "" && row.weight != null ? String(row.weight) : "";
         if (logged) {
-          label += ", " + (loggedWeight ? loggedWeight + " kg, " : "") + row.reps + " reps";
+          label += ", " + (loggedWeight ? formatWeight(loggedWeight) + " " + weightUnitLabel() + ", " : "") + row.reps + " reps";
           if (topRange) label += ", top of range";
           if (s === lastLoggedSetIndex(rows)) {
             label += ", hold 2 seconds to remove";
@@ -3821,7 +3902,7 @@
         // Stacked: "Set N" on top, then the weight that set was logged with, then its reps.
         parts.push('<span class="set-dot-kicker">Set <span class="set-dot-num">' + (s + 1) + "</span></span>");
         if (logged) {
-          if (loggedWeight) parts.push('<span class="set-dot-weight">' + escapeHtml(loggedWeight) + '<span class="set-dot-unit"> kg</span></span>');
+          if (loggedWeight) parts.push('<span class="set-dot-weight">' + escapeHtml(formatWeight(loggedWeight)) + '<span class="set-dot-unit"> ' + weightUnitLabel() + '</span></span>');
           parts.push('<span class="set-dot-reps">' + escapeHtml(String(row.reps)) + (topRange ? '<span class="set-dot-check"> ✓</span>' : "") + "</span>");
         }
         parts.push("</button>");
@@ -3862,9 +3943,9 @@
       if (!logged.length) return "";
       const weights = logged.map(row => String(row.weight || ""));
       if (weights.every(w => w === weights[0])) {
-        return (weights[0] ? weights[0] + " kg" : "Bodyweight") + " · " + logged.map(row => row.reps).join(", ");
+        return (weights[0] ? formatWeightWithUnit(weights[0]) : "Bodyweight") + " · " + logged.map(row => row.reps).join(", ");
       }
-      return logged.map(row => (row.weight ? row.weight + " kg × " : "BW × ") + row.reps).join(", ");
+      return logged.map(row => (row.weight ? formatWeightWithUnit(row.weight) + " × " : "BW × ") + row.reps).join(", ");
     }
 
     // v179: only sets logged today count. Rows left from the last time this day was trained do not.
@@ -4020,7 +4101,7 @@
       const rows = state.logs[dayKey][exercise.id];
       const shown = visibleSets(exercise);
       const editingRow = editingSetIndex !== null && rows[editingSetIndex] && setHasReps(rows[editingSetIndex]) ? rows[editingSetIndex] : null;
-      const weight = editingRow ? String(editingRow.weight || "") : currentWeight(rows, dayKey, exercise.id);
+      const weight = formatWeight(editingRow ? String(editingRow.weight || "") : currentWeight(rows, dayKey, exercise.id));
       const parts = [];
       parts.push('<section class="exercise logging">');
       parts.push('<div class="log-title-row">');
@@ -4034,8 +4115,8 @@
       const bwShare = bodyweightShareFor(exercise.id, exercise.variantId || exercise.id);
       if (bwShare > 0 && schemeInline && schemeHtml.slice(-6) === '</div>') {
         const bwSet = normalizeBodyWeight(state.bodyWeight);
-        const bwText = bwSet ? 'Body weight ' + escapeHtml(bwSet) : 'Set body weight';
-        parts.push(schemeHtml.slice(0, -6) + '<button type="button" class="bw-chip" data-action="open-bodyweight" aria-label="' + bwText + ' kg. Tap to change your body weight">' + bwText + '</button></div>');
+        const bwText = bwSet ? 'Body weight ' + escapeHtml(formatWeight(bwSet)) : 'Set body weight';
+        parts.push(schemeHtml.slice(0, -6) + '<button type="button" class="bw-chip" data-action="open-bodyweight" aria-label="' + bwText + ' ' + weightUnitLabel() + '. Tap to change your body weight">' + bwText + '</button></div>');
       } else {
         parts.push(schemeHtml);
       }
@@ -4044,7 +4125,7 @@
       const bwPlaceholder = '';
       // A tapped logged set is being corrected: say so on the label, so a weight change never hits it unnoticed (v154).
       const fixingSet = editingRow ? editingSetIndex + 1 : 0;
-      parts.push('<label for="exerciseWeight"' + (fixingSet ? ' class="fixing-set"' : '') + '>' + (fixingSet ? 'Set ' + fixingSet + ' weight' : 'Weight') + '</label>');
+      parts.push('<label for="exerciseWeight"' + (fixingSet ? ' class="fixing-set"' : '') + '>' + (fixingSet ? 'Set ' + fixingSet + ' weight' : 'Weight') + ' (' + weightUnitLabel() + ')</label>');
       parts.push('<input id="exerciseWeight" inputmode="decimal" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="done" data-ex="' + exercise.id + '" data-field="weight" value="' + escapeHtml(weight) + '"' + (bwPlaceholder ? ' placeholder="' + escapeHtml(bwPlaceholder) + '"' : '') + ' aria-label="' + escapeHtml(exercise.name) + (bwShare > 0 ? ' extra weight on top of body weight' : ' weight') + '" aria-describedby="weightHint" aria-invalid="false">');
       parts.push('<p id="weightHint" class="weight-hint" aria-live="polite"></p>');
       parts.push("</div>");
@@ -4074,6 +4155,8 @@
     function render() {
       slotCache.clear();
       applyTheme();
+      renderUnitSetting();
+      renderBodyWeightSetting();
       renderProgramPicker();
       renderTodayShortcut();
       renderWeeklyView();
@@ -4156,8 +4239,43 @@
     function renderBodyWeightSetting() {
       const input = document.getElementById("bodyWeightInput");
       if (!input || document.activeElement === input) return;
-      input.value = state.bodyWeight || "";
+      input.value = state.bodyWeight ? formatWeight(state.bodyWeight) : "";
       input.setAttribute("aria-invalid", "false");
+    }
+
+    function renderUnitSetting() {
+      const kgBtn = document.getElementById("unitKgBtn");
+      const lbBtn = document.getElementById("unitLbBtn");
+      if (kgBtn) kgBtn.setAttribute("aria-pressed", String(!usesLb()));
+      if (lbBtn) lbBtn.setAttribute("aria-pressed", String(usesLb()));
+      const suffix = document.getElementById("bodyWeightUnit");
+      if (suffix) suffix.textContent = weightUnitLabel();
+      const note = document.getElementById("bodyWeightNote");
+      if (note) {
+        note.textContent = usesLb()
+          ? "Used to estimate pounds for pull-ups, chin-ups, leg raises, bodyweight skull crushers, dips and diamond push-ups in the weekly summary."
+          : "Used to estimate kilos for pull-ups, chin-ups, leg raises, bodyweight skull crushers, dips and diamond push-ups in the weekly summary.";
+      }
+    }
+
+    function setWeightUnit(unit) {
+      const next = normalizeWeightUnit(unit);
+      if (state.weightUnit === next) return;
+      const input = document.getElementById("bodyWeightInput");
+      if (input && document.activeElement === input) {
+        const text = normalizeWeightText(input.value);
+        if (text === "") state.bodyWeight = "";
+        else if (isValidWeightInput(text)) {
+          const parsed = normalizeBodyWeight(parseDisplayWeight(text));
+          if (parsed) state.bodyWeight = parsed;
+        }
+        try { input.blur(); } catch (error) {}
+      }
+      state.weightUnit = next;
+      saveState();
+      renderUnitSetting();
+      renderBodyWeightSetting();
+      render();
     }
 
     // "Mon Push · Wed Pull · Fri Legs" for a program and weekly count.
@@ -4374,6 +4492,7 @@
       renderProgramPicker();
       renderWeekDaysSetting();
       renderEquipmentSettings();
+      renderUnitSetting();
       renderBodyWeightSetting();
       document.getElementById("settingsOverlay").hidden = false;
     }
@@ -5551,14 +5670,14 @@
         return;
       }
       if (field === "weight") {
-        const valid = isValidWeight(input.value);
+        const valid = isValidWeightInput(input.value);
         input.setAttribute("aria-invalid", String(!valid));
         const hint = document.getElementById("weightHint");
         hint.textContent = valid ? "" : "Use numbers with up to 2 decimals, like 22,5 or 22.5. Not saved yet.";
         hint.className = "weight-hint" + (valid ? "" : " error");
         if (!valid) return; // Keep the last valid saved weight, never persist invalid input.
         prepareExerciseForToday(state.currentDay, exerciseId);
-        applyExerciseWeight(state.currentDay, exerciseId, storedWeight(input.value), editingSetIndex);
+        applyExerciseWeight(state.currentDay, exerciseId, parseDisplayWeight(input.value), editingSetIndex);
         const exercise = findExercise(state.currentDay, exerciseId);
         document.getElementById("nextSession").textContent = nextSessionSuggestion(exercise, state.logs[state.currentDay][exerciseId]);
       } else {
@@ -5600,10 +5719,10 @@
       if (!rows) return;
       const editingRow = editingSetIndex !== null && rows[editingSetIndex] && setHasReps(rows[editingSetIndex]) ? rows[editingSetIndex] : null;
       const kept = editingRow ? String(editingRow.weight || "") : currentWeight(rows, state.currentDay, exercise.id);
-      input.value = kept;
+      input.value = kept ? formatWeight(kept) : "";
       input.setAttribute("aria-invalid", "false");
       const hint = document.getElementById("weightHint");
-      if (hint) { hint.textContent = "Couldn't read that weight, so " + (kept ? kept + " kg" : "the old weight") + " was kept."; hint.className = "weight-hint error"; }
+      if (hint) { hint.textContent = "Couldn't read that weight, so " + (kept ? formatWeightWithUnit(kept) : "the old weight") + " was kept."; hint.className = "weight-hint error"; }
     });
     document.addEventListener("pointerdown", function (event) {
       if (!(event.target && event.target.id === "exerciseWeight")) weightTyping = false;
@@ -5622,6 +5741,8 @@
       saveState();
       applyTheme();
     });
+    document.getElementById("unitKgBtn").addEventListener("click", function () { setWeightUnit("kg"); });
+    document.getElementById("unitLbBtn").addEventListener("click", function () { setWeightUnit("lb"); });
     document.getElementById("exportBtn").addEventListener("click", exportLogs);
     document.getElementById("importBtn").addEventListener("click", requestImport);
     document.getElementById("importFile").addEventListener("change", onImportFile);
@@ -5644,7 +5765,7 @@
     document.getElementById("bodyWeightInput").addEventListener("input", event => {
       const input = event.target;
       const text = normalizeWeightText(input.value);
-      const next = normalizeBodyWeight(text);
+      const next = text === "" ? "" : (isValidWeightInput(text) ? normalizeBodyWeight(parseDisplayWeight(text)) : "");
       const ok = text === "" || next !== "";
       input.setAttribute("aria-invalid", ok ? "false" : "true");
       if (!ok || next === (state.bodyWeight || "")) return;
@@ -5665,7 +5786,7 @@
     });
     document.getElementById("bodyWeightInput").addEventListener("change", event => {
       const input = event.target;
-      if (input.getAttribute("aria-invalid") !== "true") input.value = state.bodyWeight || "";
+      if (input.getAttribute("aria-invalid") !== "true") input.value = state.bodyWeight ? formatWeight(state.bodyWeight) : "";
     });
     document.getElementById("weekDaysPicker").addEventListener("click", event => {
       const btn = event.target.closest("[data-week-days]");
