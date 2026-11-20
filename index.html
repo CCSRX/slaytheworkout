@@ -1062,6 +1062,24 @@
     .sleep-detail-actions { display: flex; gap: 8px; margin-top: 14px; }
     .sleep-detail-actions .data-btn { width: auto; flex: 1; }
     .sleep-screen header { margin-bottom: 4px; }
+    .sleep-start h2 { margin: 0 0 6px; }
+    .sleep-start .history-note { margin: 0 0 14px; }
+    .sleep-start-choices { display: grid; gap: 10px; }
+    .sleep-choice { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; width: 100%; padding: 14px 16px; border-radius: 16px; border: 1px solid var(--line); background: var(--card-2); color: var(--text); font: inherit; text-align: left; touch-action: manipulation; }
+    .sleep-choice strong { font-size: 16px; font-weight: 800; }
+    .sleep-choice span { font-size: 13px; color: var(--mute); }
+    .sleep-choice:first-child { border-color: var(--acc); }
+    .wk-rows { display: grid; gap: 8px; margin: 12px 0 8px; }
+    .wk-row { display: grid; grid-template-columns: 64px 1fr auto 1fr; align-items: center; gap: 6px; }
+    .wk-day { min-height: 44px; border-radius: 12px; border: 1px solid var(--line); background: var(--card-2); color: var(--mute); font: inherit; font-size: 14px; font-weight: 800; touch-action: manipulation; }
+    .wk-day[aria-pressed="true"] { background: var(--acc); border-color: var(--acc); color: var(--acc-ink); }
+    .wk-row input { width: 100%; min-width: 0; min-height: 44px; border: 1px solid var(--line); border-radius: 12px; background: var(--card-2); color: var(--text); font-size: 16px; font-weight: 700; padding: 0 6px; box-sizing: border-box; }
+    .wk-row input:disabled { opacity: 0.35; }
+    .wk-row input { text-align: center; font-size: 15px; }
+    .wk-row input::-webkit-calendar-picker-indicator { display: none; }
+    .wk-dash { color: var(--mute); font-weight: 800; }
+    .wk-off { grid-column: 2 / 5; font-size: 14px; font-weight: 700; color: var(--mute); }
+    .wk-copy { margin: 4px 0 0; padding: 6px 0; border: 0; background: none; color: var(--acc); font: inherit; font-size: 14px; font-weight: 800; touch-action: manipulation; }
     .sleep-screen header h1 { margin-bottom: 0; }
     .sleep-detail { padding: 14px 16px 16px; margin: 6px 0 22px; }
     .sd-head { display: flex; align-items: center; gap: 6px; margin: 0 0 12px; }
@@ -1440,13 +1458,21 @@
       <p class="eyebrow">Bedtime and alarm</p>
       <h1>Sleep</h1>
     </header>
-    <section id="sleepEmpty" class="sleep-tonight" aria-label="No shifts" hidden><p class="history-note">Add your shifts to get a bedtime and an alarm.</p></section>
+    <section id="sleepEmpty" class="sleep-tonight sleep-start" aria-label="Set up your sleep plan" hidden>
+      <h2>Set up your sleep plan</h2>
+      <p class="history-note">Tell the app when you work, and it suggests a bedtime and an alarm for every day.</p>
+      <div class="sleep-start-choices">
+        <button type="button" class="sleep-choice" id="sleepStartRegular"><strong>I have regular hours</strong><span>Same times every week, like Mon–Fri 08:00–16:00</span></button>
+        <button type="button" class="sleep-choice" id="sleepStartShifts"><strong>I work shifts</strong><span>Add shifts one by one, paste a list or use an import link</span></button>
+      </div>
+    </section>
     <section id="sleepDetail" class="sleep-detail" aria-label="Selected day" hidden></section>
     <section class="sleep-cal" aria-label="Shift calendar" id="sleepCal"></section>
     <section class="sleep-manage" aria-label="Shift list">
-      <h2>Shifts</h2>
-      <p class="history-note sleep-hint">Your shifts stay on this device. Add them here, paste a list, or open your import link.</p>
+      <h2>Work schedule</h2>
+      <p class="history-note sleep-hint">Your schedule stays on this device. Set regular weekly hours, add single shifts, paste a list, or open your import link. A single shift always wins over regular hours.</p>
       <div class="sleep-manage-actions">
+        <button type="button" class="data-btn" id="sleepWeekBtn">Regular hours</button>
         <button type="button" class="data-btn" id="sleepAddBtn">Add shift</button>
         <button type="button" class="data-btn" id="sleepPasteBtn">Paste shifts</button>
       </div>
@@ -1553,6 +1579,23 @@
       <div class="sleep-editor-actions">
         <button type="button" class="data-btn" id="sleepEditorSave">Save</button>
         <button type="button" class="data-btn danger" id="sleepEditorDelete" hidden>Delete</button>
+      </div>
+    </div>
+  </div>
+  <div id="sleepWeekOverlay" class="settings-overlay" hidden>
+    <button type="button" class="settings-backdrop" id="sleepWeekBackdrop" aria-label="Close regular hours"></button>
+    <div class="settings-panel" role="dialog" aria-labelledby="sleepWeekTitle">
+      <div class="settings-head">
+        <h2 id="sleepWeekTitle">Regular hours</h2>
+        <button type="button" class="settings-close" id="sleepWeekClose" aria-label="Close regular hours">×</button>
+      </div>
+      <p class="history-note">Tap a day to turn work on or off. These hours repeat every week.</p>
+      <div class="wk-rows" id="sleepWeekRows"></div>
+      <button type="button" class="wk-copy" id="sleepWeekCopy">Copy Monday to all weekdays</button>
+      <p class="sleep-editor-error" id="sleepWeekError"></p>
+      <div class="sleep-editor-actions">
+        <button type="button" class="data-btn" id="sleepWeekSave">Save</button>
+        <button type="button" class="data-btn danger" id="sleepWeekClear" hidden>Remove</button>
       </div>
     </div>
   </div>
@@ -2141,6 +2184,7 @@
         sleepPrep: 60,
         sleepLatency: 15,
         sleepCommute: 45,
+        weekSchedule: null,
         sleepOffWake: "07:00",
         sleepGentle: true,
         sleepGentleMax: 60,
@@ -2244,6 +2288,7 @@
           sleepPrep: normalizeSleepPrep(parsed.sleepPrep),
           sleepLatency: normalizeSleepLatency(parsed.sleepLatency),
           sleepCommute: normalizeSleepCommute(parsed.sleepCommute),
+          weekSchedule: normalizeWeekSchedule(parsed.weekSchedule),
           sleepOffWake: normalizeSleepOffWake(parsed.sleepOffWake),
           sleepGentle: normalizeSleepGentle(parsed.sleepGentle),
           sleepGentleMax: normalizeSleepGentleMax(parsed.sleepGentleMax),
@@ -2354,6 +2399,7 @@
         sleepPrep: normalizeSleepPrep(state.sleepPrep),
         sleepLatency: normalizeSleepLatency(state.sleepLatency),
         sleepCommute: normalizeSleepCommute(state.sleepCommute),
+        weekSchedule: normalizeWeekSchedule(state.weekSchedule),
         sleepOffWake: normalizeSleepOffWake(state.sleepOffWake),
         sleepGentle: normalizeSleepGentle(state.sleepGentle),
         sleepGentleMax: normalizeSleepGentleMax(state.sleepGentleMax),
@@ -2461,6 +2507,7 @@
       state.sleepPrep = normalizeSleepPrep(payload.sleepPrep);
       state.sleepLatency = normalizeSleepLatency(payload.sleepLatency);
       state.sleepCommute = normalizeSleepCommute(payload.sleepCommute);
+      state.weekSchedule = normalizeWeekSchedule(payload.weekSchedule);
       state.sleepOffWake = normalizeSleepOffWake(payload.sleepOffWake);
       state.sleepGentle = normalizeSleepGentle(payload.sleepGentle);
       state.sleepGentleMax = normalizeSleepGentleMax(payload.sleepGentleMax);
@@ -4755,6 +4802,7 @@
         closeSleepSettings();
         closeSleepEditor();
         closeSleepPaste();
+        closeSleepWeek();
       } else renderSleep();
       const todayIsRest = !logDayKey();
       const extraViews = view === "extra" || view === "history" || view === "breathing" || view === "sleep";
@@ -6397,7 +6445,50 @@
       return absMin(sh.date, sh.end) + (shiftEndsNextDay(sh) ? 1440 : 0);
     }
 
-    function shiftByDate(date) {
+    const WEEK_DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    function normalizeWeekSchedule(value) {
+      if (!value || typeof value !== "object" || !Array.isArray(value.days) || value.days.length !== 7) return null;
+      let any = false;
+      const days = value.days.map(function (d) {
+        const start = d && normalizeClock(d.start);
+        const end = d && normalizeClock(d.end);
+        const on = !!(d && d.on && start && end && start !== end);
+        if (on) any = true;
+        return { on: on, start: start || "08:00", end: end || "16:00" };
+      });
+      return any ? { days: days } : null;
+    }
+
+    function weekScheduleOn() {
+      return !!normalizeWeekSchedule(state && state.weekSchedule);
+    }
+
+    let effectiveShiftsMemo = null;
+    function effectiveShifts() {
+      const explicit = state.shifts || [];
+      const week = normalizeWeekSchedule(state && state.weekSchedule);
+      if (!week) return explicit;
+      const today = sleepToday();
+      const key = today + "|" + JSON.stringify(week) + "|" + JSON.stringify(explicit);
+      if (effectiveShiftsMemo && effectiveShiftsMemo.key === key) return effectiveShiftsMemo.list;
+      const byDate = {};
+      explicit.forEach(function (row) { byDate[row.date] = row; });
+      let end = addDaysStamp(today, 62);
+      if (explicit.length && explicit[explicit.length - 1].date > end) end = explicit[explicit.length - 1].date;
+      for (let d = addDaysStamp(today, -7); d <= end; d = addDaysStamp(d, 1)) {
+        if (byDate[d]) continue;
+        const dow = (new Date(d + "T12:00:00").getDay() + 6) % 7;
+        const day = week.days[dow];
+        byDate[d] = day.on
+          ? { date: d, type: "work", start: day.start, end: day.end, source: "week" }
+          : { date: d, type: "off", source: "week" };
+      }
+      const list = Object.keys(byDate).sort().map(function (date) { return byDate[date]; });
+      effectiveShiftsMemo = { key: key, list: list };
+      return list;
+    }
+
+    function explicitShiftByDate(date) {
       const list = state.shifts || [];
       for (let i = 0; i < list.length; i += 1) {
         if (list[i].date === date) return list[i];
@@ -6405,8 +6496,16 @@
       return null;
     }
 
+    function shiftByDate(date) {
+      const list = effectiveShifts();
+      for (let i = 0; i < list.length; i += 1) {
+        if (list[i].date === date) return list[i];
+      }
+      return null;
+    }
+
     function previousWorkShift(date) {
-      const list = state.shifts || [];
+      const list = effectiveShifts();
       let prev = null;
       for (let i = 0; i < list.length; i += 1) {
         if (list[i].type !== "work") continue;
@@ -6498,7 +6597,7 @@
     }
 
     function nextWorkAfter(date) {
-      const list = state.shifts || [];
+      const list = effectiveShifts();
       for (let i = 0; i < list.length; i += 1) {
         if (list[i].type === "work" && list[i].date > date) return list[i];
       }
@@ -6520,7 +6619,7 @@
     }
 
     function previousWorkEndAbs(beforeAbs) {
-      const list = state.shifts || [];
+      const list = effectiveShifts();
       let end = null;
       for (let i = 0; i < list.length; i += 1) {
         if (list[i].type !== "work") continue;
@@ -6546,7 +6645,7 @@
 
     function enumeratePlanDates() {
       const today = sleepToday();
-      const shifts = state.shifts || [];
+      const shifts = effectiveShifts();
       let start = addDaysStamp(today, -1);
       let end = addDaysStamp(today, 21);
       if (shifts.length) {
@@ -6834,7 +6933,7 @@
         sleepGentleOn() ? 1 : 0,
         sleepGentleMaxMinutes(),
         sleepGentleOffMaxMinutes(),
-        JSON.stringify((state.shifts || []).map(function (s) { return [s.date, s.type, s.start, s.end]; }))
+        JSON.stringify(effectiveShifts().map(function (s) { return [s.date, s.type, s.start, s.end]; }))
       ].join("|");
       if (!sleepPlanMemo || sleepPlanMemo.key !== key) {
         sleepPlanMemo = { key: key, plan: buildSleepPlan() };
@@ -6884,7 +6983,7 @@
       const today = fileStamp(now);
       const nowAbs = stampIndex(today) * 1440 + now.getHours() * 60 + now.getMinutes();
       const plan = currentSleepPlan();
-      if (!(state.shifts && state.shifts.length)) return { kind: "empty" };
+      if (!effectiveShifts().length) return { kind: "empty" };
 
       const todayRow = plan.byDate[today];
       if (todayRow && todayRow.recovery && nowAbs >= todayRow.recovery.start - 180 && nowAbs < todayRow.recovery.end) {
@@ -7291,7 +7390,7 @@
     let sleepSelDate = null;
 
     function shiftRangeBounds() {
-      const list = (state.shifts || []).slice().sort(function (x, y) { return x.date < y.date ? -1 : x.date > y.date ? 1 : 0; });
+      const list = effectiveShifts().slice().sort(function (x, y) { return x.date < y.date ? -1 : x.date > y.date ? 1 : 0; });
       if (!list.length) return null;
       return { first: list[0].date, last: list[list.length - 1].date };
     }
@@ -7426,7 +7525,7 @@
     }
 
     function deleteShiftOn(date) {
-      if (!date || !shiftByDate(date)) return;
+      if (!date || !explicitShiftByDate(date)) return;
       if (!window.confirm("Delete this shift?")) return;
       state.shifts = (state.shifts || []).filter(function (row) { return row.date !== date; });
       saveState();
@@ -7439,8 +7538,10 @@
       const cal = document.getElementById("sleepCal");
       const detail = document.getElementById("sleepDetail");
       const clearBtn = document.getElementById("sleepClearBtn");
-      const hasShifts = !!(state.shifts && state.shifts.length);
+      const hasShifts = effectiveShifts().length > 0;
       if (empty) empty.hidden = hasShifts;
+      const weekBtn = document.getElementById("sleepWeekBtn");
+      if (weekBtn) weekBtn.textContent = weekScheduleOn() ? "Edit regular hours" : "Regular hours";
       if (!sleepSelDate) sleepSelDate = defaultSleepDate();
       if (cal) {
         cal.hidden = !hasShifts;
@@ -7450,8 +7551,82 @@
         detail.hidden = !hasShifts;
         detail.innerHTML = hasShifts ? sleepDetailHtml(sleepSelDate) : "";
       }
-      if (clearBtn) clearBtn.hidden = !hasShifts;
+      if (clearBtn) clearBtn.hidden = !(state.shifts && state.shifts.length);
       renderSleepSettings();
+    }
+
+    let weekDraft = null;
+    function defaultWeekDraft() {
+      const cur = normalizeWeekSchedule(state.weekSchedule);
+      if (cur) return cur.days.map(function (d) { return { on: d.on, start: d.start, end: d.end }; });
+      return WEEK_DAY_NAMES.map(function (_, i) { return { on: i < 5, start: "08:00", end: "16:00" }; });
+    }
+
+    function renderWeekRows() {
+      const box = document.getElementById("sleepWeekRows");
+      if (!box || !weekDraft) return;
+      box.innerHTML = weekDraft.map(function (d, i) {
+        const times = d.on
+          ? '<input type="time" step="60" data-wk-start="' + i + '" value="' + escapeHtml(d.start) + '" aria-label="' + WEEK_DAY_NAMES[i] + ' start"><span class="wk-dash">–</span><input type="time" step="60" data-wk-end="' + i + '" value="' + escapeHtml(d.end) + '" aria-label="' + WEEK_DAY_NAMES[i] + ' end">'
+          : '<span class="wk-off">Off</span>';
+        return '<div class="wk-row"><button type="button" class="wk-day" data-wk-day="' + i + '" aria-pressed="' + d.on + '">' + WEEK_DAY_NAMES[i] + "</button>" + times + "</div>";
+      }).join("");
+    }
+
+    function readWeekInputs() {
+      if (!weekDraft) return;
+      document.querySelectorAll("[data-wk-start]").forEach(function (el) { weekDraft[Number(el.getAttribute("data-wk-start"))].start = el.value; });
+      document.querySelectorAll("[data-wk-end]").forEach(function (el) { weekDraft[Number(el.getAttribute("data-wk-end"))].end = el.value; });
+    }
+
+    function openSleepWeek() {
+      weekDraft = defaultWeekDraft();
+      renderWeekRows();
+      const err = document.getElementById("sleepWeekError");
+      if (err) err.textContent = "";
+      const clear = document.getElementById("sleepWeekClear");
+      if (clear) clear.hidden = !weekScheduleOn();
+      const overlay = document.getElementById("sleepWeekOverlay");
+      if (overlay) overlay.hidden = false;
+    }
+
+    function closeSleepWeek() {
+      const overlay = document.getElementById("sleepWeekOverlay");
+      if (overlay) overlay.hidden = true;
+    }
+
+    function saveSleepWeek() {
+      readWeekInputs();
+      const err = document.getElementById("sleepWeekError");
+      for (let i = 0; i < 7; i += 1) {
+        const d = weekDraft[i];
+        if (d.on && (!normalizeClock(d.start) || !normalizeClock(d.end) || normalizeClock(d.start) === normalizeClock(d.end))) {
+          if (err) err.textContent = "Add a start and end time for " + WEEK_DAY_NAMES[i] + ".";
+          return;
+        }
+      }
+      const next = normalizeWeekSchedule({ days: weekDraft });
+      if (!next) {
+        if (err) err.textContent = "Turn on at least one work day, or tap Remove.";
+        return;
+      }
+      state.weekSchedule = next;
+      saveState();
+      closeSleepWeek();
+      sleepSelDate = null;
+      sleepCalMonth = null;
+      renderSleep();
+      window.scrollTo(0, 0);
+    }
+
+    function clearSleepWeek() {
+      if (!window.confirm("Remove your regular hours?")) return;
+      state.weekSchedule = null;
+      saveState();
+      closeSleepWeek();
+      sleepSelDate = null;
+      sleepCalMonth = null;
+      renderSleep();
     }
 
     function setSleepEditorType(type) {
@@ -7465,7 +7640,8 @@
     }
 
     function openSleepEditor(date) {
-      const sh = date ? shiftByDate(date) : null;
+      const sh = date ? explicitShiftByDate(date) : null;
+      const pre = sh || (date ? shiftByDate(date) : null);
       const title = document.getElementById("sleepEditorTitle");
       const dateInput = document.getElementById("sleepEditorDate");
       const startInput = document.getElementById("sleepEditorStart");
@@ -7474,11 +7650,11 @@
       const error = document.getElementById("sleepEditorError");
       if (title) title.textContent = sh ? "Edit shift" : "Add shift";
       if (dateInput) dateInput.value = date || sleepToday();
-      if (startInput) startInput.value = sh && sh.start ? sh.start : "";
-      if (endInput) endInput.value = sh && sh.end ? sh.end : "";
+      if (startInput) startInput.value = pre && pre.start ? pre.start : "";
+      if (endInput) endInput.value = pre && pre.end ? pre.end : "";
       if (error) error.textContent = "";
       if (delBtn) delBtn.hidden = !sh;
-      setSleepEditorType(sh ? sh.type : "work");
+      setSleepEditorType(pre ? pre.type : "work");
       const overlay = document.getElementById("sleepEditorOverlay");
       if (overlay) overlay.hidden = false;
       if (dateInput) dateInput.focus();
@@ -7513,7 +7689,7 @@
 
     function deleteEditedShift() {
       const date = normalizeShiftDate(document.getElementById("sleepEditorDate").value);
-      if (!date || !shiftByDate(date)) return;
+      if (!date || !explicitShiftByDate(date)) return;
       if (!window.confirm("Delete this shift?")) return;
       state.shifts = (state.shifts || []).filter(function (row) { return row.date !== date; });
       saveState();
@@ -8089,6 +8265,30 @@
     });
     document.getElementById("sleepAddBtn").addEventListener("click", function () { openSleepEditor(null); });
     document.getElementById("sleepPasteBtn").addEventListener("click", openSleepPaste);
+    document.getElementById("sleepWeekBtn").addEventListener("click", openSleepWeek);
+    document.getElementById("sleepStartRegular").addEventListener("click", openSleepWeek);
+    document.getElementById("sleepStartShifts").addEventListener("click", function () {
+      const sec = document.querySelector(".sleep-manage");
+      if (sec && sec.scrollIntoView) sec.scrollIntoView({ block: "start", behavior: "smooth" });
+    });
+    document.getElementById("sleepWeekClose").addEventListener("click", closeSleepWeek);
+    document.getElementById("sleepWeekBackdrop").addEventListener("click", closeSleepWeek);
+    document.getElementById("sleepWeekSave").addEventListener("click", saveSleepWeek);
+    document.getElementById("sleepWeekClear").addEventListener("click", clearSleepWeek);
+    document.getElementById("sleepWeekCopy").addEventListener("click", function () {
+      readWeekInputs();
+      const mon = weekDraft[0];
+      for (let i = 1; i < 5; i += 1) weekDraft[i] = { on: mon.on, start: mon.start, end: mon.end };
+      renderWeekRows();
+    });
+    document.getElementById("sleepWeekRows").addEventListener("click", function (event) {
+      const btn = event.target.closest("[data-wk-day]");
+      if (!btn) return;
+      readWeekInputs();
+      const i = Number(btn.getAttribute("data-wk-day"));
+      weekDraft[i].on = !weekDraft[i].on;
+      renderWeekRows();
+    });
     document.getElementById("sleepClearBtn").addEventListener("click", clearAllShifts);
     document.getElementById("sleepEditorClose").addEventListener("click", closeSleepEditor);
     document.getElementById("sleepEditorBackdrop").addEventListener("click", closeSleepEditor);
@@ -8125,6 +8325,7 @@
     document.body.appendChild(document.getElementById("sleepSettingsOverlay"));
     document.body.appendChild(document.getElementById("sleepEditorOverlay"));
     document.body.appendChild(document.getElementById("sleepPasteOverlay"));
+    document.body.appendChild(document.getElementById("sleepWeekOverlay"));
     window.addEventListener("hashchange", consumeShiftFragment);
     document.getElementById("breathBack").addEventListener("click", goExtra);
     document.getElementById("breathSettingsBtn").addEventListener("click", openBreathSettings);
