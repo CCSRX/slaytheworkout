@@ -983,6 +983,47 @@
     .extra-tile[data-extra="breathing"] .extra-icon { color: #4aa8ff; background: #15202c; border-color: #24364a; }
     body[data-theme="light"] .extra-tile[data-extra="history"] .extra-icon { background: #eef6d4; border-color: #c6d88a; }
     body[data-theme="light"] .extra-tile[data-extra="breathing"] .extra-icon { background: #dcebff; border-color: #a9c8ea; }
+    .extra-tile[data-extra="sleep"] .extra-icon { color: #b9a6ff; background: #1a1528; border-color: #3b2d5c; }
+    body[data-theme="light"] .extra-tile[data-extra="sleep"] .extra-icon { color: #5b21b6; background: #eee8ff; border-color: #c4b5fd; }
+    .sleep-screen h1 { color: var(--text); }
+    .sleep-tonight { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 18px 18px 20px; margin: 8px 0 22px; }
+    .sleep-tonight h2, .sleep-upcoming h2, .sleep-manage h2 { margin: 0 0 10px; font-size: 18px; font-weight: 800; }
+    .sleep-kicker { margin: 0 0 6px; font-size: 13px; font-weight: 700; color: var(--mute); }
+    .sleep-headline { margin: 0 0 14px; font-size: 28px; font-weight: 900; letter-spacing: -0.03em; }
+    .sleep-times { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 16px; margin-top: 8px; }
+    .sleep-times.single { grid-template-columns: 1fr; }
+    .sleep-times.night { grid-template-columns: 1fr; }
+    @media (min-width: 400px) { .sleep-times.night { grid-template-columns: 1fr 1fr 1fr; } }
+    .sleep-time-label { display: block; font-size: 12px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: var(--mute); }
+    .sleep-time-value { display: block; margin-top: 2px; font-size: 36px; font-weight: 900; letter-spacing: -0.04em; line-height: 1.1; font-variant-numeric: tabular-nums; }
+    .sleep-time-value.sleep-time-mid { font-size: 26px; }
+    .sleep-time-note { display: block; margin-top: 4px; font-size: 12px; color: var(--mute); }
+    .sleep-warn { margin: 14px 0 0; padding: 10px 12px; border-radius: 12px; background: #2a2210; border: 1px solid #6a5420; color: #f0c56a; font-size: 13px; line-height: 1.4; }
+    body[data-theme="light"] .sleep-warn { background: #fff4d6; border-color: #e6c56a; color: #6a4b00; }
+    .sleep-upcoming, .sleep-manage { margin: 0 0 28px; }
+    .sleep-days, .sleep-shift-list { display: flex; flex-direction: column; }
+    .sleep-day, .sleep-manage-row { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; width: 100%; padding: 12px 0; border: 0; border-bottom: 1px solid var(--line); background: none; color: var(--text); text-align: left; font: inherit; touch-action: manipulation; }
+    .sleep-day.today { background: var(--card); margin: 0 -12px; padding-left: 12px; padding-right: 12px; border-radius: 12px; border-bottom-color: transparent; }
+    .sleep-day-head { display: flex; align-items: baseline; gap: 8px; width: 100%; }
+    .sleep-day-head strong, .sleep-manage-row strong { font-size: 15px; font-weight: 800; }
+    .sleep-source { font-size: 11px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: var(--mute); }
+    .sleep-day-warn { margin-left: auto; font-size: 11px; font-weight: 800; color: #f0c56a; }
+    .sleep-day-meta, .sleep-manage-row span { font-size: 13px; color: var(--mute); }
+    .sleep-day-times { font-size: 14px; font-weight: 700; }
+    .sleep-manage-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; }
+    .sleep-manage-actions .data-btn { width: auto; padding: 0 16px; }
+    .sleep-editor-fields { display: grid; gap: 12px; }
+    .sleep-editor-fields label { display: grid; gap: 6px; font-size: 13px; font-weight: 700; color: var(--mute); }
+    .sleep-editor-fields input, .sleep-paste-text { width: 100%; min-height: 48px; border: 1px solid var(--line); border-radius: 12px; background: var(--card-2); color: var(--text); font-size: 16px; font-weight: 700; padding: 0 12px; box-sizing: border-box; }
+    .sleep-paste-text { min-height: 140px; padding: 12px; font-weight: 600; resize: vertical; }
+    .sleep-type-switch { display: flex; gap: 6px; }
+    .sleep-type-switch .data-btn { flex: 1; min-width: 0; padding: 0 8px; font-size: 15px; }
+    .sleep-type-switch .data-btn[aria-pressed="true"] { background: var(--acc); color: var(--acc-ink); border-color: var(--acc); }
+    .sleep-editor-error, .sleep-paste-error { margin: 8px 0 0; min-height: 1.2em; color: #ffb4a4; font-size: 13px; font-weight: 700; }
+    .sleep-editor-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+    .sleep-editor-actions .data-btn { width: auto; flex: 1; }
+    .sleep-hint { margin: 0 0 10px; }
+
     .extra-tile span { font-size: 14px; font-weight: 800; }
     .breath-top { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: calc(-16px - var(--sat)) calc(-16px - var(--sar)) 10px calc(-16px - var(--sal)); padding: calc(10px + var(--sat)) calc(16px + var(--sar)) 10px calc(16px + var(--sal)); background: var(--bg); border-bottom: 1px solid var(--line); }
     .breath-back { width: 48px; height: 48px; display: inline-flex; align-items: center; justify-content: center; margin: 0; padding: 0; color: var(--mute); border-radius: 12px; touch-action: manipulation; }
@@ -1187,6 +1228,10 @@
         <span class="extra-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.7 7.7A2.5 2.5 0 1 1 19.5 12H2"/><path d="M9.6 4.6A2 2 0 1 1 11 8H2"/><path d="M12.6 19.4A2 2 0 1 0 14 16H2"/></svg></span>
         <span>Breathing</span>
       </button>
+      <button type="button" class="extra-tile" id="extraSleep" data-extra="sleep">
+        <span class="extra-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 14.62A8.5 8.5 0 1 1 9.38 3 7 7 0 0 0 21 14.62z"/></svg></span>
+        <span>Sleep</span>
+      </button>
     </div>
   </main>
   <main id="breathingScreen" class="wrap breathing-screen" hidden>
@@ -1305,6 +1350,113 @@
           </div>
         </div>
         <button type="button" class="breath-sound" id="slayerSoundBtn" aria-pressed="true">Sound on</button>
+      </div>
+    </div>
+  </div>
+  <main id="sleepScreen" class="wrap sleep-screen" hidden>
+    <div class="breath-top">
+      <button type="button" class="home-back" id="sleepBack" aria-label="Back"><svg class="back-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M15 8H2M7.5 2.5 2 8l5.5 5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Back</button>
+      <button type="button" class="settings-btn" id="sleepSettingsBtn" aria-label="Sleep settings"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58a.5.5 0 0 0 .12-.61l-1.92-3.32a.5.5 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94L14.4 2.81a.5.5 0 0 0-.48-.41h-3.84a.5.5 0 0 0-.47.41L9.25 5.35c.59.24 1.13.56 1.62.94l-2.39-.96a.5.5 0 0 0-.59.22L2.74 8.87a.5.5 0 0 0 .12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58a.5.5 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.04.24.23.41.47.41h3.84c.24 0 .44-.17.48-.41l.36-2.54c.59-.24 1.12-.56 1.62-.94l2.39.96c.22.07.47 0 .59-.22l1.92-3.32a.5.5 0 0 0-.12-.61l-2.03-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z"/></svg></button>
+    </div>
+    <header>
+      <p class="eyebrow">Bedtime and alarm</p>
+      <h1>Sleep</h1>
+    </header>
+    <section class="sleep-tonight" aria-label="Tonight">
+      <h2>Tonight</h2>
+      <div id="sleepTonight"></div>
+    </section>
+    <section class="sleep-upcoming" aria-label="Next 14 days">
+      <h2>Next 14 days</h2>
+      <div class="sleep-days" id="sleepDays"></div>
+    </section>
+    <section class="sleep-manage" aria-label="Shift list">
+      <h2>Shifts</h2>
+      <p class="history-note sleep-hint">Your shifts stay on this device. Add them here, paste a list, or open your import link.</p>
+      <div class="sleep-manage-actions">
+        <button type="button" class="data-btn" id="sleepAddBtn">Add shift</button>
+        <button type="button" class="data-btn" id="sleepPasteBtn">Paste shifts</button>
+      </div>
+      <div class="sleep-shift-list" id="sleepShiftList"></div>
+      <button type="button" class="data-btn danger" id="sleepClearBtn" hidden>Clear all shifts</button>
+    </section>
+  </main>
+  <div id="sleepSettingsOverlay" class="settings-overlay" hidden>
+    <button type="button" class="settings-backdrop" id="sleepSettingsBackdrop" aria-label="Close sleep settings"></button>
+    <div class="settings-panel" role="dialog" aria-labelledby="sleepSettingsTitle">
+      <div class="settings-head">
+        <h2 id="sleepSettingsTitle">Sleep settings</h2>
+        <button type="button" class="settings-close" id="sleepSettingsClose" aria-label="Close sleep settings">×</button>
+      </div>
+      <div class="breath-settings">
+        <div class="breath-setting">
+          <span id="sleepGoalLabel">Sleep goal</span>
+          <div class="breath-stepper">
+            <button type="button" id="sleepGoalMinus" aria-label="Shorter sleep goal">−</button>
+            <output id="sleepGoalValue" for="sleepGoalMinus sleepGoalPlus">8 h</output>
+            <button type="button" id="sleepGoalPlus" aria-label="Longer sleep goal">+</button>
+          </div>
+        </div>
+        <div class="breath-setting">
+          <span id="sleepPrepLabel">Get ready before start</span>
+          <div class="breath-stepper">
+            <button type="button" id="sleepPrepMinus" aria-label="Less get-ready time">−</button>
+            <output id="sleepPrepValue" for="sleepPrepMinus sleepPrepPlus">60 min</output>
+            <button type="button" id="sleepPrepPlus" aria-label="More get-ready time">+</button>
+          </div>
+        </div>
+        <div class="breath-setting">
+          <span id="sleepLatencyLabel">Time to fall asleep</span>
+          <div class="breath-stepper">
+            <button type="button" id="sleepLatencyMinus" aria-label="Less time to fall asleep">−</button>
+            <output id="sleepLatencyValue" for="sleepLatencyMinus sleepLatencyPlus">15 min</output>
+            <button type="button" id="sleepLatencyPlus" aria-label="More time to fall asleep">+</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="sleepEditorOverlay" class="settings-overlay" hidden>
+    <button type="button" class="settings-backdrop" id="sleepEditorBackdrop" aria-label="Close shift editor"></button>
+    <div class="settings-panel" role="dialog" aria-labelledby="sleepEditorTitle">
+      <div class="settings-head">
+        <h2 id="sleepEditorTitle">Add shift</h2>
+        <button type="button" class="settings-close" id="sleepEditorClose" aria-label="Close shift editor">×</button>
+      </div>
+      <div class="sleep-editor-fields">
+        <label>Date <input type="date" id="sleepEditorDate"></label>
+        <div>
+          <span class="sleep-time-label" id="sleepTypeLabel" style="margin-bottom:6px">Type</span>
+          <div class="sleep-type-switch" id="sleepEditorTypes" role="group" aria-labelledby="sleepTypeLabel">
+            <button type="button" class="data-btn" id="sleepTypeWork" data-type="work" aria-pressed="true">Work</button>
+            <button type="button" class="data-btn" id="sleepTypeOff" data-type="off" aria-pressed="false">Off</button>
+            <button type="button" class="data-btn" id="sleepTypeVacation" data-type="vacation" aria-pressed="false">Vacation</button>
+          </div>
+        </div>
+        <div id="sleepEditorTimes">
+          <label>Start <input type="time" id="sleepEditorStart" step="60"></label>
+          <label style="margin-top:12px;display:grid">End <input type="time" id="sleepEditorEnd" step="60"></label>
+        </div>
+      </div>
+      <p class="sleep-editor-error" id="sleepEditorError"></p>
+      <div class="sleep-editor-actions">
+        <button type="button" class="data-btn" id="sleepEditorSave">Save</button>
+        <button type="button" class="data-btn danger" id="sleepEditorDelete" hidden>Delete</button>
+      </div>
+    </div>
+  </div>
+  <div id="sleepPasteOverlay" class="settings-overlay" hidden>
+    <button type="button" class="settings-backdrop" id="sleepPasteBackdrop" aria-label="Close paste shifts"></button>
+    <div class="settings-panel" role="dialog" aria-labelledby="sleepPasteTitle">
+      <div class="settings-head">
+        <h2 id="sleepPasteTitle">Paste shifts</h2>
+        <button type="button" class="settings-close" id="sleepPasteClose" aria-label="Close paste shifts">×</button>
+      </div>
+      <p class="history-note">Paste an import code, or lines like 2026-12-22 06:36-15:20 and 2026-12-16 vacation.</p>
+      <textarea class="sleep-paste-text" id="sleepPasteText" placeholder="2026-12-22 06:36-15:20"></textarea>
+      <p class="sleep-paste-error" id="sleepPasteError"></p>
+      <div class="sleep-editor-actions">
+        <button type="button" class="data-btn" id="sleepPasteApply">Import</button>
       </div>
     </div>
   </div>
@@ -1873,6 +2025,10 @@
         slayerRounds: 3,
         slayerRecoverySeconds: 15,
         slayerSound: true,
+        shifts: [],
+        sleepGoal: 8,
+        sleepPrep: 60,
+        sleepLatency: 15,
         bodyWeight: "",
         sessions: [],
         logDates: {},
@@ -1967,6 +2123,10 @@
           slayerRounds: normalizeSlayerRounds(parsed.slayerRounds),
           slayerRecoverySeconds: normalizeSlayerRecovery(parsed.slayerRecoverySeconds),
           slayerSound: normalizeSlayerSound(parsed.slayerSound),
+          shifts: normalizeShifts(parsed.shifts),
+          sleepGoal: normalizeSleepGoal(parsed.sleepGoal),
+          sleepPrep: normalizeSleepPrep(parsed.sleepPrep),
+          sleepLatency: normalizeSleepLatency(parsed.sleepLatency),
           bodyWeight: normalizeBodyWeight(parsed.bodyWeight),
           lastSavedAt: parsed.lastSavedAt ? String(parsed.lastSavedAt) : "",
           updatedAt: normalizeUpdatedAt(updatedAt),
@@ -2068,6 +2228,10 @@
         slayerRounds: normalizeSlayerRounds(state.slayerRounds),
         slayerRecoverySeconds: normalizeSlayerRecovery(state.slayerRecoverySeconds),
         slayerSound: normalizeSlayerSound(state.slayerSound),
+        shifts: normalizeShifts(state.shifts),
+        sleepGoal: normalizeSleepGoal(state.sleepGoal),
+        sleepPrep: normalizeSleepPrep(state.sleepPrep),
+        sleepLatency: normalizeSleepLatency(state.sleepLatency),
         lastSavedAt: state.lastSavedAt || exportedAt,
         updatedAt: state.updatedAt,
         sessions: state.sessions,
@@ -2166,6 +2330,10 @@
       state.slayerRounds = normalizeSlayerRounds(payload.slayerRounds);
       state.slayerRecoverySeconds = normalizeSlayerRecovery(payload.slayerRecoverySeconds);
       state.slayerSound = normalizeSlayerSound(payload.slayerSound);
+      state.shifts = normalizeShifts(payload.shifts);
+      state.sleepGoal = normalizeSleepGoal(payload.sleepGoal);
+      state.sleepPrep = normalizeSleepPrep(payload.sleepPrep);
+      state.sleepLatency = normalizeSleepLatency(payload.sleepLatency);
       if (payload.customExercises || payload.dayCustom) {
         state.customExercises = normalizeCustomExercises(payload.customExercises);
         CUSTOM_EXERCISES = state.customExercises;
@@ -4446,13 +4614,19 @@
       document.getElementById("historyScreen").hidden = view !== "history";
       document.getElementById("extraScreen").hidden = view !== "extra";
       document.getElementById("breathingScreen").hidden = view !== "breathing";
+      document.getElementById("sleepScreen").hidden = view !== "sleep";
       if (view !== "breathing") {
         stopBreathing();
         stopSlayer();
         closeBreathSettings();
       } else renderBreathMode();
+      if (view !== "sleep") {
+        closeSleepSettings();
+        closeSleepEditor();
+        closeSleepPaste();
+      } else renderSleep();
       const todayIsRest = !logDayKey();
-      const extraViews = view === "extra" || view === "history" || view === "breathing";
+      const extraViews = view === "extra" || view === "history" || view === "breathing" || view === "sleep";
       document.querySelectorAll(".nav-button").forEach(button => {
         const on = (button.dataset.view === view || (button.id === "navExtra" && extraViews)) && !(button.id === "navLog" && todayIsRest);
         if (on) button.setAttribute("aria-current", "page");
@@ -5935,6 +6109,837 @@
       render();
     }
 
+    function normalizeSleepGoal(value) {
+      const n = Math.round(Number(value) * 2) / 2;
+      if (!Number.isFinite(n)) return 8;
+      return Math.min(10, Math.max(6, n));
+    }
+
+    function normalizeSleepPrep(value) {
+      const n = Math.round(Number(value) / 15) * 15;
+      if (!Number.isFinite(n)) return 60;
+      return Math.min(120, Math.max(15, n));
+    }
+
+    function normalizeSleepLatency(value) {
+      const n = Math.round(Number(value) / 5) * 5;
+      if (!Number.isFinite(n)) return 15;
+      return Math.min(45, Math.max(0, n));
+    }
+
+    function normalizeClock(value) {
+      if (value == null || value === "") return null;
+      const s = String(value).trim();
+      let h, min;
+      const colon = s.match(/^(\d{1,2}):(\d{2})$/);
+      const compact = s.match(/^(\d{2})(\d{2})$/);
+      if (colon) { h = Number(colon[1]); min = Number(colon[2]); }
+      else if (compact) { h = Number(compact[1]); min = Number(compact[2]); }
+      else return null;
+      if (!Number.isFinite(h) || !Number.isFinite(min) || h < 0 || h > 23 || min < 0 || min > 59) return null;
+      return String(h).padStart(2, "0") + ":" + String(min).padStart(2, "0");
+    }
+
+    function normalizeShiftDate(value) {
+      const s = String(value || "");
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
+      const d = new Date(s + "T12:00:00");
+      if (!Number.isFinite(d.getTime()) || fileStamp(d) !== s) return null;
+      return s;
+    }
+
+    function normalizeShiftSource(value) {
+      if (value === "calendar" || value === "rota" || value === "manual") return value;
+      return "manual";
+    }
+
+    function normalizeShiftTag(value) {
+      const s = String(value || "");
+      if (s === "X" || s === "O" || s === "T") return s;
+      return null;
+    }
+
+    function normalizeOneShift(row) {
+      if (!row || typeof row !== "object") return null;
+      const date = normalizeShiftDate(row.date);
+      if (!date) return null;
+      let type = row.type === "vacation" || row.type === "off" || row.type === "work" ? row.type : null;
+      const tag = normalizeShiftTag(row.tag);
+      const start = normalizeClock(row.start);
+      const end = normalizeClock(row.end);
+      if (!type) {
+        if (tag === "V" || row.tag === "V") type = "vacation";
+        else if (!start || !end) type = "off";
+        else type = "work";
+      }
+      if (type === "work" && (!start || !end)) return null;
+      if (type !== "work") {
+        return { date: date, start: null, end: null, type: type, tag: type === "off" ? tag : null, source: normalizeShiftSource(row.source) };
+      }
+      return { date: date, start: start, end: end, type: "work", tag: null, source: normalizeShiftSource(row.source) };
+    }
+
+    function normalizeShifts(value) {
+      if (!Array.isArray(value)) return [];
+      const byDate = {};
+      for (let i = 0; i < value.length; i += 1) {
+        const row = normalizeOneShift(value[i]);
+        if (row) byDate[row.date] = row;
+      }
+      return Object.keys(byDate).sort().map(function (date) { return byDate[date]; });
+    }
+
+    function clockToMin(clock) {
+      const normalized = normalizeClock(clock);
+      if (!normalized) return null;
+      const parts = normalized.split(":");
+      return Number(parts[0]) * 60 + Number(parts[1]);
+    }
+
+    function minToClock(min) {
+      const n = ((min % 1440) + 1440) % 1440;
+      const h = Math.floor(n / 60);
+      const m = n % 60;
+      return String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0");
+    }
+
+    function formatClock(clock) {
+      const normalized = normalizeClock(clock);
+      return normalized || "—";
+    }
+
+    function addDaysStamp(stamp, days) {
+      const d = new Date(stamp + "T12:00:00");
+      d.setDate(d.getDate() + days);
+      return fileStamp(d);
+    }
+
+    function stampIndex(stamp) {
+      const d = new Date(stamp + "T12:00:00");
+      return Math.round(d.getTime() / 86400000);
+    }
+
+    function stampFromIndex(index) {
+      const d = new Date(index * 86400000 + 12 * 3600000);
+      return fileStamp(d);
+    }
+
+    function absMin(stamp, clock) {
+      return stampIndex(stamp) * 1440 + clockToMin(clock);
+    }
+
+    function absToClock(abs) {
+      return minToClock(((abs % 1440) + 1440) % 1440);
+    }
+
+    function absToStamp(abs) {
+      return stampFromIndex(Math.floor(abs / 1440));
+    }
+
+    function formatSleepDate(stamp, withYear) {
+      const d = new Date(stamp + "T12:00:00");
+      const opts = { weekday: "short", day: "numeric", month: "short" };
+      if (withYear) opts.year = "numeric";
+      return d.toLocaleDateString("nb-NO", opts);
+    }
+
+    function shiftEndsNextDay(sh) {
+      if (!sh || sh.type !== "work") return false;
+      const start = clockToMin(sh.start);
+      const end = clockToMin(sh.end);
+      return end <= start;
+    }
+
+    function isNightShift(sh) {
+      if (!sh || sh.type !== "work") return false;
+      const start = clockToMin(sh.start);
+      const end = clockToMin(sh.end);
+      if (start >= 20 * 60) return true;
+      return shiftEndsNextDay(sh) && end > 2 * 60;
+    }
+
+    function shiftStartAbs(sh) {
+      return absMin(sh.date, sh.start);
+    }
+
+    function shiftEndAbs(sh) {
+      return absMin(sh.date, sh.end) + (shiftEndsNextDay(sh) ? 1440 : 0);
+    }
+
+    function shiftByDate(date) {
+      const list = state.shifts || [];
+      for (let i = 0; i < list.length; i += 1) {
+        if (list[i].date === date) return list[i];
+      }
+      return null;
+    }
+
+    function previousWorkShift(date) {
+      const list = state.shifts || [];
+      let prev = null;
+      for (let i = 0; i < list.length; i += 1) {
+        if (list[i].type !== "work") continue;
+        if (list[i].date < date) prev = list[i];
+        else break;
+      }
+      return prev;
+    }
+
+    function sleepNowDate() {
+      if (typeof window !== "undefined" && window.__sleepNow) {
+        const d = new Date(window.__sleepNow);
+        if (Number.isFinite(d.getTime())) return d;
+      }
+      return new Date();
+    }
+
+    function sleepToday() {
+      return fileStamp(sleepNowDate());
+    }
+
+    function sleepGoalHours() {
+      return normalizeSleepGoal(state && state.sleepGoal);
+    }
+
+    function sleepPrepMinutes() {
+      return normalizeSleepPrep(state && state.sleepPrep);
+    }
+
+    function sleepLatencyMinutes() {
+      return normalizeSleepLatency(state && state.sleepLatency);
+    }
+
+    function workBedtimes(aroundStamp) {
+      const times = [];
+      const list = state.shifts || [];
+      for (let i = 0; i < list.length; i += 1) {
+        const sh = list[i];
+        if (sh.type !== "work" || isNightShift(sh)) continue;
+        if (clockToMin(sh.start) >= 12 * 60) continue;
+        const startIdx = stampIndex(sh.date);
+        const around = stampIndex(aroundStamp);
+        if (Math.abs(startIdx - around) > 21) continue;
+        const plan = planForWorkShift(sh, false);
+        if (!plan || plan.bedAbs == null) continue;
+        const clock = ((plan.bedAbs % 1440) + 1440) % 1440;
+        if (clock >= 18 * 60 || clock <= 60) times.push(clock);
+      }
+      times.sort(function (a, b) { return a - b; });
+      return times;
+    }
+
+    function typicalBedtime(aroundStamp) {
+      const times = workBedtimes(aroundStamp);
+      if (!times.length) return "23:00";
+      return minToClock(times[Math.floor((times.length - 1) / 2)]);
+    }
+
+    function nextWorkAfter(date) {
+      const list = state.shifts || [];
+      for (let i = 0; i < list.length; i += 1) {
+        if (list[i].type === "work" && list[i].date > date) return list[i];
+      }
+      return null;
+    }
+
+    function planForWorkShift(sh, withWarn) {
+      if (!sh || sh.type !== "work") return null;
+      if (isNightShift(sh)) return planForNightShift(sh, withWarn);
+      const startAbs = shiftStartAbs(sh);
+      const alarmAbs = startAbs - sleepPrepMinutes();
+      const need = sleepGoalHours() * 60 + sleepLatencyMinutes();
+      let bedAbs = alarmAbs - need;
+      let warn = null;
+      let maxHours = sleepGoalHours();
+      if (withWarn !== false) {
+        const prev = previousWorkShift(sh.date);
+        if (prev) {
+          const earliest = shiftEndAbs(prev) + 45;
+          if (bedAbs < earliest) {
+            const available = alarmAbs - earliest - sleepLatencyMinutes();
+            maxHours = Math.max(0, Math.round((available / 60) * 10) / 10);
+            bedAbs = earliest;
+            warn = "Full sleep isn't possible after the previous shift. Longest you can get is " + formatSleepHours(maxHours) + ".";
+          }
+        }
+      }
+      return {
+        kind: "work",
+        shift: sh,
+        night: false,
+        alarmAbs: alarmAbs,
+        bedAbs: bedAbs,
+        alarm: absToClock(alarmAbs),
+        alarmDate: absToStamp(alarmAbs),
+        bedtime: absToClock(bedAbs),
+        bedtimeDate: absToStamp(bedAbs),
+        warn: warn,
+        maxHours: maxHours
+      };
+    }
+
+    function planForNightShift(sh, withWarn) {
+      const startAbs = shiftStartAbs(sh);
+      const endAbs = shiftEndAbs(sh);
+      const napEnd = startAbs - 120;
+      const napStart = napEnd - 90;
+      const sleepStart = endAbs + 45;
+      const sleepEnd = sleepStart + sleepGoalHours() * 60;
+      let warn = null;
+      if (withWarn !== false) {
+        const prev = previousWorkShift(sh.date);
+        if (prev) {
+          const earliest = shiftEndAbs(prev) + 45;
+          if (napStart < earliest) {
+            warn = "The nap starts soon after your previous shift ends. Rest as much as you can before you go in.";
+          }
+        }
+      }
+      return {
+        kind: "night",
+        shift: sh,
+        night: true,
+        napStartAbs: napStart,
+        napEndAbs: napEnd,
+        napStart: absToClock(napStart),
+        napEnd: absToClock(napEnd),
+        ready: absToClock(startAbs - sleepPrepMinutes()),
+        sleepStartAbs: sleepStart,
+        sleepEndAbs: sleepEnd,
+        sleepStart: absToClock(sleepStart),
+        sleepStartDate: absToStamp(sleepStart),
+        alarm: absToClock(sleepEnd),
+        alarmDate: absToStamp(sleepEnd),
+        warn: warn
+      };
+    }
+
+    function planForOff(date, type) {
+      const upcoming = nextWorkAfter(date);
+      if (upcoming && !isNightShift(upcoming)) {
+        const plan = planForWorkShift(upcoming, true);
+        if (plan && plan.bedtimeDate === date) {
+          return {
+            kind: type === "vacation" ? "vacation" : "off",
+            date: date,
+            night: false,
+            bedtime: plan.bedtime,
+            bedAbs: plan.bedAbs,
+            alarm: plan.alarm,
+            alarmDate: plan.alarmDate,
+            forShift: upcoming,
+            warn: plan.warn,
+            maxHours: plan.maxHours
+          };
+        }
+      }
+      const clock = typicalBedtime(date);
+      const bedAbs = absMin(date, clock);
+      return {
+        kind: type === "vacation" ? "vacation" : "off",
+        date: date,
+        night: false,
+        bedtime: clock,
+        bedAbs: bedAbs,
+        alarm: null
+      };
+    }
+
+    function formatSleepHours(hours) {
+      if (hours <= 0) return "0 h";
+      const rounded = Math.round(hours * 10) / 10;
+      return (Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1)) + " h";
+    }
+
+    function formatClockRange(start, end) {
+      return formatClock(start) + "–" + formatClock(end);
+    }
+
+    function shiftRangeLabel(sh) {
+      if (!sh || sh.type !== "work") return "";
+      const range = formatClockRange(sh.start, sh.end);
+      return shiftEndsNextDay(sh) ? range + " (+1)" : range;
+    }
+
+    function offLabel(sh) {
+      if (!sh) return "No shift planned";
+      if (sh.type === "vacation") return "Vacation";
+      if (sh.tag === "X") return "X-fri";
+      if (sh.tag === "O") return "O-fri";
+      if (sh.tag === "T") return "T-fri";
+      return "Day off";
+    }
+
+    function sourceLabel(sh) {
+      if (!sh) return "";
+      if (sh.source === "rota") return "Rota";
+      return "";
+    }
+
+    function nextWorkFrom(stamp, nowAbs) {
+      const list = state.shifts || [];
+      for (let i = 0; i < list.length; i += 1) {
+        const sh = list[i];
+        if (sh.type !== "work") continue;
+        if (shiftEndAbs(sh) > nowAbs) return sh;
+      }
+      return null;
+    }
+
+    function tonightPlan() {
+      const now = sleepNowDate();
+      const today = fileStamp(now);
+      const nowAbs = stampIndex(today) * 1440 + now.getHours() * 60 + now.getMinutes();
+      const list = state.shifts || [];
+      if (!list.length) return { kind: "empty" };
+
+      for (let i = 0; i < list.length; i += 1) {
+        const sh = list[i];
+        if (sh.type !== "work" || !isNightShift(sh)) continue;
+        const plan = planForNightShift(sh, true);
+        if (nowAbs >= plan.sleepStartAbs - 180 && nowAbs < plan.sleepEndAbs) return plan;
+      }
+
+      const upcoming = nextWorkFrom(today, nowAbs);
+      if (upcoming) {
+        const plan = planForWorkShift(upcoming, true);
+        if (plan.night) {
+          if (nowAbs <= plan.napEndAbs + 60 || nowAbs < shiftStartAbs(upcoming)) return plan;
+        } else {
+          const evening = absMin(today, "12:00");
+          if (plan.bedAbs >= evening - 6 * 60 || plan.alarmAbs >= nowAbs) return plan;
+        }
+      }
+
+      const tomorrow = addDaysStamp(today, 1);
+      const todayShift = shiftByDate(today);
+      const tomorrowShift = shiftByDate(tomorrow);
+      const offDay = (tomorrowShift && tomorrowShift.type !== "work") ? tomorrowShift
+        : (todayShift && todayShift.type !== "work" ? todayShift : null);
+      if (offDay) return planForOff(offDay.date, offDay.type);
+      if (!upcoming) return { kind: "empty-soon" };
+      return planForWorkShift(upcoming, true);
+    }
+
+    function dayPlan(date) {
+      const sh = shiftByDate(date);
+      if (!sh) return { kind: "none", date: date };
+      if (sh.type !== "work") return Object.assign(planForOff(date, sh.type), { shift: sh });
+      return planForWorkShift(sh, true);
+    }
+
+    function decodeBase64Url(text) {
+      const padded = text.replace(/-/g, "+").replace(/_/g, "/");
+      const pad = padded.length % 4;
+      const full = pad ? padded + "===".slice(0, 4 - pad) : padded;
+      try {
+        return decodeURIComponent(Array.prototype.map.call(atob(full), function (c) {
+          return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(""));
+      } catch (error) {
+        try { return atob(full); } catch (error2) { return null; }
+      }
+    }
+
+    function tokensToShifts(payload) {
+      const start = normalizeShiftDate(payload.f || payload.from);
+      if (!start || !Array.isArray(payload.s)) return [];
+      const calendarCount = Number(payload.c) || 0;
+      const rows = [];
+      for (let i = 0; i < payload.s.length; i += 1) {
+        const date = addDaysStamp(start, i);
+        const tok = payload.s[i];
+        const source = i < calendarCount ? "calendar" : (payload.c != null ? "rota" : (payload.source || "manual"));
+        const row = tokenToShift(date, tok, source);
+        if (row) rows.push(row);
+      }
+      return rows;
+    }
+
+    function tokenToShift(date, tok, source) {
+      if (tok == null || tok === 0 || tok === "0" || tok === "" || tok === "off") {
+        return { date: date, start: null, end: null, type: "off", tag: null, source: source };
+      }
+      if (tok === "V" || tok === "vacation") {
+        return { date: date, start: null, end: null, type: "vacation", tag: null, source: source };
+      }
+      if (tok === "X" || tok === "O" || tok === "T") {
+        return { date: date, start: null, end: null, type: "off", tag: tok, source: source };
+      }
+      const s = String(tok);
+      const compact = s.match(/^(\d{4})-(\d{4})$/);
+      const colon = s.match(/^(\d{1,2}:\d{2})-(\d{1,2}:\d{2})$/);
+      let start = null, end = null;
+      if (compact) { start = normalizeClock(compact[1]); end = normalizeClock(compact[2]); }
+      else if (colon) { start = normalizeClock(colon[1]); end = normalizeClock(colon[2]); }
+      if (!start || !end) return null;
+      return { date: date, start: start, end: end, type: "work", tag: null, source: source };
+    }
+
+    function parseShiftsPayload(raw) {
+      const text = String(raw || "").trim();
+      if (!text) return null;
+      let data = null;
+      if (text.charAt(0) === "{" || text.charAt(0) === "[") {
+        try { data = JSON.parse(text); } catch (error) { data = null; }
+      }
+      if (!data) {
+        const decoded = decodeBase64Url(text.replace(/^#?shifts=/, ""));
+        if (decoded) {
+          try { data = JSON.parse(decoded); } catch (error) { data = null; }
+        }
+      }
+      if (data && data.s && data.f) return tokensToShifts(data);
+      if (Array.isArray(data)) {
+        return data.map(function (item) {
+          if (Array.isArray(item)) {
+            const date = normalizeShiftDate(item[0]);
+            if (!date) return null;
+            if (item.length < 3 || !item[1] || item[1] === "off" || item[1] === 0) {
+              const tag = item[1] === "X" || item[1] === "O" || item[1] === "T" ? item[1] : null;
+              const type = item[1] === "V" || item[1] === "vacation" ? "vacation" : "off";
+              return { date: date, start: null, end: null, type: type, tag: tag, source: "manual" };
+            }
+            return normalizeOneShift({ date: date, start: item[1], end: item[2], type: "work", source: "manual" });
+          }
+          return normalizeOneShift(item);
+        }).filter(Boolean);
+      }
+      const rows = [];
+      const lines = text.split(/\n+/);
+      for (let i = 0; i < lines.length; i += 1) {
+        const line = lines[i].trim();
+        if (!line) continue;
+        const m = line.match(/^(\d{4}-\d{2}-\d{2})(?:\s+[Ff]ri|\s+)(vacation|off|X|O|T|V)?\s*(?:(\d{1,2}:\d{2}|\d{4})\s*[–\-]\s*(\d{1,2}:\d{2}|\d{4}))?$/i);
+        if (!m) continue;
+        const date = normalizeShiftDate(m[1]);
+        if (!date) continue;
+        if (m[3] && m[4]) rows.push(normalizeOneShift({ date: date, start: m[3], end: m[4], type: "work", source: "manual" }));
+        else {
+          const flag = (m[2] || "off").toLowerCase();
+          const type = flag === "vacation" || flag === "v" ? "vacation" : "off";
+          const tag = m[2] === "X" || m[2] === "O" || m[2] === "T" ? m[2] : null;
+          rows.push({ date: date, start: null, end: null, type: type, tag: tag, source: "manual" });
+        }
+      }
+      return rows.length ? rows.filter(Boolean) : null;
+    }
+
+    function mergeShifts(incoming) {
+      const byDate = {};
+      const existing = state.shifts || [];
+      for (let i = 0; i < existing.length; i += 1) byDate[existing[i].date] = existing[i];
+      for (let j = 0; j < incoming.length; j += 1) {
+        const row = normalizeOneShift(incoming[j]);
+        if (row) byDate[row.date] = row;
+      }
+      state.shifts = Object.keys(byDate).sort().map(function (date) { return byDate[date]; });
+    }
+
+    function applyImportedShifts(rows, announce) {
+      if (!rows || !rows.length) return false;
+      mergeShifts(rows);
+      saveState();
+      if (announce !== false) showStatus("Imported " + rows.length + " shifts.");
+      if (view === "sleep") renderSleep();
+      return true;
+    }
+
+    function shiftFragmentValue() {
+      const hash = String(location.hash || "");
+      const match = hash.match(/(?:^#|&)?shifts=([^&]+)/);
+      return match ? decodeURIComponent(match[1]) : "";
+    }
+
+    function clearShiftFragment() {
+      try {
+        history.replaceState(null, "", location.pathname + location.search);
+      } catch (error) {}
+    }
+
+    function consumeShiftFragment() {
+      const raw = shiftFragmentValue();
+      if (!raw) return;
+      const rows = parseShiftsPayload(raw) || parseShiftsPayload(decodeBase64Url(raw) || "");
+      clearShiftFragment();
+      if (!rows || !rows.length) return;
+      if (!window.confirm("Import " + rows.length + " shifts?")) return;
+      applyImportedShifts(rows);
+      goSleep();
+    }
+
+    function goSleep() {
+      rememberOnLeave();
+      cancelLongPress();
+      closeSettings();
+      closeBreathSettings();
+      view = "sleep";
+      render();
+      window.scrollTo(0, 0);
+    }
+
+    function closeSleepSettings() {
+      const overlay = document.getElementById("sleepSettingsOverlay");
+      if (overlay) overlay.hidden = true;
+    }
+
+    function closeSleepEditor() {
+      const overlay = document.getElementById("sleepEditorOverlay");
+      if (overlay) overlay.hidden = true;
+    }
+
+    function closeSleepPaste() {
+      const overlay = document.getElementById("sleepPasteOverlay");
+      if (overlay) overlay.hidden = true;
+    }
+
+    function openSleepSettings() {
+      renderSleepSettings();
+      const overlay = document.getElementById("sleepSettingsOverlay");
+      if (overlay) overlay.hidden = false;
+    }
+
+    function renderSleepSettings() {
+      const goal = sleepGoalHours();
+      const prep = sleepPrepMinutes();
+      const latency = sleepLatencyMinutes();
+      const goalVal = document.getElementById("sleepGoalValue");
+      const prepVal = document.getElementById("sleepPrepValue");
+      const latVal = document.getElementById("sleepLatencyValue");
+      if (goalVal) goalVal.textContent = formatSleepHours(goal);
+      if (prepVal) prepVal.textContent = prep + " min";
+      if (latVal) latVal.textContent = latency + " min";
+      const setDisabled = function (id, on) {
+        const el = document.getElementById(id);
+        if (el) el.disabled = on;
+      };
+      setDisabled("sleepGoalMinus", goal <= 6);
+      setDisabled("sleepGoalPlus", goal >= 10);
+      setDisabled("sleepPrepMinus", prep <= 15);
+      setDisabled("sleepPrepPlus", prep >= 120);
+      setDisabled("sleepLatencyMinus", latency <= 0);
+      setDisabled("sleepLatencyPlus", latency >= 45);
+    }
+
+    function changeSleepGoal(delta) {
+      const next = normalizeSleepGoal(sleepGoalHours() + delta);
+      if (next === sleepGoalHours()) return;
+      state.sleepGoal = next;
+      saveState();
+      renderSleepSettings();
+      renderSleep();
+    }
+
+    function changeSleepPrep(delta) {
+      const next = normalizeSleepPrep(sleepPrepMinutes() + delta);
+      if (next === sleepPrepMinutes()) return;
+      state.sleepPrep = next;
+      saveState();
+      renderSleepSettings();
+      renderSleep();
+    }
+
+    function changeSleepLatency(delta) {
+      const next = normalizeSleepLatency(sleepLatencyMinutes() + delta);
+      if (next === sleepLatencyMinutes()) return;
+      state.sleepLatency = next;
+      saveState();
+      renderSleepSettings();
+      renderSleep();
+    }
+
+    function tonightHtml(plan) {
+      if (!plan || plan.kind === "empty") {
+        return '<p class="history-note">Add your shifts to get a bedtime and an alarm.</p>';
+      }
+      if (plan.kind === "empty-soon") {
+        return '<p class="history-note">No upcoming shifts in your list.</p>';
+      }
+      if (plan.kind === "off" || plan.kind === "vacation") {
+        const title = plan.kind === "vacation" ? "Vacation, no alarm" : "Day off, no alarm";
+        return '<p class="sleep-kicker">' + escapeHtml(formatSleepDate(plan.date)) + '</p>' +
+          '<p class="sleep-headline">' + title + '</p>' +
+          '<div class="sleep-times single"><div class="sleep-time-block"><span class="sleep-time-label">Bedtime</span><span class="sleep-time-value">' + escapeHtml(plan.bedtime) + '</span><span class="sleep-time-note">Keeps a steady rhythm</span></div></div>';
+      }
+      const sh = plan.shift;
+      const when = escapeHtml(formatSleepDate(sh.date)) + " · " + escapeHtml(shiftRangeLabel(sh));
+      if (plan.night) {
+        return '<p class="sleep-kicker">Next shift · ' + when + '</p>' +
+          '<p class="sleep-headline">Night shift</p>' +
+          '<div class="sleep-times night">' +
+            '<div class="sleep-time-block"><span class="sleep-time-label">Nap before</span><span class="sleep-time-value sleep-time-mid">' + escapeHtml(plan.napStart) + "–" + escapeHtml(plan.napEnd) + '</span><span class="sleep-time-note">90 min, ending 2 h before start</span></div>' +
+            '<div class="sleep-time-block"><span class="sleep-time-label">Sleep after</span><span class="sleep-time-value">' + escapeHtml(plan.sleepStart) + '</span><span class="sleep-time-note">About 45 min after the shift ends</span></div>' +
+            '<div class="sleep-time-block"><span class="sleep-time-label">Alarm</span><span class="sleep-time-value">' + escapeHtml(plan.alarm) + '</span><span class="sleep-time-note">' + escapeHtml(formatSleepHours(sleepGoalHours())) + " of sleep</span></div>" +
+          "</div>" +
+          (plan.warn ? '<p class="sleep-warn">' + escapeHtml(plan.warn) + "</p>" : "");
+      }
+      const bedNote = plan.bedtimeDate !== sh.date ? "The evening before" : "Same day";
+      return '<p class="sleep-kicker">Next shift · ' + when + '</p>' +
+        '<div class="sleep-times">' +
+          '<div class="sleep-time-block"><span class="sleep-time-label">Bedtime</span><span class="sleep-time-value">' + escapeHtml(plan.bedtime) + '</span><span class="sleep-time-note">' + bedNote + "</span></div>" +
+          '<div class="sleep-time-block"><span class="sleep-time-label">Alarm</span><span class="sleep-time-value">' + escapeHtml(plan.alarm) + '</span><span class="sleep-time-note">' + sleepPrepMinutes() + " min before start</span></div>" +
+        "</div>" +
+        (plan.warn ? '<p class="sleep-warn">' + escapeHtml(plan.warn) + "</p>" : "");
+    }
+
+    function dayRowHtml(date) {
+      const plan = dayPlan(date);
+      const sh = shiftByDate(date);
+      const today = date === sleepToday() ? " today" : "";
+      const source = sourceLabel(sh);
+      const sourceHtml = source ? '<span class="sleep-source">' + escapeHtml(source) + "</span>" : "";
+      let detail;
+      if (!sh) detail = '<span class="sleep-day-meta">No shift planned</span>';
+      else if (sh.type !== "work") {
+        const label = offLabel(sh);
+        if (plan.alarm && plan.forShift) {
+          detail = '<span class="sleep-day-meta">' + escapeHtml(label) + ' · work in the morning</span><span class="sleep-day-times">Bedtime ' + escapeHtml(plan.bedtime) + ' · Alarm ' + escapeHtml(plan.alarm) + '</span>';
+        } else {
+          detail = '<span class="sleep-day-meta">' + escapeHtml(label) + ' · no alarm</span><span class="sleep-day-times">Bedtime ' + escapeHtml(plan.bedtime) + '</span>';
+        }
+      } else if (plan.night) {
+        detail = '<span class="sleep-day-meta">Night · ' + escapeHtml(shiftRangeLabel(sh)) + '</span><span class="sleep-day-times">Nap ' + escapeHtml(plan.napStart) + '–' + escapeHtml(plan.napEnd) + ' · Sleep ' + escapeHtml(plan.sleepStart) + ' · Alarm ' + escapeHtml(plan.alarm) + '</span>';
+      } else {
+        detail = '<span class="sleep-day-meta">' + escapeHtml(shiftRangeLabel(sh)) + '</span><span class="sleep-day-times">Bedtime ' + escapeHtml(plan.bedtime) + ' · Alarm ' + escapeHtml(plan.alarm) + '</span>';
+      }
+      const warn = plan && plan.warn ? '<span class="sleep-day-warn">Short night</span>' : "";
+      return '<button type="button" class="sleep-day' + today + '" data-sleep-edit="' + date + '"><div class="sleep-day-head"><strong>' + escapeHtml(formatSleepDate(date)) + "</strong>" + sourceHtml + warn + "</div>" + detail + "</button>";
+    }
+
+    function manageRowHtml(sh) {
+      let meta;
+      if (sh.type === "vacation") meta = "Vacation";
+      else if (sh.type !== "work") meta = offLabel(sh);
+      else meta = shiftRangeLabel(sh) + (isNightShift(sh) ? " · Night" : "");
+      const source = sourceLabel(sh);
+      return '<button type="button" class="sleep-manage-row" data-sleep-edit="' + sh.date + '"><strong>' + escapeHtml(formatSleepDate(sh.date, true)) + "</strong><span>" + escapeHtml(meta) + (source ? " · " + source : "") + "</span></button>";
+    }
+
+    function renderSleep() {
+      if (view !== "sleep") return;
+      const tonight = document.getElementById("sleepTonight");
+      const days = document.getElementById("sleepDays");
+      const list = document.getElementById("sleepShiftList");
+      const clearBtn = document.getElementById("sleepClearBtn");
+      if (tonight) tonight.innerHTML = tonightHtml(tonightPlan());
+      if (days) {
+        const start = sleepToday();
+        const rows = [];
+        for (let i = 0; i < 14; i += 1) rows.push(dayRowHtml(addDaysStamp(start, i)));
+        days.innerHTML = rows.join("");
+      }
+      if (list) {
+        const shifts = state.shifts || [];
+        list.innerHTML = shifts.length ? shifts.map(manageRowHtml).join("") : '<p class="history-note">No shifts yet. Add one, paste a list, or open your import link.</p>';
+      }
+      if (clearBtn) clearBtn.hidden = !(state.shifts && state.shifts.length);
+      renderSleepSettings();
+    }
+
+    function setSleepEditorType(type) {
+      const work = type === "work";
+      const times = document.getElementById("sleepEditorTimes");
+      if (times) times.hidden = !work;
+      ["sleepTypeWork", "sleepTypeOff", "sleepTypeVacation"].forEach(function (id) {
+        const btn = document.getElementById(id);
+        if (btn) btn.setAttribute("aria-pressed", String(btn.getAttribute("data-type") === type));
+      });
+    }
+
+    function openSleepEditor(date) {
+      const sh = date ? shiftByDate(date) : null;
+      const title = document.getElementById("sleepEditorTitle");
+      const dateInput = document.getElementById("sleepEditorDate");
+      const startInput = document.getElementById("sleepEditorStart");
+      const endInput = document.getElementById("sleepEditorEnd");
+      const delBtn = document.getElementById("sleepEditorDelete");
+      const error = document.getElementById("sleepEditorError");
+      if (title) title.textContent = sh ? "Edit shift" : "Add shift";
+      if (dateInput) dateInput.value = date || sleepToday();
+      if (startInput) startInput.value = sh && sh.start ? sh.start : "";
+      if (endInput) endInput.value = sh && sh.end ? sh.end : "";
+      if (error) error.textContent = "";
+      if (delBtn) delBtn.hidden = !sh;
+      setSleepEditorType(sh ? sh.type : "work");
+      const overlay = document.getElementById("sleepEditorOverlay");
+      if (overlay) overlay.hidden = false;
+      if (dateInput) dateInput.focus();
+    }
+
+    function saveSleepEditor() {
+      const date = normalizeShiftDate(document.getElementById("sleepEditorDate").value);
+      const error = document.getElementById("sleepEditorError");
+      const typeBtn = document.querySelector("#sleepEditorTypes [aria-pressed='true']");
+      const type = typeBtn ? typeBtn.getAttribute("data-type") : "work";
+      if (!date) {
+        if (error) error.textContent = "Pick a valid date.";
+        return;
+      }
+      let row;
+      if (type === "work") {
+        const start = normalizeClock(document.getElementById("sleepEditorStart").value);
+        const end = normalizeClock(document.getElementById("sleepEditorEnd").value);
+        if (!start || !end) {
+          if (error) error.textContent = "Add a start and end time.";
+          return;
+        }
+        row = { date: date, start: start, end: end, type: "work", tag: null, source: "manual" };
+      } else {
+        row = { date: date, start: null, end: null, type: type, tag: null, source: "manual" };
+      }
+      mergeShifts([row]);
+      saveState();
+      closeSleepEditor();
+      renderSleep();
+    }
+
+    function deleteEditedShift() {
+      const date = normalizeShiftDate(document.getElementById("sleepEditorDate").value);
+      if (!date || !shiftByDate(date)) return;
+      if (!window.confirm("Delete this shift?")) return;
+      state.shifts = (state.shifts || []).filter(function (row) { return row.date !== date; });
+      saveState();
+      closeSleepEditor();
+      renderSleep();
+    }
+
+    function clearAllShifts() {
+      if (!(state.shifts && state.shifts.length)) return;
+      if (!window.confirm("Clear all shifts?")) return;
+      state.shifts = [];
+      saveState();
+      renderSleep();
+    }
+
+    function openSleepPaste() {
+      const area = document.getElementById("sleepPasteText");
+      const error = document.getElementById("sleepPasteError");
+      if (area) area.value = "";
+      if (error) error.textContent = "";
+      const overlay = document.getElementById("sleepPasteOverlay");
+      if (overlay) overlay.hidden = false;
+      if (area) area.focus();
+    }
+
+    function applySleepPaste() {
+      const area = document.getElementById("sleepPasteText");
+      const error = document.getElementById("sleepPasteError");
+      const rows = parseShiftsPayload(area ? area.value : "");
+      if (!rows || !rows.length) {
+        if (error) error.textContent = "That doesn't look like a shift list.";
+        return;
+      }
+      applyImportedShifts(rows);
+      closeSleepPaste();
+    }
+
+    window.__sleep = {
+      suggestion: dayPlan,
+      tonight: tonightPlan,
+      parse: parseShiftsPayload,
+      today: sleepToday
+    };
+
     // First run = nothing saved at all (v154). Read before anything below can save.
     const FIRST_RUN = (function () { try { return !localStorage.getItem(STORAGE_KEY); } catch (error) { return false; } })();
     const state = loadState();
@@ -6439,6 +7444,43 @@
     document.getElementById("extraHistory").addEventListener("click", goHistory);
     document.getElementById("historyBack").addEventListener("click", goHistoryBack);
     document.getElementById("extraBreathing").addEventListener("click", goBreathing);
+    document.getElementById("extraSleep").addEventListener("click", goSleep);
+    document.getElementById("sleepBack").addEventListener("click", goExtra);
+    document.getElementById("sleepSettingsBtn").addEventListener("click", openSleepSettings);
+    document.getElementById("sleepSettingsClose").addEventListener("click", closeSleepSettings);
+    document.getElementById("sleepSettingsBackdrop").addEventListener("click", closeSleepSettings);
+    document.getElementById("sleepGoalMinus").addEventListener("click", function () { changeSleepGoal(-0.5); });
+    document.getElementById("sleepGoalPlus").addEventListener("click", function () { changeSleepGoal(0.5); });
+    document.getElementById("sleepPrepMinus").addEventListener("click", function () { changeSleepPrep(-15); });
+    document.getElementById("sleepPrepPlus").addEventListener("click", function () { changeSleepPrep(15); });
+    document.getElementById("sleepLatencyMinus").addEventListener("click", function () { changeSleepLatency(-5); });
+    document.getElementById("sleepLatencyPlus").addEventListener("click", function () { changeSleepLatency(5); });
+    document.getElementById("sleepAddBtn").addEventListener("click", function () { openSleepEditor(null); });
+    document.getElementById("sleepPasteBtn").addEventListener("click", openSleepPaste);
+    document.getElementById("sleepClearBtn").addEventListener("click", clearAllShifts);
+    document.getElementById("sleepEditorClose").addEventListener("click", closeSleepEditor);
+    document.getElementById("sleepEditorBackdrop").addEventListener("click", closeSleepEditor);
+    document.getElementById("sleepEditorSave").addEventListener("click", saveSleepEditor);
+    document.getElementById("sleepEditorDelete").addEventListener("click", deleteEditedShift);
+    document.getElementById("sleepEditorTypes").addEventListener("click", function (event) {
+      const btn = event.target.closest("[data-type]");
+      if (btn) setSleepEditorType(btn.getAttribute("data-type"));
+    });
+    document.getElementById("sleepPasteClose").addEventListener("click", closeSleepPaste);
+    document.getElementById("sleepPasteBackdrop").addEventListener("click", closeSleepPaste);
+    document.getElementById("sleepPasteApply").addEventListener("click", applySleepPaste);
+    document.getElementById("sleepDays").addEventListener("click", function (event) {
+      const btn = event.target.closest("[data-sleep-edit]");
+      if (btn) openSleepEditor(btn.getAttribute("data-sleep-edit"));
+    });
+    document.getElementById("sleepShiftList").addEventListener("click", function (event) {
+      const btn = event.target.closest("[data-sleep-edit]");
+      if (btn) openSleepEditor(btn.getAttribute("data-sleep-edit"));
+    });
+    document.body.appendChild(document.getElementById("sleepSettingsOverlay"));
+    document.body.appendChild(document.getElementById("sleepEditorOverlay"));
+    document.body.appendChild(document.getElementById("sleepPasteOverlay"));
+    window.addEventListener("hashchange", consumeShiftFragment);
     document.getElementById("breathBack").addEventListener("click", goExtra);
     document.getElementById("breathSettingsBtn").addEventListener("click", openBreathSettings);
     document.getElementById("breathSettingsClose").addEventListener("click", closeBreathSettings);
@@ -6937,6 +7979,7 @@
     if ((syncLogVariants() | /"weight":"[^"]*(?:,[^"]*"|\.")/.test(rawSavedState)) && !FIRST_RUN) saveState();
     render();
     resumeRestTimerFromStore();
+    consumeShiftFragment();
     if (FIRST_RUN && !state.onboardingDone) openOnboarding();
     // v182: "Install app" in Settings. Shown only after the browser offers install (beforeinstallprompt);
     // stays hidden when already installed or when the browser never offers it (iOS Safari, Firefox).
