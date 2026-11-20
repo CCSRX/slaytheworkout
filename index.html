@@ -1084,6 +1084,10 @@
     .train-link .breath-sound { width: 100%; }
     .train-link .sleep-time-label { margin: 0 0 6px; }
     .train-window { grid-template-columns: 64px 1fr auto 1fr; }
+    .train-minfree { display: block; margin-top: 14px; }
+    .train-minfree .sleep-time-label { margin: 0 0 6px; }
+    .train-minfree-row { display: flex; align-items: center; gap: 8px; font-weight: 800; color: var(--mute); }
+    .train-minfree-row input { width: 96px; min-height: 44px; border: 1px solid var(--line); border-radius: 12px; background: var(--card-2); color: var(--text); font-size: 16px; font-weight: 700; text-align: center; box-sizing: border-box; }
     .train-window-label { font-size: 14px; font-weight: 800; color: var(--mute); }
     .wk-copy { margin: 4px 0 0; padding: 6px 0; border: 0; background: none; color: var(--acc); font: inherit; font-size: 14px; font-weight: 800; touch-action: manipulation; }
     .sleep-screen header h1 { margin-bottom: 0; }
@@ -1485,12 +1489,17 @@
       <div class="train-link">
         <button type="button" class="breath-sound" id="trainLinkBtn" aria-pressed="false">Fit workouts around work: off</button>
         <div id="trainLinkRow" hidden>
-          <p class="sleep-gentle-note">When work, the trip home or sleep leaves less than 75 min free inside your training window, that day's workout moves to the next free rest day. Your workouts stay in order.</p>
+          <p class="sleep-gentle-note">When work, the trip home or sleep leaves too little free time inside your training window, that day's workout moves to the next free rest day. Your workouts stay in order.</p>
           <span class="sleep-time-label">Training window</span>
           <div class="wk-row train-window">
             <span class="train-window-label">Daily</span>
             <input type="time" step="60" id="trainStart" aria-label="Training window start" value="09:00"><span class="wk-dash">–</span><input type="time" step="60" id="trainEnd" aria-label="Training window end" value="20:00">
           </div>
+          <label class="train-minfree">
+            <span class="sleep-time-label">Free time needed after work</span>
+            <span class="train-minfree-row"><input type="number" id="trainMinFree" min="0" max="240" step="5" inputmode="numeric" value="25" aria-describedby="trainMinFreeHint"><span>min</span></span>
+            <span class="sleep-time-note" id="trainMinFreeHint">Minutes free in your window (after getting home) before a workout fits</span>
+          </label>
         </div>
       </div>
       <button type="button" class="data-btn danger" id="sleepClearBtn" hidden>Clear all shifts</button>
@@ -2205,6 +2214,7 @@
         trainLink: false,
         trainStart: "09:00",
         trainEnd: "20:00",
+        trainMinFree: 25,
         sleepOffWake: "07:00",
         sleepGentle: true,
         sleepGentleMax: 60,
@@ -2312,6 +2322,7 @@
           trainLink: parsed.trainLink === true,
           trainStart: (parsed.trainLink !== true && parsed.trainStart === "10:00" && (parsed.trainEnd || "20:00") === "20:00") ? "09:00" : (normalizeClock(parsed.trainStart) || "09:00"),
           trainEnd: normalizeClock(parsed.trainEnd) || "20:00",
+          trainMinFree: normalizeTrainMinFree(parsed.trainMinFree),
           sleepOffWake: normalizeSleepOffWake(parsed.sleepOffWake),
           sleepGentle: normalizeSleepGentle(parsed.sleepGentle),
           sleepGentleMax: normalizeSleepGentleMax(parsed.sleepGentleMax),
@@ -2426,6 +2437,7 @@
         trainLink: state.trainLink === true,
         trainStart: normalizeClock(state.trainStart) || "09:00",
         trainEnd: normalizeClock(state.trainEnd) || "20:00",
+        trainMinFree: normalizeTrainMinFree(state.trainMinFree),
         sleepOffWake: normalizeSleepOffWake(state.sleepOffWake),
         sleepGentle: normalizeSleepGentle(state.sleepGentle),
         sleepGentleMax: normalizeSleepGentleMax(state.sleepGentleMax),
@@ -2537,6 +2549,7 @@
       state.trainLink = payload.trainLink === true;
       state.trainStart = normalizeClock(payload.trainStart) || "09:00";
       state.trainEnd = normalizeClock(payload.trainEnd) || "20:00";
+      state.trainMinFree = normalizeTrainMinFree(payload.trainMinFree);
       state.sleepOffWake = normalizeSleepOffWake(payload.sleepOffWake);
       state.sleepGentle = normalizeSleepGentle(payload.sleepGentle);
       state.sleepGentleMax = normalizeSleepGentleMax(payload.sleepGentleMax);
@@ -6565,7 +6578,15 @@
       return list;
     }
 
-    const TRAIN_MIN_GAP = 75;
+    function normalizeTrainMinFree(value) {
+      if (value === null || value === undefined || value === "") return 25;
+      const n = Math.round(Number(value) / 5) * 5;
+      if (!Number.isFinite(n)) return 25;
+      return Math.min(240, Math.max(0, n));
+    }
+    function trainMinFreeMinutes() {
+      return normalizeTrainMinFree(state && state.trainMinFree);
+    }
     function trainLinkOn() {
       return !!(state && state.trainLink === true);
     }
@@ -6577,10 +6598,11 @@
     function trainLinkKey() {
       if (!trainLinkOn()) return "off";
       const w = trainWindow();
-      return w.start + "-" + w.end + "|" + sleepCommuteMinutes() + "|" + effectiveShifts().length;
+      return w.start + "-" + w.end + "|" + sleepCommuteMinutes() + "|" + trainMinFreeMinutes() + "|" + effectiveShifts().length;
     }
     let trainBlockMemo = null;
-    // Blocked = the largest free stretch inside the training window is under TRAIN_MIN_GAP minutes.
+    // Blocked = the largest free stretch inside the training window is under the "Free time needed
+    // after work" setting (trainMinFree, default 25 min; 0 = blocked only when nothing is free).
     // Busy: work (shifts and regular hours, incl. a shift from the day before running past midnight)
     // with the time to get home before and after it, the nap before a night shift, the sleep after
     // a night shift, and the sleep plan's wake-up that morning and bedtime that evening.
@@ -6623,7 +6645,8 @@
         cursor = Math.max(cursor, b[1]);
       });
       best = Math.max(best, we - cursor);
-      const blocked = best < TRAIN_MIN_GAP;
+      const minFree = trainMinFreeMinutes();
+      const blocked = minFree > 0 ? best < minFree : best <= 0;
       trainBlockMemo.map[stamp] = blocked;
       return blocked;
     }
@@ -7692,6 +7715,8 @@
       const teIn = document.getElementById("trainEnd");
       if (tsIn && document.activeElement !== tsIn) tsIn.value = tw.start;
       if (teIn && document.activeElement !== teIn) teIn.value = tw.end;
+      const mfIn = document.getElementById("trainMinFree");
+      if (mfIn && document.activeElement !== mfIn) mfIn.value = String(trainMinFreeMinutes());
       const weekBtn = document.getElementById("sleepWeekBtn");
       if (weekBtn) weekBtn.textContent = weekScheduleOn() ? "Edit regular hours" : "Regular hours";
       if (!sleepSelDate) sleepSelDate = defaultSleepDate();
@@ -8431,6 +8456,12 @@
         saveState();
         renderSleep();
       });
+    });
+    document.getElementById("trainMinFree").addEventListener("change", function (event) {
+      state.trainMinFree = normalizeTrainMinFree(event.target.value === "" ? 25 : event.target.value);
+      event.target.value = String(state.trainMinFree);
+      saveState();
+      renderSleep();
     });
     document.getElementById("sleepStartRegular").addEventListener("click", openSleepWeek);
     document.getElementById("sleepStartShifts").addEventListener("click", function () {
