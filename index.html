@@ -743,12 +743,11 @@
     .history-session h3 { margin: 0 0 6px; font-size: 16px; }
     .history-session p { margin: 0; color: var(--mute); }
     .today-shortcut { margin: 0 0 16px; }
-    .home-sleep { display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; margin: -4px 0 14px; padding: 8px 12px; background: none; border: 0; color: var(--text); font: inherit; touch-action: manipulation; }
-    .home-sleep[hidden] { display: none; }
-    .home-sleep .hs-lbl { font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mute); }
-    .home-sleep .hs-item { display: inline-flex; align-items: baseline; gap: 6px; font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }
-    .home-sleep .hs-item em { font-style: normal; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--mute); }
-    .home-sleep .hs-arrow { color: var(--mute); }
+    #weeklyView { position: relative; }
+    .home-sleep { position: absolute; top: 14px; right: 14px; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; padding: 8px 10px; background: var(--card-2); border: 0; border-radius: 12px; color: var(--text); font: inherit; touch-action: manipulation; z-index: 1; }
+    .home-sleep .hs-lbl { font-size: 10px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mute); }
+    .home-sleep .hs-item { display: inline-flex; align-items: baseline; gap: 6px; font-size: 18px; font-weight: 800; line-height: 1.15; font-variant-numeric: tabular-nums; }
+    .home-sleep .hs-item em { font-style: normal; font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--mute); }
     .today-shortcut-btn { width: 100%; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: 4px; min-height: 76px; padding: 14px 44px 14px 16px; border-radius: 16px; text-align: left; font: inherit; color: inherit; position: relative; touch-action: manipulation; background: var(--card); border: 1px solid var(--line); }
     .today-shortcut-btn.workout { border-color: transparent; }
     .today-shortcut-label { font-size: 13px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; opacity: 0.72; }
@@ -1243,7 +1242,6 @@
       <p class="app-subtitle slay-tagline">BIGGER, BETTER, COOLER</p>
     </header>
     <section id="todayShortcut" class="today-shortcut" aria-label="Today's workout"></section>
-    <button type="button" id="homeSleep" class="home-sleep" hidden aria-label="Sleep times, open Sleep page"></button>
     <section id="weeklyView" class="weekly-view" aria-label="Weekly progress"></section>
     <div class="home-actions" id="homeActions" hidden></div>
   </div>
@@ -4294,8 +4292,10 @@
     }
 
     function renderHomeSleep() {
-      const el = document.getElementById("homeSleep");
-      if (!el) return;
+      const view = document.getElementById("weeklyView");
+      if (!view) return;
+      const old = view.querySelector("[data-home-sleep]");
+      if (old) old.remove();
       let html = "";
       try {
         const today = sleepToday();
@@ -4307,15 +4307,18 @@
           let times = null, label = "Tonight";
           if (cur && nowClock < "12:00" && nowClock < cur.wake) { times = cur; label = "Now"; }
           else times = homeSleepTimes(addDaysStamp(today, 1));
-          if (times) html = '<span class="hs-lbl">' + label + '</span><span class="hs-item"><em>Bedtime</em>' + escapeHtml(times.bed) + '</span><span class="hs-arrow" aria-hidden="true">→</span><span class="hs-item"><em>' + times.wakeLabel + '</em>' + escapeHtml(times.wake) + "</span>";
+          if (times) html = '<span class="hs-lbl">' + label + '</span><span class="hs-item"><em>Bedtime</em>' + escapeHtml(times.bed) + '</span><span class="hs-item"><em>' + times.wakeLabel + '</em>' + escapeHtml(times.wake) + "</span>";
         }
       } catch (err) { html = ""; }
-      el.innerHTML = html;
-      el.hidden = !html;
+      if (html) view.insertAdjacentHTML("afterbegin", '<button type="button" class="home-sleep" data-home-sleep="1" aria-label="Sleep times, open Sleep page">' + html + "</button>");
     }
 
     function renderWeeklyView() {
+      renderWeeklyViewInner();
       renderHomeSleep();
+    }
+
+    function renderWeeklyViewInner() {
       const week = weeklyProgress();
       const viewEl = document.getElementById("weeklyView");
       if (state.homeRange === "month") {
@@ -8321,7 +8324,6 @@
       const choice = event.target.closest("[data-swap-choice]");
       if (choice) applyExerciseSwap(choice.getAttribute("data-swap-slot"), choice.getAttribute("data-swap-choice"));
     });
-    document.getElementById("homeSleep").addEventListener("click", () => { goSleep(); });
     document.getElementById("todayShortcut").addEventListener("click", event => {
       const open = event.target.closest("[data-open-day]");
       if (open) enterDay(open.dataset.openDay);
@@ -8708,6 +8710,7 @@
       window.__weekDrag = { start, move, finish, down, moved, up };
     })();
     document.getElementById("weeklyView").addEventListener("click", event => {
+      if (event.target.closest("[data-home-sleep]")) { goSleep(); return; }
       const day = event.target.closest("[data-home-day]");
       if (day) { openHomeDay(day.getAttribute("data-home-day")); return; }
       const open = event.target.closest("[data-open-day]");
