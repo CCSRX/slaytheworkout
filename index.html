@@ -64,6 +64,10 @@
     .month-cell .month-num { font-size: 12px; font-weight: 800; line-height: 1.2; }
     .month-cell .month-kind { font-size: 10px; font-weight: 800; line-height: 1.15; max-width: 100%; overflow-wrap: anywhere; }
     .month-cell .month-mark { font-weight: 900; }
+    .month-cell .month-work { font-size: 9px; font-weight: 700; line-height: 1.1; opacity: 0.8; font-variant-numeric: tabular-nums; }
+    .month-work.k-vacation, .week-work.k-vacation { color: #ffd166; opacity: 1; }
+    .month-cell.workout .month-work.k-vacation, .week-status.workout .week-work.k-vacation { color: #5a3d00; }
+    .week-status .week-work { flex-basis: 100%; font-size: 12px; font-weight: 600; opacity: 0.75; line-height: 1.2; }
     .month-cell.rest .month-kind { font-weight: 700; }
     .month-cell.rest { color: var(--mute); }
     .month-cell.workout { color: #101820; }
@@ -3673,6 +3677,15 @@
     // Only a complete, still-valid swap is used; anything stale falls back to the plain cycle.
     function applyWorkoutSwaps(slots, today) {
       slots.forEach(s => { s.srcStamp = s.stamp; });
+      // v218: a workout swapped with one in another week is pinned to that date ("key:<day>").
+      slots.forEach(s => {
+        const ov = s.stamp >= today ? dayOverrideFor(s.stamp) : null;
+        if (!ov || String(ov).indexOf("key:") !== 0 || !s.dayKey || s.trained) return;
+        const k = String(ov).slice(4);
+        if (!DAY_META[k] || !(PROGRAMS[state.program].days || []).includes(k)) return;
+        s.dayKey = k;
+        s.name = DAY_META[k].name;
+      });
       const index = {};
       slots.forEach((s, i) => { index[s.stamp] = i; });
       const open = s => s && s.dayKey && !s.trained && s.stamp >= today;
@@ -3767,7 +3780,7 @@
         const clean = {};
         Object.keys(map).forEach(stamp => {
           const v = map[stamp];
-          if (/^\d{4}-\d{2}-\d{2}$/.test(stamp) && (v === "rest" || v === "train" || days.includes(v) || /^from:\d{4}-\d{2}-\d{2}$/.test(String(v)))) clean[stamp] = v;
+          if (/^\d{4}-\d{2}-\d{2}$/.test(stamp) && (v === "rest" || v === "train" || days.includes(v) || /^from:\d{4}-\d{2}-\d{2}$/.test(String(v)) || (/^key:/.test(String(v)) && days.includes(String(v).slice(4))))) clean[stamp] = v;
         });
         out[prog] = clean;
       });
@@ -4186,7 +4199,12 @@
       const shorts = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
       const headers = shorts.map(label => '<div class="month-dow">' + label + "</div>").join("");
       homeSlotByStamp = {};
+      const workMap = homeWorkMap();
       const cells = month.slots.map(slot => {
+        const wsh = workMap[slot.stamp];
+        const workTxt = !wsh ? "" : (wsh.type === "work"
+          ? '<span class="month-work">' + formatClock(wsh.start) + "<br>" + formatClock(wsh.end) + "</span>"
+          : '<span class="month-work k-' + sleepCellKind(wsh) + '">' + escapeHtml(wsh.type === "vacation" ? "Vacation" : (wsh.tag ? wsh.tag + "-fri" : "Off")) + "</span>");
         const trained = slot.trained;
         const today = slot.stamp === month.today;
         const outside = slot.stamp < monthStart || slot.stamp > monthEnd;
@@ -4196,7 +4214,7 @@
         const colorStyle = slot.dayKey ? ' style="background:' + DAY_META[slot.dayKey].color + ';color:#101820"' : "";
         const classes = "month-cell" + (trained ? " trained" : "") + (today ? " today" : "") + (slot.dayKey ? " workout" : " rest") + (outside ? " outside" : "");
         const moved = !trained && slot.movedFrom ? ' <span class="month-moved" aria-label="moved for work">↷</span>' : "";
-        const inner = '<span class="month-num">' + dayNum + '</span><span class="month-kind">' + escapeHtml(slot.dayKey ? slot.name : (slot.workBlocked ? "Work" : "Rest")) + (mark ? ' <span class="month-mark">' + mark + "</span>" : "") + moved + "</span>";
+        const inner = '<span class="month-num">' + dayNum + '</span><span class="month-kind">' + escapeHtml(slot.dayKey ? slot.name : (slot.workBlocked ? "Work" : "Rest")) + (mark ? ' <span class="month-mark">' + mark + "</span>" : "") + moved + "</span>" + workTxt;
         homeSlotByStamp[slot.stamp] = Object.assign({}, slot, { status: trained ? "Done" : (partly ? "Not finished" : (slot.missed ? "Missed" : (slot.dayKey ? (slot.movedFrom ? "Moved for work" : "Not yet") : (slot.workBlocked ? "Work day" : "Rest day")))) });
         const movable = !trained && slot.stamp >= month.today;
         return '<button type="button" class="' + classes + '" data-home-day="' + slot.stamp + '" data-stamp="' + slot.stamp + '"' + (movable ? ' data-movable="1"' : '') + ' aria-label="' + (slot.dayKey ? slot.name : (slot.workBlocked ? "Work" : "Rest")) + " on " + displaySessionDate(slot.stamp, false) + (trained ? ", done" : "") + ', tap to see and edit"' + colorStyle + ">" + inner + "</button>";
@@ -4269,7 +4287,12 @@
       if (viewEl) viewEl.setAttribute("aria-label", "Weekly progress");
       const nextSlot = calendarNextUp(week.slots, week.today);
       homeSlotByStamp = {};
+      const workMap = homeWorkMap();
       const cards = week.slots.map((slot, slotIndex) => {
+        const wsh = workMap[slot.stamp];
+        const workTxt = !wsh ? "" : (wsh.type === "work"
+          ? '<span class="week-work">' + (isNightShift(wsh) ? "Night shift " : "Work ") + formatClock(wsh.start) + "–" + formatClock(wsh.end) + (shiftEndsNextDay(wsh) ? " +1" : "") + "</span>"
+          : '<span class="week-work k-' + sleepCellKind(wsh) + '">' + escapeHtml(offLabel(wsh)) + "</span>");
         const trained = slot.trained;
         const today = slot.stamp === week.today;
         const isNext = !!(slot.dayKey && nextSlot && slot.stamp === nextSlot.stamp);
@@ -4280,8 +4303,8 @@
         const badge = isNext ? '<span class="next-up-badge">' + nextWord + '</span>' : "";
         const openLabel = slot.dayKey ? ' aria-label="Open ' + slot.name + ' for ' + slot.label + (isNext ? ', ' + nextWord.toLowerCase() : '') + '"' : "";
         const open = slot.dayKey
-          ? '<button type="button" class="week-open" data-open-day="' + slot.dayKey + '" data-home-day="' + slot.stamp + '"' + openLabel + '><span class="week-dow">' + slot.short + '</span>' + (trained && slot.swappedFrom ? '<span class="week-name"><strong>' + slot.name + badge + '</strong><span class="swap-from">swapped from ' + slot.swappedFrom + '</span></span>' : '<strong>' + slot.name + badge + '</strong>') + '<span>' + status + '</span></button>'
-          : '<button type="button" class="week-open" data-home-day="' + slot.stamp + '" aria-label="' + slot.name + ' on ' + slot.label + ', tap to see and edit"><span class="week-dow">' + slot.short + '</span><strong>' + slot.name + '</strong><span>' + status + '</span></button>';
+          ? '<button type="button" class="week-open" data-open-day="' + slot.dayKey + '" data-home-day="' + slot.stamp + '"' + openLabel + '><span class="week-dow">' + slot.short + '</span>' + (trained && slot.swappedFrom ? '<span class="week-name"><strong>' + slot.name + badge + '</strong><span class="swap-from">swapped from ' + slot.swappedFrom + '</span>' + workTxt + '</span>' : (workTxt ? '<span class="week-name"><strong>' + slot.name + badge + '</strong>' + workTxt + '</span>' : '<strong>' + slot.name + badge + '</strong>')) + '<span>' + status + '</span></button>'
+          : '<button type="button" class="week-open" data-home-day="' + slot.stamp + '" aria-label="' + slot.name + ' on ' + slot.label + ', tap to see and edit"><span class="week-dow">' + slot.short + '</span>' + (workTxt ? '<span class="week-name"><strong>' + slot.name + '</strong>' + workTxt + '</span>' : '<strong>' + slot.name + '</strong>') + '<span>' + status + '</span></button>';
         const colorStyle = slot.dayKey ? ' style="background:' + DAY_META[slot.dayKey].color + ';color:#101820"' : "";
         const movable = !trained && slot.stamp >= week.today;
         return '<div data-slot-index="' + slotIndex + '" data-stamp="' + slot.stamp + '"' + (movable ? ' data-movable="1"' : '') + ' class="week-status' + (trained ? " trained" : "") + (today ? " today" : "") + (isNext ? " next-up" : "") + (slot.dayKey ? " workout" : " rest") + '" title="' + (slot.dayKey ? slot.label + ' · tap to open ' + slot.name : slot.label) + '"' + colorStyle + '>' + open + '</div>';
@@ -6842,6 +6865,13 @@
       return null;
     }
 
+    // v218: work times on the home calendar. One lookup map per render.
+    function homeWorkMap() {
+      const map = {};
+      effectiveShifts().forEach(sh => { if (sh && sh.date && (sh.type !== "work" || (sh.start && sh.end))) map[sh.date] = sh; });
+      return map;
+    }
+
     function shiftByDate(date) {
       const list = effectiveShifts();
       for (let i = 0; i < list.length; i += 1) {
@@ -8281,7 +8311,10 @@
       const fi = week.slots.findIndex(s => s.stamp === fromStamp), ti = week.slots.findIndex(s => s.stamp === toStamp);
       if (fi >= 0 && ti >= 0) return moveWeekDay(fi, ti);
       const slotOf = stamp => {
-        const w = weeklyProgress(new Date(stamp + "T12:00:00"));
+        const d = new Date(stamp + "T12:00:00");
+        const monday = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+        monday.setDate(monday.getDate() - (monday.getDay() + 6) % 7);
+        const w = { monday, slots: scheduleSlots(monday, week.today) };
         return { w, slot: w.slots.find(s => s.stamp === stamp) };
       };
       const a = slotOf(fromStamp), b = slotOf(toStamp);
@@ -8292,7 +8325,14 @@
       const map = state.dayOverrides[state.program];
       const sameWeek = fileStamp(a.w.monday) === fileStamp(b.w.monday);
       if (from.dayKey && to.dayKey) {
-        if (!sameWeek) return false;
+        if (!sameWeek || /^key:/.test(String(map[from.stamp] || "")) || /^key:/.test(String(map[to.stamp] || ""))) {
+          if (from.dayKey === to.dayKey) return false;
+          map[from.stamp] = "key:" + to.dayKey;
+          map[to.stamp] = "key:" + from.dayKey;
+          saveState();
+          render();
+          return true;
+        }
         const srcFrom = from.srcStamp || from.stamp, srcTo = to.srcStamp || to.stamp;
         map[from.stamp] = srcTo === from.stamp ? "train" : "from:" + srcTo;
         map[to.stamp] = srcFrom === to.stamp ? "train" : "from:" + srcFrom;
@@ -8318,7 +8358,12 @@
       if (!state.dayOverrides) state.dayOverrides = {};
       if (!state.dayOverrides[state.program]) state.dayOverrides[state.program] = {};
       const map = state.dayOverrides[state.program];
-      if (from.dayKey && to.dayKey) {
+      if (from.dayKey && to.dayKey && (/^key:/.test(String(map[from.stamp] || "")) || /^key:/.test(String(map[to.stamp] || "")))) {
+        if (from.dayKey === to.dayKey) return false;
+        const fk = from.dayKey, tk = to.dayKey;
+        map[from.stamp] = "key:" + tk;
+        map[to.stamp] = "key:" + fk;
+      } else if (from.dayKey && to.dayKey) {
         // Two training days: swap their workouts; the layout stays.
         const srcFrom = from.srcStamp || from.stamp, srcTo = to.srcStamp || to.stamp;
         map[from.stamp] = srcTo === from.stamp ? "train" : "from:" + srcTo;
