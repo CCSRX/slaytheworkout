@@ -1454,6 +1454,14 @@
           </div>
         </div>
         <div class="breath-setting">
+          <span id="sleepCommuteLabel">Time to get home</span>
+          <div class="breath-stepper">
+            <button type="button" id="sleepCommuteMinus" aria-label="Less time to get home">−</button>
+            <output id="sleepCommuteValue" for="sleepCommuteMinus sleepCommutePlus">45 min</output>
+            <button type="button" id="sleepCommutePlus" aria-label="More time to get home">+</button>
+          </div>
+        </div>
+        <div class="breath-setting">
           <span id="sleepOffWakeLabel">Wake on days off</span>
           <div class="breath-stepper">
             <button type="button" id="sleepOffWakeMinus" aria-label="Earlier day-off wake">−</button>
@@ -2100,6 +2108,7 @@
         sleepGoal: 8,
         sleepPrep: 60,
         sleepLatency: 15,
+        sleepCommute: 45,
         sleepOffWake: "07:00",
         sleepGentle: true,
         sleepGentleMax: 60,
@@ -2202,6 +2211,7 @@
           sleepGoal: normalizeSleepGoal(parsed.sleepGoal),
           sleepPrep: normalizeSleepPrep(parsed.sleepPrep),
           sleepLatency: normalizeSleepLatency(parsed.sleepLatency),
+          sleepCommute: normalizeSleepCommute(parsed.sleepCommute),
           sleepOffWake: normalizeSleepOffWake(parsed.sleepOffWake),
           sleepGentle: normalizeSleepGentle(parsed.sleepGentle),
           sleepGentleMax: normalizeSleepGentleMax(parsed.sleepGentleMax),
@@ -2311,6 +2321,7 @@
         sleepGoal: normalizeSleepGoal(state.sleepGoal),
         sleepPrep: normalizeSleepPrep(state.sleepPrep),
         sleepLatency: normalizeSleepLatency(state.sleepLatency),
+        sleepCommute: normalizeSleepCommute(state.sleepCommute),
         sleepOffWake: normalizeSleepOffWake(state.sleepOffWake),
         sleepGentle: normalizeSleepGentle(state.sleepGentle),
         sleepGentleMax: normalizeSleepGentleMax(state.sleepGentleMax),
@@ -2417,6 +2428,7 @@
       state.sleepGoal = normalizeSleepGoal(payload.sleepGoal);
       state.sleepPrep = normalizeSleepPrep(payload.sleepPrep);
       state.sleepLatency = normalizeSleepLatency(payload.sleepLatency);
+      state.sleepCommute = normalizeSleepCommute(payload.sleepCommute);
       state.sleepOffWake = normalizeSleepOffWake(payload.sleepOffWake);
       state.sleepGentle = normalizeSleepGentle(payload.sleepGentle);
       state.sleepGentleMax = normalizeSleepGentleMax(payload.sleepGentleMax);
@@ -6392,6 +6404,16 @@
       return normalizeSleepPrep(state && state.sleepPrep);
     }
 
+    const SLEEP_COMMUTE_OPTIONS = [15, 30, 45, 60, 90];
+    function normalizeSleepCommute(value) {
+      const n = Number(value);
+      return SLEEP_COMMUTE_OPTIONS.indexOf(n) >= 0 ? n : 45;
+    }
+
+    function sleepCommuteMinutes() {
+      return normalizeSleepCommute(state && state.sleepCommute);
+    }
+
     function sleepLatencyMinutes() {
       return normalizeSleepLatency(state && state.sleepLatency);
     }
@@ -6477,7 +6499,7 @@
     }
 
     function recoveryWindow(nightShift) {
-      const start = shiftEndAbs(nightShift) + 45;
+      const start = shiftEndAbs(nightShift) + sleepCommuteMinutes();
       const endDate = absToStamp(start);
       const full = anotherNightFollows(nightShift) || !sleepGentleOn();
       if (full) {
@@ -6518,6 +6540,13 @@
       const INF = 1e12;
       const maxOff = offMaxSetting === 0 ? 1e9 : offMaxSetting;
       const limitFor = function (r) { return r && kindIsOff(r.kind) ? maxOff : maxWork; };
+      // Gentle mode never costs sleep: the wake-up may not go earlier than the earliest
+      // bedtime plus the full sleep need, unless a hard alarm makes that impossible.
+      const fullSleepFloor = function (r) {
+        if (!(r.earliestBed > -INF / 2)) return -INF;
+        const floor = r.earliestBed + need;
+        return r.hasHardWake ? Math.min(floor, r.latestWake) : floor;
+      };
       const offWake = sleepOffWakeClock();
       const byDate = {};
 
@@ -6565,11 +6594,11 @@
           row.latestWake = alarmAbs;
           row.targetWake = alarmAbs;
           const prevEnd = previousWorkEndAbs(alarmAbs);
-          row.earliestBed = prevEnd != null ? prevEnd + 45 : -INF;
+          row.earliestBed = prevEnd != null ? prevEnd + sleepCommuteMinutes() : -INF;
         } else if (kind === "off" || kind === "vacation" || kind === "night" || kind === "none") {
           row.targetWake = absMin(date, offWake);
           const prevEnd = previousWorkEndAbs(row.targetWake);
-          row.earliestBed = prevEnd != null ? prevEnd + 45 : -INF;
+          row.earliestBed = prevEnd != null ? prevEnd + sleepCommuteMinutes() : -INF;
         }
         byDate[date] = row;
       }
@@ -6608,6 +6637,8 @@
           if (row.wakeAbs > maxAllowed) {
             let wake = maxAllowed;
             if (row.hasHardWake && row.latestWake < wake) wake = row.latestWake;
+            const floorB = Math.min(fullSleepFloor(row), row.wakeAbs);
+            if (wake < floorB) { wake = floorB; row.yielded = true; }
             if (wake < row.wakeAbs) {
               row.wakeAbs = wake;
               row.bedAbs = wake - need;
@@ -6655,6 +6686,11 @@
             if (row.hasHardWake && wake > row.latestWake) wake = row.latestWake;
             if (row.targetWake != null && wake < row.targetWake - 1) row.note = "getting ready for early start";
             else if (!row.hasHardWake) row.note = row.note || "easing back from late shifts";
+          }
+          const floorF = fullSleepFloor(row);
+          if (wake < floorF) {
+            wake = floorF;
+            row.yielded = true;
           }
           if (wake !== row.wakeAbs) {
             row.wakeAbs = wake;
@@ -6705,6 +6741,21 @@
 
       for (let i = 0; i < dates.length; i += 1) {
         const row = byDate[dates[i]];
+        if (!row || row.recovery || row.wakeAbs == null || row.bedAbs == null) continue;
+        // Bedtime pinned by the previous shift: the times come from that, not from easing.
+        if (row.earliestBed > -INF / 2 && row.bedAbs <= row.earliestBed + 1) row.note = null;
+        // Warn only when the hard limits really prevent the full sleep goal.
+        const slept = row.wakeAbs - row.bedAbs - sleepLatencyMinutes();
+        if (row.hasHardWake && slept < sleepGoalHours() * 60 - 1) {
+          row.maxHours = Math.max(0, Math.round((slept / 60) * 10) / 10);
+          row.warn = "Full sleep isn't possible after the previous shift. Longest you can get is " + formatSleepHours(row.maxHours) + ".";
+        } else {
+          row.warn = null;
+        }
+      }
+
+      for (let i = 0; i < dates.length; i += 1) {
+        const row = byDate[dates[i]];
         if (row.wakeAbs != null) {
           row.wake = absToClock(row.wakeAbs);
           row.wakeDate = absToStamp(row.wakeAbs);
@@ -6746,6 +6797,7 @@
         sleepGoalHours(),
         sleepPrepMinutes(),
         sleepLatencyMinutes(),
+        sleepCommuteMinutes(),
         sleepOffWakeClock(),
         sleepGentleOn() ? 1 : 0,
         sleepGentleMaxMinutes(),
@@ -7071,6 +7123,11 @@
       setDisabled("sleepGoalPlus", goal >= 10);
       setDisabled("sleepPrepMinus", prep <= 15);
       setDisabled("sleepPrepPlus", prep >= 120);
+      const commute = sleepCommuteMinutes();
+      const comVal = document.getElementById("sleepCommuteValue");
+      if (comVal) comVal.textContent = commute + " min";
+      setDisabled("sleepCommuteMinus", commute <= SLEEP_COMMUTE_OPTIONS[0]);
+      setDisabled("sleepCommutePlus", commute >= SLEEP_COMMUTE_OPTIONS[SLEEP_COMMUTE_OPTIONS.length - 1]);
       setDisabled("sleepLatencyMinus", latency <= 0);
       setDisabled("sleepLatencyPlus", latency >= 45);
       setDisabled("sleepOffWakeMinus", clockToMin(offWake) <= 5 * 60);
@@ -7090,6 +7147,16 @@
       const next = normalizeSleepPrep(sleepPrepMinutes() + delta);
       if (next === sleepPrepMinutes()) return;
       state.sleepPrep = next;
+      saveState();
+      renderSleepSettings();
+      renderSleep();
+    }
+
+    function changeSleepCommute(dir) {
+      const i = SLEEP_COMMUTE_OPTIONS.indexOf(sleepCommuteMinutes());
+      const j = Math.min(SLEEP_COMMUTE_OPTIONS.length - 1, Math.max(0, i + dir));
+      if (j === i) return;
+      state.sleepCommute = SLEEP_COMMUTE_OPTIONS[j];
       saveState();
       renderSleepSettings();
       renderSleep();
@@ -7961,6 +8028,8 @@
     document.getElementById("sleepGoalPlus").addEventListener("click", function () { changeSleepGoal(0.5); });
     document.getElementById("sleepPrepMinus").addEventListener("click", function () { changeSleepPrep(-15); });
     document.getElementById("sleepPrepPlus").addEventListener("click", function () { changeSleepPrep(15); });
+    document.getElementById("sleepCommuteMinus").addEventListener("click", function () { changeSleepCommute(-1); });
+    document.getElementById("sleepCommutePlus").addEventListener("click", function () { changeSleepCommute(1); });
     document.getElementById("sleepLatencyMinus").addEventListener("click", function () { changeSleepLatency(-5); });
     document.getElementById("sleepLatencyPlus").addEventListener("click", function () { changeSleepLatency(5); });
     document.getElementById("sleepOffWakeMinus").addEventListener("click", function () { changeSleepOffWake(-15); });
