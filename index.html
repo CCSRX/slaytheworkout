@@ -998,6 +998,51 @@
     body[data-theme="light"] .extra-tile[data-extra="sleep"] .extra-icon { color: #5b21b6; background: #eee8ff; border-color: #c4b5fd; }
     .extra-tile[data-extra="summary"] .extra-icon { color: #f0a35a; background: #2a1c12; border-color: #5c3a20; }
     body[data-theme="light"] .extra-tile[data-extra="summary"] .extra-icon { color: #b45309; background: #fff1e0; border-color: #f0c56a; }
+    .extra-tile[data-extra="achievements"] .extra-icon { color: #f0c56a; background: #2a2410; border-color: #6a5420; }
+    body[data-theme="light"] .extra-tile[data-extra="achievements"] .extra-icon { color: #805200; background: #fff0c7; border-color: #e6c56a; }
+    .ach-screen .history-note { margin-top: 8px; }
+    .ach-group { margin: 18px 0 8px; }
+    .ach-group h2 { margin: 0 0 10px; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mute); }
+    .ach-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .ach-badge { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; width: 100%; padding: 12px 12px 10px; border-radius: 16px; border: 1px solid var(--line); background: var(--card); color: var(--text); font: inherit; text-align: left; touch-action: manipulation; }
+    .ach-badge.is-off { opacity: 0.48; }
+    .ach-badge.is-on { border-color: #6a5420; background: #1c1810; }
+    body[data-theme="light"] .ach-badge.is-on { border-color: #e6c56a; background: #fff7e0; }
+    .ach-medal { width: 28px; height: 28px; color: #f0c56a; }
+    .ach-medal svg { width: 28px; height: 28px; display: block; }
+    .ach-badge.is-off .ach-medal { color: var(--mute); }
+    .ach-badge strong { font-size: 14px; font-weight: 800; line-height: 1.3; }
+    .ach-bar { display: block; width: 100%; height: 4px; border-radius: 999px; background: var(--card-2); overflow: hidden; }
+    .ach-bar span { display: block; height: 100%; border-radius: 999px; background: var(--acc); }
+    .ach-date { font-size: 12px; font-weight: 700; color: #f0c56a; }
+    body[data-theme="light"] .ach-date { color: #805200; }
+    .ach-progress { font-size: 12px; color: var(--mute); }
+    .achievement-toast { position: fixed; left: 16px; right: 16px; bottom: calc(78px + var(--sab, 0px)); z-index: 60; padding: 12px 14px; border-radius: 16px; border: 1px solid #6a5420; background: var(--card); color: var(--text); box-shadow: 0 8px 18px rgba(0,0,0,0.28); }
+    .achievement-toast[hidden] { display: none; }
+    .achievement-toast strong { display: block; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: #f0c56a; margin-bottom: 2px; }
+    .achievement-toast p { margin: 0; font-size: 15px; font-weight: 750; line-height: 1.35; }
+    .achievement-toast.is-glow, .dc-achievements.is-glow { animation: ach-glow 0.9s ease-out; }
+    @keyframes ach-glow {
+      0% { transform: scale(0.96); box-shadow: 0 0 0 0 rgba(240,197,106,0); }
+      40% { transform: scale(1.03); box-shadow: 0 0 24px 2px rgba(240,197,106,0.35); }
+      100% { transform: scale(1); box-shadow: 0 8px 18px rgba(0,0,0,0.28); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .achievement-toast.is-glow, .dc-achievements.is-glow { animation: none; }
+    }
+    .dc-achievements { margin: 0 0 14px; padding: 10px 12px; border-radius: 14px; border: 1px solid #6a5420; background: #1c1810; }
+    .dc-achievements[hidden] { display: none; }
+    .dc-achievements strong { display: block; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: #f0c56a; margin-bottom: 4px; }
+    .dc-achievements ul { list-style: none; margin: 0; padding: 0; }
+    .dc-achievements li { font-size: 14px; font-weight: 700; padding: 2px 0; }
+    body[data-theme="light"] .dc-achievements { background: #fff7e0; border-color: #e6c56a; }
+    body[data-theme="light"] .dc-achievements strong { color: #805200; }
+    .ach-detail { position: fixed; inset: 0; z-index: 55; display: flex; align-items: flex-end; justify-content: center; padding: calc(16px + var(--sat, 0px)) 16px calc(16px + var(--sab, 0px)); background: rgba(0,0,0,0.55); }
+    .ach-detail[hidden] { display: none; }
+    .ach-detail-card { width: min(520px, 100%); background: var(--card); border: 1px solid var(--line); border-radius: 20px 20px 16px 16px; padding: 18px 16px 16px; }
+    .ach-detail-card h2 { margin: 8px 0 8px; font-size: 22px; }
+    .ach-detail-card p { margin: 0 0 8px; color: var(--mute); font-size: 14px; line-height: 1.45; }
+    .ach-detail-close { float: right; border: 0; background: none; color: var(--text); font: inherit; font-weight: 700; padding: 4px 0 4px 8px; }
     .summary-screen .week-summary { margin: 8px 0 0; padding-top: 0; border-top: 0; }
     .summary-screen header { margin-bottom: 4px; }
     .summary-range { margin: 12px 0 0; }
@@ -1373,6 +1418,7 @@
       <h2 id="dayCompleteTitle">Workout done</h2>
       <p class="dc-sub" id="dayCompleteSub"></p>
       <ul class="dc-list" id="dayCompleteList"></ul>
+      <div id="dayCompleteAchievements" class="dc-achievements" hidden></div>
       <p class="dc-breath-q">Want a short breathing exercise to help your recovery?</p>
       <button type="button" class="dc-breath" id="dayCompleteBreath">Yes, start breathing</button>
       <button type="button" class="dc-done" id="dayCompleteDone">Done · back to home</button>
@@ -1417,6 +1463,10 @@
         <span class="extra-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20V8"/></svg></span>
         <span>Exercise summary</span>
       </button>
+      <button type="button" class="extra-tile" id="extraAchievements" data-extra="achievements">
+        <span class="extra-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4h8v5a4 4 0 0 1-8 0V4z"/><path d="M8 6H5.5A2.5 2.5 0 0 0 8 10.5"/><path d="M16 6h2.5A2.5 2.5 0 0 1 16 10.5"/><path d="M12 13v2"/><path d="M9 21h6"/><path d="M10 15h4v6h-4z"/></svg></span>
+        <span>Achievements</span>
+      </button>
     </div>
   </main>
   <main id="summaryScreen" class="wrap summary-screen" hidden>
@@ -1441,6 +1491,24 @@
     <div id="exerciseSummaryBody"></div>
     <div id="summaryLegend"></div>
   </main>
+  <main id="achievementsScreen" class="wrap ach-screen" hidden>
+    <div class="breath-top">
+      <button type="button" class="home-back" id="achievementsBack" aria-label="Back"><svg class="back-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M15 8H2M7.5 2.5 2 8l5.5 5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Back</button>
+    </div>
+    <header>
+      <p class="eyebrow">Just for you</p>
+      <h1>Achievements</h1>
+      <p class="history-note">Personal notes of progress. Nothing is ranked or compared.</p>
+    </header>
+    <div id="achievementsBody"></div>
+  </main>
+  <div id="achievementDetail" class="ach-detail" hidden>
+    <div class="ach-detail-card" id="achievementDetailCard" role="dialog" aria-modal="true"></div>
+  </div>
+  <div id="achievementToast" class="achievement-toast" hidden>
+    <strong>Achievement</strong>
+    <p id="achievementToastText"></p>
+  </div>
   <main id="breathingScreen" class="wrap breathing-screen" hidden>
     <div class="breath-top">
       <button type="button" class="home-back" id="breathBack" aria-label="Back"><svg class="back-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M15 8H2M7.5 2.5 2 8l5.5 5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Back</button>
@@ -2333,6 +2401,7 @@
         sleepGentleMax: 60,
         sleepGentleOffMax: 120,
         bodyWeight: "",
+        achievements: { unlocked: {}, celebrated: {} },
         sessions: [],
         logDates: {},
         lastSavedAt: "",
@@ -2442,6 +2511,7 @@
           sleepGentleMax: normalizeSleepGentleMax(parsed.sleepGentleMax),
           sleepGentleOffMax: normalizeSleepGentleOffMax(parsed.sleepGentleOffMax),
           bodyWeight: normalizeBodyWeight(parsed.bodyWeight),
+          achievements: normalizeAchievements(parsed.achievements),
           lastSavedAt: parsed.lastSavedAt ? String(parsed.lastSavedAt) : "",
           updatedAt: normalizeUpdatedAt(updatedAt),
           sessions: normalizeSessions(parsed.sessions),
@@ -2563,6 +2633,7 @@
         logDates: state.logDates,
         restDuration: state.restDuration,
         bodyWeight: state.bodyWeight || "",
+        achievements: normalizeAchievements(state.achievements),
         exerciseSwaps: state.exerciseSwaps,
         weekPlans: state.weekPlans,
         weekPlanHistory: state.weekPlanHistory,
@@ -2685,6 +2756,7 @@
       state.logDates = normalizeLogDates(payload.logDates, payload.updatedAt);
       if (payload.restDuration != null) state.restDuration = normalizeRestDuration(payload.restDuration);
       if (payload.bodyWeight != null) state.bodyWeight = normalizeBodyWeight(payload.bodyWeight);
+      state.achievements = normalizeAchievements(payload.achievements);
       if (payload.exerciseSwaps) state.exerciseSwaps = normalizeExerciseSwaps(payload.exerciseSwaps);
       if (payload.equipment) state.equipment = normalizeEquipment(payload.equipment);
       if (payload.repTargets) state.repTargets = normalizeRepTargets(payload.repTargets);
@@ -2697,6 +2769,7 @@
       state.logVariants = normalizeLogVariants(payload.logVariants);
       weightDraft = null;
       syncLogVariants();
+      checkAchievements({ notify: false });
       saveState();
       render();
       showStatus("Logs imported and current data replaced.");
@@ -2715,6 +2788,7 @@
       state.updatedAt = fresh.updatedAt;
       state.logs = fresh.logs;
       state.sessions = [];
+      state.achievements = emptyAchievements();
       state.logDates = {};
       state.logVariants = {};
       state.lastDay = null;
@@ -3519,6 +3593,7 @@
       if (!state.logVariants || typeof state.logVariants !== "object") state.logVariants = {};
       if (!state.logVariants[day]) state.logVariants[day] = {};
       state.logVariants[day][exerciseId] = v.id;
+      checkAchievements({ notify: true });
     }
 
     function prepareExerciseForToday(day, exerciseId) {
@@ -4848,6 +4923,14 @@
       document.getElementById("dayCompleteTitle").textContent = DAY_META[dayKey].name + " done!";
       document.getElementById("dayCompleteSub").textContent = displaySessionDate(fileStamp(new Date())) + " · nice work.";
       document.getElementById("dayCompleteList").innerHTML = items;
+      checkAchievements({ notify: true });
+      fillDayCompleteAchievements();
+      const dcAch = document.getElementById("dayCompleteAchievements");
+      if (dcAch && !dcAch.hidden) {
+        dcAch.classList.remove("is-glow");
+        void dcAch.offsetWidth;
+        dcAch.classList.add("is-glow");
+      }
       document.getElementById("dayComplete").hidden = false;
     }
 
@@ -5057,6 +5140,9 @@
       document.getElementById("breathingScreen").hidden = view !== "breathing";
       document.getElementById("sleepScreen").hidden = view !== "sleep";
       document.getElementById("summaryScreen").hidden = view !== "exerciseSummary";
+      const achScreen = document.getElementById("achievementsScreen");
+      if (achScreen) achScreen.hidden = view !== "achievements";
+      if (view !== "achievements") closeAchievementDetail();
       if (view !== "breathing") {
         stopBreathing();
         stopSlayer();
@@ -5069,7 +5155,7 @@
         closeSleepWeek();
       } else renderSleep();
       const todayIsRest = !logDayKey();
-      const extraViews = view === "extra" || view === "history" || view === "breathing" || view === "sleep" || view === "exerciseSummary";
+      const extraViews = view === "extra" || view === "history" || view === "breathing" || view === "sleep" || view === "exerciseSummary" || view === "achievements";
       document.querySelectorAll(".nav-button").forEach(button => {
         const on = (button.dataset.view === view || (button.id === "navExtra" && extraViews)) && !(button.id === "navLog" && todayIsRest);
         if (on) button.setAttribute("aria-current", "page");
@@ -5078,6 +5164,7 @@
       updateLogNavLabel();
       if (view === "history") renderGlobalHistory();
       if (view === "exerciseSummary") renderExerciseSummary();
+      if (view === "achievements") renderAchievements();
       if (view !== "workout") return;
 
       const dayKey = state.currentDay;
@@ -6102,6 +6189,385 @@
       view = "exerciseSummary";
       render();
       window.scrollTo(0, 0);
+    }
+
+    const ACHIEVEMENT_SQUATS = ["squat", "frontSquat", "gobletSquat", "hackSquat", "safetyBarSquat"];
+    const ACHIEVEMENT_DEADLIFTS = ["rdl", "dbRdl", "sldl"];
+    const ACHIEVEMENT_BENCHES = ["bench", "inclineDbBench", "flatBench", "flatDbBench", "machineInclinePress"];
+    const ACHIEVEMENT_PRESSES = ["ohp", "dbOhp", "seatedDbPress", "machineShoulderPress", "arnoldPress"];
+    const ACHIEVEMENT_PULLUPS = ["pullupsWide", "pullupsShort", "pullupsSupinated", "neutralPullups"];
+    const VOLUME_GOALS = [10000, 25000, 50000, 100000];
+
+    function emptyAchievements() {
+      return { unlocked: {}, celebrated: {} };
+    }
+
+    function normalizeAchievements(raw) {
+      const out = emptyAchievements();
+      if (!raw || typeof raw !== "object") return out;
+      const unlocked = raw.unlocked && typeof raw.unlocked === "object" ? raw.unlocked : raw;
+      Object.keys(unlocked).forEach(function (id) {
+        if (id === "unlocked" || id === "celebrated") return;
+        const date = String(unlocked[id] || "");
+        if (/^\d{4}-\d{2}-\d{2}$/.test(date)) out.unlocked[id] = date;
+      });
+      const celebrated = raw.celebrated && typeof raw.celebrated === "object" ? raw.celebrated : {};
+      Object.keys(celebrated).forEach(function (id) {
+        if (celebrated[id]) out.celebrated[id] = true;
+      });
+      return out;
+    }
+
+    function typedSetKg(row) {
+      const typed = Number(normalizeWeightText(row && row.weight));
+      return Number.isFinite(typed) && typed > 0 ? typed : 0;
+    }
+
+    function achievementEntryName(exId, entry, session) {
+      if (entry && entry.variantName) return entry.variantName;
+      const variant = entryVariant(entry, exId);
+      if (variant && variant !== exId) {
+        const alt = (typeof alternativesFor === "function" ? alternativesFor(exId) : []).find(function (item) { return item.id === variant; });
+        if (alt && alt.name) return alt.name;
+        if (EXERCISES[variant] && EXERCISES[variant].name) return EXERCISES[variant].name;
+      }
+      const ex = (session ? findExercise(session.day, exId) : null) || EXERCISES[exId] || CUSTOM_EXERCISES[exId];
+      return ex && ex.name ? ex.name : exId;
+    }
+
+    function formatAchievementVolume(kg) {
+      const display = usesLb() ? Number(kg) * KG_TO_LB : Number(kg);
+      const rounded = Math.round(display * 10) / 10;
+      if (!Number.isFinite(rounded)) return "0 " + weightUnitLabel();
+      const num = Number.isInteger(rounded) ? String(Math.round(rounded)) : rounded.toFixed(1);
+      const parts = num.split(".");
+      parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+      return parts.join(".") + " " + weightUnitLabel();
+    }
+
+    function achievementEntryMatches(exId, entry, ids) {
+      const variant = entryVariant(entry, exId);
+      return ids.indexOf(exId) >= 0 || ids.indexOf(variant) >= 0;
+    }
+
+    function liftProgress(ids, targetKg) {
+      let best = 0, date = "", name = "";
+      const sessions = (state.sessions || []).slice().sort(function (a, b) {
+        return String(a.date).localeCompare(String(b.date));
+      });
+      sessions.forEach(function (session) {
+        const exercises = session.exercises || {};
+        Object.keys(exercises).forEach(function (exId) {
+          const entry = exercises[exId];
+          if (!achievementEntryMatches(exId, entry, ids)) return;
+          (entry.sets || []).forEach(function (row) {
+            if (!setHasReps(row)) return;
+            const kg = typedSetKg(row);
+            if (kg > best) {
+              best = kg;
+              name = achievementEntryName(exId, entry, session);
+            }
+          });
+        });
+        if (!date && targetKg > 0 && best + 1e-6 >= targetKg) date = session.date;
+      });
+      return { best: best, date: date, name: name };
+    }
+
+    function sessionCountProgress(target) {
+      const dates = {};
+      let count = 0, date = "";
+      const sessions = (state.sessions || []).slice().sort(function (a, b) {
+        return String(a.date).localeCompare(String(b.date));
+      });
+      sessions.forEach(function (session) {
+        if (!sessionHasSets(session) || dates[session.date]) return;
+        dates[session.date] = true;
+        count += 1;
+        if (!date && count >= target) date = session.date;
+      });
+      return { best: count, date: date };
+    }
+
+    function firstWeightProgress() {
+      let date = "", name = "";
+      const sessions = (state.sessions || []).slice().sort(function (a, b) {
+        return String(a.date).localeCompare(String(b.date));
+      });
+      sessions.some(function (session) {
+        const exercises = session.exercises || {};
+        return Object.keys(exercises).some(function (exId) {
+          const entry = exercises[exId];
+          return (entry.sets || []).some(function (row) {
+            if (!setHasReps(row) || typedSetKg(row) <= 0) return false;
+            date = session.date;
+            name = achievementEntryName(exId, entry, session);
+            return true;
+          });
+        });
+      });
+      return { best: date ? 1 : 0, date: date, name: name };
+    }
+
+    function volumeProgress(targetKg) {
+      let total = 0, date = "";
+      const sessions = (state.sessions || []).slice().sort(function (a, b) {
+        return String(a.date).localeCompare(String(b.date));
+      });
+      sessions.forEach(function (session) {
+        const exercises = session.exercises || {};
+        Object.keys(exercises).forEach(function (exId) {
+          const entry = exercises[exId];
+          const variantId = entryVariant(entry, exId);
+          const exercise = findExercise(session.day, exId) || EXERCISES[exId] || CUSTOM_EXERCISES[exId] || { id: exId };
+          (entry.sets || []).forEach(function (row) {
+            if (!setHasReps(row)) return;
+            const reps = Number(row.reps);
+            const kg = setKg(row, exercise, variantId);
+            if (Number.isFinite(reps) && reps > 0 && kg > 0) total += kg * reps;
+          });
+        });
+        if (!date && targetKg > 0 && total + 1e-6 >= targetKg) date = session.date;
+      });
+      return { best: total, date: date };
+    }
+
+    function firstPersonalBestProgress() {
+      const bests = {};
+      let date = "", name = "";
+      const sessions = (state.sessions || []).slice().sort(function (a, b) {
+        return String(a.date).localeCompare(String(b.date)) || String(a.updatedAt || "").localeCompare(String(b.updatedAt || ""));
+      });
+      sessions.forEach(function (session) {
+        const exercises = session.exercises || {};
+        Object.keys(exercises).forEach(function (exId) {
+          const entry = exercises[exId];
+          let heavy = 0, load = 0;
+          (entry.sets || []).forEach(function (row) {
+            if (!setHasReps(row)) return;
+            const kg = typedSetKg(row);
+            const reps = Number(row.reps) || 0;
+            if (kg > heavy) heavy = kg;
+            const setLoad = kg * reps;
+            if (setLoad > load) load = setLoad;
+          });
+          if (heavy <= 0 && load <= 0) return;
+          const prev = bests[exId];
+          if (prev && (heavy > prev.heavy + 1e-6 || load > prev.load + 1e-6) && !date) {
+            date = session.date;
+            name = achievementEntryName(exId, entry, session);
+          }
+          if (!prev || heavy > prev.heavy || load > prev.load) {
+            bests[exId] = { heavy: Math.max(heavy, prev ? prev.heavy : 0), load: Math.max(load, prev ? prev.load : 0) };
+          }
+        });
+      });
+      return { best: date ? 1 : 0, date: date, name: name };
+    }
+
+    function makeLiftBadge(id, group, title, blurb, ids, multiplier) {
+      const bodyKg = Number(normalizeBodyWeight(state.bodyWeight)) || 0;
+      const needsBodyWeight = !bodyKg;
+      const target = bodyKg ? bodyKg * multiplier : 0;
+      const progress = liftProgress(ids, target);
+      const unlocked = !!(state.achievements && state.achievements.unlocked[id]) || !!(target && progress.date);
+      const date = (state.achievements && state.achievements.unlocked[id]) || progress.date || "";
+      let progressText = "";
+      if (needsBodyWeight) progressText = "Set your body weight in Settings";
+      else progressText = formatWeightWithUnit(progress.best) + " / " + formatWeightWithUnit(target);
+      return {
+        id: id, group: group, title: title, blurb: blurb,
+        unlocked: unlocked, date: unlocked ? date : "",
+        current: progress.best, target: target, kind: "weight",
+        progressText: progressText, liftName: progress.name || "",
+        needsBodyWeight: needsBodyWeight, multiplier: multiplier
+      };
+    }
+
+    function makeCountBadge(id, group, title, blurb, current, target, date, kind, extra) {
+      const unlocked = !!(state.achievements && state.achievements.unlocked[id]) || !!(target && date);
+      const kept = (state.achievements && state.achievements.unlocked[id]) || date || "";
+      return Object.assign({
+        id: id, group: group, title: title, blurb: blurb,
+        unlocked: unlocked, date: unlocked ? kept : "",
+        current: current, target: target, kind: kind,
+        progressText: "", liftName: "", needsBodyWeight: false
+      }, extra || {});
+    }
+
+    function evaluateAchievements() {
+      const badges = [];
+      badges.push(makeLiftBadge("starter-squat", "starter", "Squat body weight", "A working set at or above your body weight on a squat.", ACHIEVEMENT_SQUATS, 1));
+      badges.push(makeLiftBadge("starter-deadlift", "starter", "Deadlift 1½× body weight", "A working set at or above one and a half times your body weight on a deadlift or Romanian deadlift.", ACHIEVEMENT_DEADLIFTS, 1.5));
+      badges.push(makeLiftBadge("starter-bench", "starter", "Bench ½ body weight", "A working set at or above half your body weight on a bench press.", ACHIEVEMENT_BENCHES, 0.5));
+      badges.push(makeLiftBadge("starter-ohp", "starter", "Press ⅓ body weight", "A working set at or above a third of your body weight on an overhead press.", ACHIEVEMENT_PRESSES, 1 / 3));
+      badges.push(makeLiftBadge("advanced-squat", "advanced", "Squat 1½× body weight", "A working set at or above one and a half times your body weight on a squat.", ACHIEVEMENT_SQUATS, 1.5));
+      badges.push(makeLiftBadge("advanced-deadlift", "advanced", "Deadlift 2× body weight", "A working set at or above twice your body weight on a deadlift or Romanian deadlift.", ACHIEVEMENT_DEADLIFTS, 2));
+      badges.push(makeLiftBadge("advanced-bench", "advanced", "Bench body weight", "A working set at or above your body weight on a bench press.", ACHIEVEMENT_BENCHES, 1));
+      badges.push(makeLiftBadge("advanced-ohp", "advanced", "Press ½ body weight", "A working set at or above half your body weight on an overhead press.", ACHIEVEMENT_PRESSES, 0.5));
+      badges.push(makeLiftBadge("advanced-pullup", "advanced", "Pull-up with body weight added", "A pull-up with added weight equal to your body weight. Only the weight you type counts, not an estimate.", ACHIEVEMENT_PULLUPS, 1));
+      const firstW = firstWeightProgress();
+      badges.push(makeCountBadge("first-weight", "other", "First weight added", "The first time you add a typed weight to any lift.", firstW.best, 1, firstW.date, "flag", { liftName: firstW.name, progressText: firstW.date ? "Done" : "Not yet" }));
+      const sessions = sessionCountProgress(5);
+      badges.push(makeCountBadge("sessions-5", "other", "Five sessions logged", "Log five training sessions.", sessions.best, 5, sessions.date, "count", { progressText: sessions.best + " / 5 sessions" }));
+      VOLUME_GOALS.forEach(function (goal) {
+        const vol = volumeProgress(goal);
+        badges.push(makeCountBadge("volume-" + goal, "other", formatAchievementVolume(goal) + " volume", "Reach a lifetime training volume of " + formatAchievementVolume(goal) + ".", vol.best, goal, vol.date, "volume", { progressText: formatAchievementVolume(vol.best) + " / " + formatAchievementVolume(goal) }));
+      });
+      const pr = firstPersonalBestProgress();
+      badges.push(makeCountBadge("first-pr", "other", "New personal best", "Beat a previous best on a single exercise.", pr.best, 1, pr.date, "flag", { liftName: pr.name, progressText: pr.date ? "Done" : "Not yet" }));
+      return badges;
+    }
+
+    function achievementRatio(badge) {
+      if (badge.unlocked) return 1;
+      if (badge.needsBodyWeight || !badge.target) return 0;
+      return Math.max(0, Math.min(1, (Number(badge.current) || 0) / badge.target));
+    }
+
+    function playAchievementChime() {
+      if (!breathSoundOn()) return;
+      const ctx = breathAudio || ensureBreathAudio();
+      if (!ctx) return;
+      const t0 = ctx.currentTime + 0.02;
+      breathBeep(ctx, t0, 523.25, 659.25, 0.55, 0.04);
+      breathBeep(ctx, t0 + 0.2, 659.25, 783.99, 0.7, 0.035);
+    }
+
+    let achievementToastTimer = 0;
+
+    function showAchievementToast(badges) {
+      const el = document.getElementById("achievementToast");
+      const text = document.getElementById("achievementToastText");
+      if (!el || !text || !badges.length) return;
+      text.textContent = badges.map(function (b) { return b.title; }).join(" · ");
+      el.hidden = false;
+      el.classList.remove("is-glow");
+      void el.offsetWidth;
+      el.classList.add("is-glow");
+      playAchievementChime();
+      if (achievementToastTimer) window.clearTimeout(achievementToastTimer);
+      achievementToastTimer = window.setTimeout(function () {
+        el.classList.remove("is-glow");
+        el.hidden = true;
+      }, 4200);
+    }
+
+    function checkAchievements(options) {
+      const notify = !!(options && options.notify);
+      if (!state.achievements) state.achievements = emptyAchievements();
+      const badges = evaluateAchievements();
+      const today = fileStamp(new Date());
+      const fresh = [];
+      let changed = false;
+      badges.forEach(function (badge) {
+        if (!badge.unlocked || !badge.date) return;
+        if (!state.achievements.unlocked[badge.id]) {
+          state.achievements.unlocked[badge.id] = badge.date;
+          changed = true;
+        }
+        const isToday = badge.date === today;
+        if (notify && isToday && !state.achievements.celebrated[badge.id]) {
+          fresh.push(badge);
+          state.achievements.celebrated[badge.id] = true;
+          changed = true;
+        } else if (!notify && !state.achievements.celebrated[badge.id]) {
+          state.achievements.celebrated[badge.id] = true;
+          changed = true;
+        }
+      });
+      if (changed) saveState();
+      if (notify && fresh.length) showAchievementToast(fresh);
+      if (typeof window.__onAchievements === "function") {
+        try { window.__onAchievements({ notify: notify, fresh: fresh.map(function (b) { return b.id; }) }); } catch (error) {}
+      }
+      return badges;
+    }
+
+    function achievementIconSvg() {
+      return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 4h8v5a4 4 0 0 1-8 0V4z"/><path d="M8 6H5.5A2.5 2.5 0 0 0 8 10.5"/><path d="M16 6h2.5A2.5 2.5 0 0 1 16 10.5"/><path d="M12 13v2"/><path d="M9 21h6"/><path d="M10 15h4v6h-4z"/></svg>';
+    }
+
+    function renderAchievementBadge(badge) {
+      const ratio = achievementRatio(badge);
+      const dateText = badge.unlocked && badge.date ? displaySessionDate(badge.date, false) : "";
+      const bar = badge.kind === "flag" && !badge.unlocked ? "" : (
+        '<span class="ach-bar" aria-hidden="true"><span style="width:' + Math.round(ratio * 100) + '%"></span></span>'
+      );
+      const meta = badge.unlocked ? ('<span class="ach-date">' + escapeHtml(dateText) + "</span>") : ('<span class="ach-progress">' + escapeHtml(badge.progressText || "") + "</span>");
+      return '<button type="button" class="ach-badge' + (badge.unlocked ? " is-on" : " is-off") + '" data-achievement="' + escapeHtml(badge.id) + '">' +
+        '<span class="ach-medal">' + achievementIconSvg() + "</span>" +
+        "<strong>" + escapeHtml(badge.title) + "</strong>" +
+        bar + meta +
+        "</button>";
+    }
+
+    function renderAchievements() {
+      const body = document.getElementById("achievementsBody");
+      if (!body) return;
+      const badges = evaluateAchievements();
+      const groups = [
+        { id: "starter", title: "Starter" },
+        { id: "advanced", title: "Advanced" },
+        { id: "other", title: "Other" }
+      ];
+      body.innerHTML = groups.map(function (group) {
+        const items = badges.filter(function (b) { return b.group === group.id; });
+        return '<section class="ach-group"><h2>' + escapeHtml(group.title) + "</h2><div class=\"ach-grid\">" +
+          items.map(renderAchievementBadge).join("") + "</div></section>";
+      }).join("");
+    }
+
+    function closeAchievementDetail() {
+      const el = document.getElementById("achievementDetail");
+      if (el) el.hidden = true;
+    }
+
+    function openAchievementDetail(id) {
+      const badge = evaluateAchievements().find(function (item) { return item.id === id; });
+      const el = document.getElementById("achievementDetail");
+      const card = document.getElementById("achievementDetailCard");
+      if (!badge || !el || !card) return;
+      let extras = "<p>" + escapeHtml(badge.blurb) + "</p>";
+      if (badge.liftName) extras += "<p>Best so far: " + escapeHtml(badge.liftName) + (badge.kind === "weight" ? " · " + escapeHtml(formatWeightWithUnit(badge.current)) : "") + "</p>";
+      else if (badge.kind === "weight" && badge.current) extras += "<p>Best so far: " + escapeHtml(formatWeightWithUnit(badge.current)) + "</p>";
+      if (badge.unlocked && badge.date) extras += "<p>Reached " + escapeHtml(displaySessionDate(badge.date)) + ".</p>";
+      else extras += "<p>" + escapeHtml(badge.progressText || "Still ahead.") + "</p>";
+      if (!badge.unlocked && badge.kind === "weight" && badge.target && !badge.needsBodyWeight) {
+        const left = Math.max(0, badge.target - (badge.current || 0));
+        if (left > 0) extras += "<p>" + escapeHtml(formatWeightWithUnit(left)) + " to go.</p>";
+      }
+      card.innerHTML = '<button type="button" class="ach-detail-close" id="achievementDetailClose">Close</button>' +
+        '<span class="ach-medal' + (badge.unlocked ? " is-on" : "") + '">' + achievementIconSvg() + "</span>" +
+        "<h2>" + escapeHtml(badge.title) + "</h2>" + extras;
+      el.hidden = false;
+    }
+
+    function goAchievements() {
+      rememberOnLeave();
+      cancelLongPress();
+      closeSettings();
+      closeAchievementDetail();
+      view = "achievements";
+      render();
+      window.scrollTo(0, 0);
+    }
+
+    function fillDayCompleteAchievements() {
+      const box = document.getElementById("dayCompleteAchievements");
+      if (!box) return;
+      const today = fileStamp(new Date());
+      const badges = evaluateAchievements().filter(function (b) { return b.unlocked && b.date === today; });
+      if (!badges.length) {
+        box.hidden = true;
+        box.innerHTML = "";
+        box.classList.remove("is-glow");
+        return;
+      }
+      box.hidden = false;
+      box.innerHTML = "<strong>Achievements</strong><ul>" + badges.map(function (b) {
+        return "<li>" + escapeHtml(b.title) + "</li>";
+      }).join("") + "</ul>";
     }
 
     function goBreathing(options) {
@@ -8818,6 +9284,7 @@
     // First run = nothing saved at all (v154). Read before anything below can save.
     const FIRST_RUN = (function () { try { return !localStorage.getItem(STORAGE_KEY); } catch (error) { return false; } })();
     const state = loadState();
+    checkAchievements({ notify: false });
     let view = "home";
     let activeExerciseId = null;
     let selectedReps = "";
@@ -9396,6 +9863,15 @@
     document.getElementById("extraSleep").addEventListener("click", goSleep);
     document.getElementById("extraSummary").addEventListener("click", goExerciseSummary);
     document.getElementById("summaryBack").addEventListener("click", goExtra);
+    document.getElementById("extraAchievements").addEventListener("click", goAchievements);
+    document.getElementById("achievementsBack").addEventListener("click", goExtra);
+    document.getElementById("achievementsBody").addEventListener("click", function (event) {
+      const btn = event.target.closest("[data-achievement]");
+      if (btn) openAchievementDetail(btn.getAttribute("data-achievement"));
+    });
+    document.getElementById("achievementDetail").addEventListener("click", function (event) {
+      if (event.target.id === "achievementDetail" || event.target.id === "achievementDetailClose" || event.target.closest("#achievementDetailClose")) closeAchievementDetail();
+    });
     document.getElementById("summaryRangeWeek").addEventListener("click", function () { summaryRange = "week"; if (view === "exerciseSummary") renderExerciseSummary(); });
     document.getElementById("summaryRangeMonth").addEventListener("click", function () { summaryRange = "month"; if (view === "exerciseSummary") renderExerciseSummary(); });
     document.getElementById("summaryTabMuscles").addEventListener("click", function () { summaryTab = "muscles"; if (view === "exerciseSummary") renderExerciseSummary(); });
@@ -9914,8 +10390,10 @@
       input.setAttribute("aria-invalid", ok ? "false" : "true");
       if (!ok || next === (state.bodyWeight || "")) return;
       state.bodyWeight = next;
+      checkAchievements({ notify: false });
       saveState();
       renderWeeklyView();
+      if (view === "achievements") renderAchievements();
       if (view === "workout" && activeExerciseId) render();
     });
     document.addEventListener("click", event => {
