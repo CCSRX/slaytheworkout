@@ -1908,8 +1908,6 @@
     // Legs uses its own partial-squat label; other programs keep the plain Back Squats name on the same lift id.
     EXERCISES.squat = Object.assign({}, EXERCISES.squat, { name: "Back Squats" });
     const lifts = ids => ids.map(id => EXERCISES[id]);
-    // Lying Neck Extension is removed from the PPL Pull day (Carl, 2026-11-20); the lift itself stays for other programs and old logs.
-    ROUTINE.pull = ROUTINE.pull.filter(ex => ex.id !== "neckExt");
     Object.assign(ROUTINE, {
       upperA: lifts(["bench", "ohp", "pullupsWide", "rows", "laterals", "ezCurls", "skulls"]),
       lowerA: lifts(["squat", "rdl", "calves", "legRaises", "neckFlex"]),
@@ -4912,16 +4910,43 @@
     }
 
     // v179: only sets logged today count. Rows left from the last time this day was trained do not.
+    function dayHasLoggedWorkToday(dayKey) {
+      const today = fileStamp(new Date());
+      if ((state.sessions || []).some(session => session.date === today && session.day === dayKey && sessionHasSets(session))) return true;
+      const dates = (state.logDates && state.logDates[dayKey]) || {};
+      const logs = (state.logs && state.logs[dayKey]) || {};
+      return Object.keys(dates).some(id => dates[id] === today && (logs[id] || []).some(setHasReps));
+    }
+
     function dayLogsComplete(dayKey) {
       const list = dayExercises(dayKey);
-      return list.length > 0 && list.every(ex => doneToday(dayKey, ex));
+      if (list.length) return list.every(ex => doneToday(dayKey, ex));
+      return dayHasLoggedWorkToday(dayKey);
+    }
+
+    function maybeOfferDayComplete(dayKey, wasComplete) {
+      if (wasComplete || view !== "workout") return;
+      if (dayLogsComplete(dayKey)) showDayComplete(dayKey);
     }
 
     function showDayComplete(dayKey) {
-      const items = dayExercises(dayKey).map(ex => {
-        const line = completedSetsLine(state.logs[dayKey][ex.id]);
+      let items = dayExercises(dayKey).map(ex => {
+        const line = completedSetsLine(state.logs[dayKey] && state.logs[dayKey][ex.id]);
         return line ? '<li><strong>' + escapeHtml(displayExercise(ex).name) + '</strong><span>' + escapeHtml(line) + '</span></li>' : "";
       }).join("");
+      if (!items) {
+        const today = fileStamp(new Date());
+        const session = (state.sessions || []).filter(function (s) { return s.date === today && s.day === dayKey && sessionHasSets(s); }).pop();
+        const source = session ? session.exercises : ((state.logs && state.logs[dayKey]) || {});
+        items = Object.keys(source).map(function (id) {
+          const rows = session ? (session.exercises[id] && session.exercises[id].sets) : source[id];
+          const line = completedSetsLine(rows);
+          if (!line) return "";
+          const entry = session && session.exercises[id];
+          const name = (entry && entry.variantName) || (EXERCISES[id] && EXERCISES[id].name) || (CUSTOM_EXERCISES[id] && CUSTOM_EXERCISES[id].name) || id;
+          return '<li><strong>' + escapeHtml(name) + '</strong><span>' + escapeHtml(line) + '</span></li>';
+        }).join("");
+      }
       document.getElementById("dayCompleteTitle").textContent = DAY_META[dayKey].name + " done!";
       document.getElementById("dayCompleteSub").textContent = displaySessionDate(fileStamp(new Date())) + " · nice work.";
       document.getElementById("dayCompleteList").innerHTML = items;
@@ -4989,6 +5014,7 @@
     }
 
     function commitDayList(dayKey, list) {
+      const wasComplete = dayLogsComplete(dayKey);
       ROUTINE[dayKey] = list;
       state.dayCustom[dayKey] = list.map(ex => ex.id);
       if (!state.logs[dayKey]) state.logs[dayKey] = {};
@@ -4998,6 +5024,7 @@
       });
       saveState();
       render();
+      maybeOfferDayComplete(dayKey, wasComplete);
     }
 
     function moveExercise(dayKey, fromId, toId) {
@@ -5040,12 +5067,14 @@
     }
 
     function restoreDayExercises(dayKey) {
+      const wasComplete = dayLogsComplete(dayKey);
       delete state.dayCustom[dayKey];
       ROUTINE[dayKey] = BASE_ROUTINE[dayKey].slice();
       if (activeExerciseId && !ROUTINE[dayKey].some(ex => ex.id === activeExerciseId)) activeExerciseId = null;
       ROUTINE[dayKey].forEach(ex => { if (!Array.isArray(state.logs[dayKey][ex.id])) state.logs[dayKey][ex.id] = emptyExerciseLog(ex); });
       saveState();
       render();
+      maybeOfferDayComplete(dayKey, wasComplete);
     }
 
     function renderResetDay(dayKey) {
