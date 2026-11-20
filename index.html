@@ -7049,15 +7049,41 @@
     function recoveryWindow(nightShift) {
       const start = shiftEndAbs(nightShift) + sleepCommuteMinutes();
       const endDate = absToStamp(start);
-      const full = anotherNightFollows(nightShift) || !sleepGentleOn();
-      if (full) {
+      if (anotherNightFollows(nightShift) || !sleepGentleOn()) {
         return { start: start, end: start + sleepGoalHours() * 60, full: true, date: endDate };
       }
-      const cap = absMin(endDate, "13:00");
-      let end = start + 4.5 * 60;
-      if (end > cap) end = cap;
-      if (end - start < 4 * 60) end = start + 4 * 60;
-      return { start: start, end: end, full: false, date: endDate };
+      const nextWork = nextWorkAfter(nightShift.date);
+      const earlyNext = nextWork && !isNightShift(nextWork) && clockToMin(nextWork.start) < 12 * 60;
+      let end;
+      if (earlyNext) {
+        // Keep the short recovery so easing toward an early start can begin.
+        const cap = absMin(endDate, "13:00");
+        end = start + 4.5 * 60;
+        if (end > cap) end = cap;
+        if (end - start < 4 * 60) end = start + 4 * 60;
+      } else {
+        // Next work is in the afternoon or later (or there isn't one): scale
+        // toward the sleep goal, without sleeping past mid-afternoon.
+        const goalEnd = start + sleepGoalHours() * 60;
+        const clockCap = absMin(endDate, "15:00");
+        end = goalEnd < clockCap ? goalEnd : clockCap;
+        if (end - start < 4 * 60) end = start + 4 * 60;
+      }
+      if (nextWork) {
+        const deadline = shiftStartAbs(nextWork) - sleepPrepMinutes();
+        if (deadline > start && end > deadline) end = deadline;
+      }
+      const full = end - start >= sleepGoalHours() * 60 - 1;
+      return { start: start, end: end, full: full, date: endDate };
+    }
+
+    function isMorningWorkAlarm(row) {
+      if (!row || row.kind !== "work" || !row.hasHardWake || row.recovery) return false;
+      const sh = row.shift;
+      if (sh && sh.type === "work" && clockToMin(sh.start) < 12 * 60) return true;
+      if (!(row.latestWake < 1e12 / 2)) return false;
+      const clock = ((row.latestWake % 1440) + 1440) % 1440;
+      return clock < 10 * 60;
     }
 
     function enumeratePlanDates() {
@@ -7181,6 +7207,11 @@
           const next = byDate[dates[i + 1]];
           if (!next || next.wakeAbs == null || row.recovery) continue;
           if (row.wakeAbs == null) continue;
+          // Only ease earlier for a real morning work alarm. Night-shift mornings
+          // (they have a pre-shift nap) and late work-day alarms are not early starts.
+          // Days off still chain, so a stretch before an early shift keeps easing.
+          if (next.kind === "night") continue;
+          if (next.kind === "work" && !isMorningWorkAlarm(next)) continue;
           const maxAllowed = next.wakeAbs - 1440 + limitFor(row);
           if (row.wakeAbs > maxAllowed) {
             let wake = maxAllowed;
@@ -7218,7 +7249,15 @@
           const earliestGentle = prev.wakeAbs + 1440 - lim;
           const latestGentle = prev.wakeAbs + 1440 + lim;
           let wake = row.wakeAbs;
-          if (wake < earliestGentle) {
+          if (row.kind === "work" && row.hasHardWake) {
+            // The shift alarm is a deadline, not a destination: hold yesterday's
+            // wake, keep an earlier early-start pull, and only go earlier when
+            // the shift requires it. Never sleep in just because the shift allows it.
+            const hold = prev.wakeAbs + 1440;
+            wake = Math.min(row.latestWake, hold);
+            if (row.wakeAbs < wake) wake = row.wakeAbs;
+            if (wake > row.latestWake) wake = row.latestWake;
+          } else if (wake < earliestGentle) {
             if (row.hasHardWake && row.latestWake <= earliestGentle) {
               wake = Math.min(row.latestWake, wake < row.latestWake ? wake : row.latestWake);
               if (row.latestWake < earliestGentle) wake = row.latestWake;
