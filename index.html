@@ -1063,6 +1063,19 @@
     .summary-card-meta { margin: 4px 0 0; font-size: 13px; color: var(--mute); line-height: 1.35; }
     .summary-card .summary-bar { margin-top: 8px; }
     .summary-cues { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; align-items: center; }
+    .summary-row { padding: 12px 14px; }
+    .summary-row .summary-card-head { align-items: center; }
+    .summary-row .summary-card-head .cue-up,
+    .summary-row .summary-card-head .cue-down,
+    .summary-row .summary-card-head .cue-same,
+    .summary-row .summary-card-head .cue-badge { flex: 0 0 auto; }
+    .summary-best { margin: 4px 0 0; font-size: 20px; font-weight: 800; line-height: 1.2; }
+    .summary-bar.thin { height: 4px; margin-top: 8px; }
+    .summary-card-meta.subtle { margin-top: 4px; font-size: 12px; }
+    .summary-how { margin: 6px 0 22px; }
+    .summary-how summary { color: var(--mute); font-size: 13px; font-weight: 700; cursor: pointer; list-style: none; }
+    .summary-how summary::-webkit-details-marker { display: none; }
+    .summary-how p { margin: 8px 0 0; color: var(--mute); font-size: 13px; line-height: 1.45; }
     .cue-up { color: #5dcf6e; font-weight: 800; font-size: 13px; }
     .cue-same { color: var(--mute); font-weight: 800; font-size: 13px; }
     .cue-down { color: #8a93a3; font-weight: 800; font-size: 13px; }
@@ -5906,6 +5919,20 @@
       return parts.length ? '<div class="summary-cues">' + parts.join("") + "</div>" : "";
     }
 
+    function primaryCueHtml(trend, isPr, preferTrend) {
+      if (preferTrend && trend && trend.prev) {
+        if (trend.dir === "up") return '<span class="cue-up">↑ ' + escapeHtml(formatDeltaKg(trend.delta, true)) + "</span>";
+        if (trend.dir === "down") return '<span class="cue-down">↓ ' + escapeHtml(formatDeltaKg(trend.delta, false)) + "</span>";
+        return '<span class="cue-same">=</span>';
+      }
+      if (isPr) return '<span class="cue-badge pr">PR</span>';
+      if (trend && trend.top) return '<span class="cue-badge top">Top of range</span>';
+      if (trend && trend.prev && trend.dir === "up") return '<span class="cue-up">↑ ' + escapeHtml(formatDeltaKg(trend.delta, true)) + "</span>";
+      if (trend && trend.prev && trend.dir === "down") return '<span class="cue-down">↓ ' + escapeHtml(formatDeltaKg(trend.delta, false)) + "</span>";
+      if (trend && trend.prev) return '<span class="cue-same">=</span>';
+      return "";
+    }
+
     function computeSummaryInsights() {
       const today = summaryTodayStamp();
       const fromDate = addCalendarDays(new Date(today + "T12:00:00"), -27);
@@ -6115,11 +6142,8 @@
         const item = totals[muscle.id] || { quarters: 0, direct: 0, reps: 0, volume: 0, directVolume: 0 };
         if (!item.quarters) return "";
         const width = item.volume > 0 ? Math.max(8, Math.round((item.volume / maxVolume) * 100)) : 0;
-        const volumeText = formatVolume(item.volume) + (item.volume > 0 && Math.abs(item.volume - item.directVolume) > 0.01 ? (item.directVolume > 0 ? " (" + formatVolume(item.directVolume) + " direct)" : "") : "");
-        const setsText = formatSetCount(item.quarters) + " sets";
-        const meta = item.quarters > 0 && !item.direct
-          ? setsText + " · " + formatVolume(item.volume) + " (from other lifts)"
-          : setsText + (item.quarters !== item.direct * 4 ? " (" + item.direct + " direct)" : "") + " · " + item.reps + " reps · " + volumeText;
+        const meta = formatSetCount(item.quarters) + " sets · " + formatVolume(item.volume);
+        const helper = item.quarters > 0 && !item.direct ? '<p class="summary-card-meta subtle">From other lifts</p>' : "";
         const recs = uniqueExerciseIds().filter(function (id) { return muscleGroupFor(id) === muscle.id; });
         let best = null, anyTop = false, anyPr = false;
         recs.forEach(function (id) {
@@ -6130,14 +6154,14 @@
           if (trend.prev && (!best || (trend.dir === "up" && trend.delta > (best.delta || 0)) || (!best.prev))) best = trend;
         });
         const fakeTrend = best ? best : (anyTop ? { top: true } : null);
-        return '<article class="summary-card" data-group="' + muscle.id + '"><div class="summary-card-head"><strong>' + muscle.name + "</strong></div>" +
-          '<p class="summary-card-meta">' + meta + "</p>" +
-          '<div class="summary-bar" aria-hidden="true"><i style="width:' + width + "%;background:" + muscle.color + '"></i></div>' +
-          cueHtml(fakeTrend, anyPr) + "</article>";
+        const cue = primaryCueHtml(fakeTrend, anyPr, false);
+        return '<article class="summary-card summary-row" data-group="' + muscle.id + '"><div class="summary-card-head"><strong>' + muscle.name + "</strong>" + cue + "</div>" +
+          '<p class="summary-card-meta">' + meta + "</p>" + helper +
+          '<div class="summary-bar thin" aria-hidden="true"><i style="width:' + width + "%;background:" + muscle.color + '"></i></div></article>';
       }).join("");
       if (!rows.replace(/\s/g, "")) return '<p class="insight-empty">No workouts logged in this period.</p>';
       return '<section class="week-summary" aria-label="Muscle totals">' + rows +
-        '<p class="summary-note">Sets, reps and volume are totals from logged working sets this ' + (period.monthLabel ? "month" : "week") + ". Volume is weight × reps. Bodyweight lifts use your body weight setting for estimated " + (usesLb() ? "pounds" : "kilos") + " when it’s set. Helper muscles get a share of the set and the volume.</p></section>";
+        '<details class="summary-how"><summary>How it’s counted</summary><p>Sets, reps and volume are totals from logged working sets this ' + (period.monthLabel ? "month" : "week") + ". Volume is weight × reps. Bodyweight lifts use your body weight setting for estimated " + (usesLb() ? "pounds" : "kilos") + " when it’s set. Helper muscles get a share of the set and the volume.</p></details></section>";
     }
 
     function renderExercisesTab(period) {
@@ -6149,10 +6173,10 @@
         const bestTxt = best
           ? (best.kg > 0 ? formatWeightWithUnit(best.kg) + " × " + best.reps : best.reps + " reps")
           : "—";
-        return '<article class="summary-card" data-exercise="' + id + '"><div class="summary-card-head"><strong>' + escapeHtml(trend.ex.name) + "</strong></div>" +
-          '<p class="summary-card-meta">' + trend.sets + (trend.sets === 1 ? " set" : " sets") + " · " + trend.reps + " reps · Best " + escapeHtml(bestTxt) +
-          " · " + displaySessionDate(trend.last.date, false) + "</p>" +
-          cueHtml(trend, isPr) + "</article>";
+        const cue = primaryCueHtml(trend, isPr, true);
+        return '<article class="summary-card summary-row" data-exercise="' + id + '"><div class="summary-card-head"><strong>' + escapeHtml(trend.ex.name) + "</strong>" + cue + "</div>" +
+          '<p class="summary-best">' + escapeHtml(bestTxt) + "</p>" +
+          '<p class="summary-card-meta">' + trend.sets + (trend.sets === 1 ? " set" : " sets") + " · " + trend.reps + " reps · " + displaySessionDate(trend.last.date, false) + "</p></article>";
       }).join("");
       if (!rows.replace(/\s/g, "")) return '<p class="insight-empty">No workouts logged in this period.</p>';
       return '<section class="week-summary" aria-label="Exercises">' + rows + "</section>";
