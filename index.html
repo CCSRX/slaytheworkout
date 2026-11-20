@@ -3445,6 +3445,19 @@
       return result;
     }
 
+    function normalizeStartedAt(value) {
+      if (typeof value === "number" && Number.isFinite(value) && value > 0) {
+        const d = new Date(value);
+        return Number.isFinite(d.getTime()) ? d.toISOString() : "";
+      }
+      if (typeof value === "string" && value.trim()) {
+        const ms = Date.parse(value);
+        if (!Number.isFinite(ms)) return "";
+        return new Date(ms).toISOString();
+      }
+      return "";
+    }
+
     function normalizeSessions(source) {
       const byKey = new Map();
       const out = [];
@@ -3468,6 +3481,8 @@
         }
         if (typeof item.updatedAt === "string" && Number.isFinite(Date.parse(item.updatedAt))) session.updatedAt = item.updatedAt;
         if (item.markedDone === true) session.markedDone = true;
+        const started = normalizeStartedAt(item.startedAt);
+        if (started && (!session.startedAt || Date.parse(started) < Date.parse(session.startedAt))) session.startedAt = started;
         historyExercises(item.day).forEach(ex => {
           const saved = item.exercises && item.exercises[ex.id];
           if (!saved || !Array.isArray(saved.sets)) return;
@@ -3587,7 +3602,7 @@
       // A different variant of this slot logged earlier today keeps its own session entry.
       let session = state.sessions.find(item => item.date === today && item.day === day && selectedSession(item) && (!item.exercises[exerciseId] || entryVariant(item.exercises[exerciseId], exerciseId) === v.id));
       if (!session) {
-        session = { date: today, day: day, program: state.program, updatedAt: "", exercises: {} };
+        session = { date: today, day: day, program: state.program, updatedAt: "", startedAt: new Date().toISOString(), exercises: {} };
         state.sessions.push(session);
       }
       // Array order breaks equal-timestamp ties (including imported/offline sessions).
@@ -6815,6 +6830,27 @@
       return { best: best, date: date };
     }
 
+
+    function startHourProgress(kind) {
+      let date = "";
+      const sessions = (state.sessions || []).slice().sort(function (a, b) {
+        return String(a.date).localeCompare(String(b.date)) || String(a.updatedAt || "").localeCompare(String(b.updatedAt || ""));
+      });
+      sessions.some(function (session) {
+        if (!sessionHasSets(session)) return false;
+        const started = normalizeStartedAt(session.startedAt);
+        if (!started) return false;
+        const hour = new Date(started).getHours();
+        const early = hour < 7;
+        const late = hour >= 21;
+        if (kind === "early" && !early) return false;
+        if (kind === "late" && !late) return false;
+        date = session.date;
+        return true;
+      });
+      return { best: date ? 1 : 0, date: date };
+    }
+
     function weekendWarriorProgress() {
       const dates = {};
       (state.sessions || []).forEach(function (session) {
@@ -6911,6 +6947,10 @@
       badges.push(makeCountBadge("bro-suns-out", "bro", "Sun’s Out, Guns Out", "Log curls in June, July or August.", summer.best, 1, summer.date, "flag", { liftName: summer.name, progressText: summer.date ? "Done" : "Not yet" }));
       const weekend = weekendWarriorProgress();
       badges.push(makeCountBadge("bro-weekend", "bro", "Weekend Warrior", "Train on both Saturday and Sunday of the same weekend.", weekend.best, 1, weekend.date, "flag", { progressText: weekend.date ? "Done" : "Not yet" }));
+      const earlyBird = startHourProgress("early");
+      badges.push(makeCountBadge("bro-early-bird", "bro", "Early Bird Gains", "Start a workout before 07:00.", earlyBird.best, 1, earlyBird.date, "flag", { progressText: earlyBird.date ? "Done" : "Not yet" }));
+      const nightOwl = startHourProgress("late");
+      badges.push(makeCountBadge("bro-night-owl", "bro", "Night Owl Pump", "Start a workout at 21:00 or later.", nightOwl.best, 1, nightOwl.date, "flag", { progressText: nightOwl.date ? "Done" : "Not yet" }));
       const shrugs = countSetsOnIds(ACHIEVEMENT_SHRUGS, 50);
       badges.push(makeCountBadge("bro-shrug-life", "bro", "Shrug Life", "Log 50 shrug sets in total.", shrugs.best, 50, shrugs.date, "count", { progressText: shrugs.best + " / 50 sets" }));
       const calfSess = countDatesOnIds(ACHIEVEMENT_CALVES, 20);
