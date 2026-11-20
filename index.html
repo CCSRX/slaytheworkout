@@ -4298,8 +4298,10 @@
       if (!el) return;
       let html = "";
       try {
-        if (effectiveShifts().length) {
-          const today = sleepToday();
+        const today = sleepToday();
+        const soon = addDaysStamp(today, 7);
+        // Only when the Sleep feature is in use: a shift or regular-hours day from yesterday to a week ahead.
+        if (effectiveShifts().some(sh => sh.date >= addDaysStamp(today, -1) && sh.date <= soon)) {
           const now = new Date();
           const nowClock = String(now.getHours()).padStart(2, "0") + ":" + String(now.getMinutes()).padStart(2, "0");
           const cur = homeSleepTimes(today);
