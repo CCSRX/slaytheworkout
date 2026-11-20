@@ -4063,9 +4063,9 @@
       return String(Math.round(quarters) / 4);
     }
 
-    function weeklyMuscleSummary(monday) {
+    function weeklyMuscleSummary(monday, endDate) {
       const start = fileStamp(monday);
-      const end = fileStamp(addCalendarDays(monday, 6));
+      const end = fileStamp(endDate || addCalendarDays(monday, 6));
       const totals = emptyMuscleTotals();
       state.sessions.forEach(session => {
         if (session.date < start || session.date > end) return;
@@ -4108,7 +4108,7 @@
       return (Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1)) + " " + weightUnitLabel();
     }
 
-    function renderMuscleSummary(title, monday, totals) {
+    function renderMuscleSummary(title, monday, totals, monthLabel) {
       const end = addCalendarDays(monday, 6);
       const maxVolume = Math.max.apply(null, MUSCLE_ORDER.map(muscle => (totals[muscle.id] && totals[muscle.id].volume) || 0).concat([1]));
       const rows = MUSCLE_ORDER.map(muscle => {
@@ -4121,7 +4121,7 @@
           : setsText + (item.quarters !== item.direct * 4 ? ' (' + item.direct + ' direct)' : '') + ' · ' + item.reps + ' reps · ' + volumeText;
         return '<div class="summary-row" data-group="' + muscle.id + '"><div class="summary-meta"><strong>' + muscle.name + '</strong><span>' + meta + '</span></div><div class="summary-bar" aria-hidden="true"><i style="width:' + width + '%;background:' + muscle.color + '"></i></div></div>';
       }).join("");
-      return '<section class="week-summary" aria-label="' + title + '"><h3>' + title + '</h3><p class="week-dates">Mon–Sun · ' + displaySessionDate(fileStamp(monday), false) + ' – ' + displaySessionDate(fileStamp(end)) + '</p>' + rows + '<p class="summary-note">Sets, reps, and volume are totals from logged working sets this week. Volume is weight × reps. Bodyweight sets count toward sets and reps; bodyweight lifts use your body weight setting for estimated ' + (usesLb() ? "pounds" : "kilos") + ' when it’s set. Each set counts as 1 for its main muscle; helper muscles get ½ or ¼ set. Helper muscles get the same share of the volume. Reps count only for the main muscle, so the same weight can show under more than one muscle.</p></section>';
+      return '<section class="week-summary" aria-label="' + title + '"><h3>' + title + '</h3><p class="week-dates">' + (monthLabel ? escapeHtml(monthLabel) : 'Mon–Sun · ' + displaySessionDate(fileStamp(monday), false) + ' – ' + displaySessionDate(fileStamp(end))) + '</p>' + rows + '<p class="summary-note">Sets, reps, and volume are totals from logged working sets this ' + (monthLabel ? 'month' : 'week') + '. Volume is weight × reps. Bodyweight sets count toward sets and reps; bodyweight lifts use your body weight setting for estimated ' + (usesLb() ? "pounds" : "kilos") + ' when it’s set. Each set counts as 1 for its main muscle; helper muscles get ½ or ¼ set. Helper muscles get the same share of the volume. Reps count only for the main muscle, so the same weight can show under more than one muscle.</p></section>';
     }
 
     function slotForDate(date) {
@@ -4226,13 +4226,14 @@
       }).join("");
       const streak = dayStreak();
       const streakLabel = streak === 1 ? "1 day" : streak + " days";
-      const thisTotals = weeklyMuscleSummary(week.monday);
-      const lastMonday = addCalendarDays(week.monday, -7);
-      const lastTotals = weeklyMuscleSummary(lastMonday);
+      const thisTotals = weeklyMuscleSummary(month.first, month.last);
+      const lastFirst = new Date(month.first.getFullYear(), month.first.getMonth() - 1, 1);
+      const lastLast = new Date(month.first.getFullYear(), month.first.getMonth(), 0);
+      const lastTotals = weeklyMuscleSummary(lastFirst, lastLast);
       const useLast = !summaryHasSets(thisTotals) && summaryHasSets(lastTotals);
       const summary = useLast
-        ? renderMuscleSummary("Last week", lastMonday, lastTotals)
-        : renderMuscleSummary("Weekly summary", week.monday, thisTotals);
+        ? renderMuscleSummary("Last month", lastFirst, lastTotals, lastFirst.toLocaleDateString("en-GB", { month: "long", year: "numeric" }))
+        : renderMuscleSummary("Monthly summary", month.first, thisTotals, monthLabel);
       const nextName = nextSlot ? nextSlot.name : DAY_META[week.next].name;
       const nextDayKey = nextSlot ? nextSlot.dayKey : week.next;
       const view = document.getElementById("weeklyView");
