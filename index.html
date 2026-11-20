@@ -6251,6 +6251,11 @@
     const ACHIEVEMENT_BENCHES = ["bench", "inclineDbBench", "flatBench", "flatDbBench", "machineInclinePress"];
     const ACHIEVEMENT_PRESSES = ["ohp", "dbOhp", "seatedDbPress", "machineShoulderPress", "arnoldPress"];
     const ACHIEVEMENT_PULLUPS = ["pullupsWide", "pullupsShort", "pullupsSupinated", "neutralPullups"];
+    const ACHIEVEMENT_CURLS = ["ezCurls", "barbellCurls", "dbCurls", "cableCurls", "preacher", "ezPreacher", "machinePreacher", "concentrationCurls"];
+    const ACHIEVEMENT_SHRUGS = ["shrugs", "dbShrugs", "trapBarShrugs", "cableShrugs"];
+    const ACHIEVEMENT_CALVES = ["calves", "seatedCalves", "legPressCalves", "donkeyCalves"];
+    const ACHIEVEMENT_SQUATS_ALL = ACHIEVEMENT_SQUATS.concat(["squatFull"]);
+    const LEG_DAYS = ["legs", "lowerA", "lowerB"];
     const VOLUME_GOALS = [10000, 25000, 50000, 100000];
 
     function emptyAchievements() {
@@ -6654,6 +6659,176 @@
       return { distinct: distinct, total: total, date5: date5, date10: date10 };
     }
 
+    function weekdayOfStamp(stamp) {
+      return new Date(stamp + "T12:00:00").getDay();
+    }
+
+    function monthOfStamp(stamp) {
+      return new Date(stamp + "T12:00:00").getMonth() + 1;
+    }
+
+    function twoPlateKg() {
+      return displayAmountToKg(usesLb() ? 225 : 100);
+    }
+
+    function firstLoggedSetProgress() {
+      let date = "", name = "";
+      const sessions = (state.sessions || []).slice().sort(function (a, b) {
+        return String(a.date).localeCompare(String(b.date));
+      });
+      sessions.some(function (session) {
+        const exercises = session.exercises || {};
+        return Object.keys(exercises).some(function (exId) {
+          const entry = exercises[exId];
+          if (!loggedSets(entry).length) return false;
+          date = session.date;
+          name = achievementEntryName(exId, entry, session);
+          return true;
+        });
+      });
+      return { best: date ? 1 : 0, date: date, name: name };
+    }
+
+    function heaviestAnyTypedProgress(targetKg) {
+      let best = 0, date = "", name = "";
+      const sessions = (state.sessions || []).slice().sort(function (a, b) {
+        return String(a.date).localeCompare(String(b.date));
+      });
+      sessions.forEach(function (session) {
+        Object.keys(session.exercises || {}).forEach(function (exId) {
+          const entry = session.exercises[exId];
+          const heavy = heaviestTypedOf(entry);
+          if (heavy > best) {
+            best = heavy;
+            name = achievementEntryName(exId, entry, session);
+          }
+        });
+        if (!date && targetKg > 0 && best + 1e-6 >= targetKg) date = session.date;
+      });
+      return { best: best, date: date, name: name };
+    }
+
+    function countSetsOnIds(ids, target) {
+      let count = 0, date = "";
+      const sessions = (state.sessions || []).slice().sort(function (a, b) {
+        return String(a.date).localeCompare(String(b.date));
+      });
+      sessions.forEach(function (session) {
+        Object.keys(session.exercises || {}).forEach(function (exId) {
+          const entry = session.exercises[exId];
+          if (!achievementEntryMatches(exId, entry, ids)) return;
+          const n = loggedSets(entry).length;
+          if (!n) return;
+          count += n;
+          if (!date && target > 0 && count >= target) date = session.date;
+        });
+      });
+      return { best: count, date: date };
+    }
+
+    function countDatesOnIds(ids, target) {
+      const dates = {};
+      let count = 0, date = "";
+      const sessions = (state.sessions || []).slice().sort(function (a, b) {
+        return String(a.date).localeCompare(String(b.date));
+      });
+      sessions.forEach(function (session) {
+        if (dates[session.date] || !sessionHasSets(session)) return;
+        const hit = Object.keys(session.exercises || {}).some(function (exId) {
+          const entry = session.exercises[exId];
+          return achievementEntryMatches(exId, entry, ids) && loggedSets(entry).length;
+        });
+        if (!hit) return;
+        dates[session.date] = true;
+        count += 1;
+        if (!date && target > 0 && count >= target) date = session.date;
+      });
+      return { best: count, date: date };
+    }
+
+    function countSessionsOnDays(days, target) {
+      const dates = {};
+      let count = 0, date = "";
+      const sessions = (state.sessions || []).slice().sort(function (a, b) {
+        return String(a.date).localeCompare(String(b.date));
+      });
+      sessions.forEach(function (session) {
+        if (!sessionHasSets(session) || days.indexOf(session.day) < 0 || dates[session.date]) return;
+        dates[session.date] = true;
+        count += 1;
+        if (!date && target > 0 && count >= target) date = session.date;
+      });
+      return { best: count, date: date };
+    }
+
+    function firstDayOnWeekdayProgress(days, weekday) {
+      let date = "";
+      const sessions = (state.sessions || []).slice().sort(function (a, b) {
+        return String(a.date).localeCompare(String(b.date));
+      });
+      sessions.some(function (session) {
+        if (!sessionHasSets(session) || days.indexOf(session.day) < 0) return false;
+        if (weekdayOfStamp(session.date) !== weekday) return false;
+        date = session.date;
+        return true;
+      });
+      return { best: date ? 1 : 0, date: date };
+    }
+
+    function firstMonthOnIdsProgress(ids, months) {
+      let date = "", name = "";
+      const sessions = (state.sessions || []).slice().sort(function (a, b) {
+        return String(a.date).localeCompare(String(b.date));
+      });
+      sessions.some(function (session) {
+        if (months.indexOf(monthOfStamp(session.date)) < 0) return false;
+        return Object.keys(session.exercises || {}).some(function (exId) {
+          const entry = session.exercises[exId];
+          if (!achievementEntryMatches(exId, entry, ids) || !loggedSets(entry).length) return false;
+          date = session.date;
+          name = achievementEntryName(exId, entry, session);
+          return true;
+        });
+      });
+      return { best: date ? 1 : 0, date: date, name: name };
+    }
+
+    function consecutiveDayWeeksProgress(days, target) {
+      const weekFirst = {};
+      const sessions = (state.sessions || []).slice().sort(function (a, b) {
+        return String(a.date).localeCompare(String(b.date));
+      });
+      sessions.forEach(function (session) {
+        if (!sessionHasSets(session) || days.indexOf(session.day) < 0) return;
+        const start = weekStartStamp(session.date);
+        if (!weekFirst[start]) weekFirst[start] = session.date;
+      });
+      const weeks = Object.keys(weekFirst).sort();
+      let best = 0, date = "", run = 0, prev = "";
+      weeks.forEach(function (start) {
+        const expected = prev ? fileStamp(addCalendarDays(new Date(prev + "T12:00:00"), 7)) : "";
+        run = prev && start === expected ? run + 1 : 1;
+        if (run > best) best = run;
+        if (!date && run >= target) date = weekFirst[start];
+        prev = start;
+      });
+      return { best: best, date: date };
+    }
+
+    function weekendWarriorProgress() {
+      const dates = {};
+      (state.sessions || []).forEach(function (session) {
+        if (sessionHasSets(session) && session.date) dates[session.date] = true;
+      });
+      let date = "";
+      Object.keys(dates).sort().forEach(function (stamp) {
+        if (date || weekdayOfStamp(stamp) !== 6) return;
+        const sunday = fileStamp(addCalendarDays(new Date(stamp + "T12:00:00"), 1));
+        if (dates[sunday]) date = sunday;
+      });
+      return { best: date ? 1 : 0, date: date };
+    }
+
     function evaluateAchievements() {
       const badges = [];
       badges.push(makeLiftBadge("starter-squat", "starter", "Squat body weight", "A working set at or above your body weight on a squat.", ACHIEVEMENT_SQUATS, 1));
@@ -6714,6 +6889,37 @@
         const sess = sessionCountProgress(n);
         badges.push(makeCountBadge("sessions-" + n, "sessions", n + " sessions logged", "Log " + n + " training sessions.", sess.best, n, sess.date, "count", { progressText: sess.best + " / " + n + " sessions" }));
       });
+
+      const chestMon = firstDayOnWeekdayProgress(["push"], 1);
+      badges.push(makeCountBadge("bro-chest-day", "bro", "International Chest Day", "Log a push workout on a Monday.", chestMon.best, 1, chestMon.date, "flag", { progressText: chestMon.date ? "Done" : "Not yet" }));
+      const legWeeks = consecutiveDayWeeksProgress(LEG_DAYS, 4);
+      badges.push(makeCountBadge("bro-leg-weeks", "bro", "Never Skip Leg Day", "Train legs in four weeks in a row, Monday to Sunday.", legWeeks.best, 4, legWeeks.date, "count", { progressText: legWeeks.best + " / 4 weeks" }));
+      const legSess = countSessionsOnDays(LEG_DAYS, 25);
+      badges.push(makeCountBadge("bro-leg-loyalist", "bro", "Leg Day Loyalist", "Log 25 legs sessions.", legSess.best, 25, legSess.date, "count", { progressText: legSess.best + " / 25 sessions" }));
+      const evenLift = firstLoggedSetProgress();
+      badges.push(makeCountBadge("bro-even-lift", "bro", "Do You Even Lift?", "Log your first working set.", evenLift.best, 1, evenLift.date, "flag", { liftName: evenLift.name, progressText: evenLift.date ? "Done" : "Not yet" }));
+      const plateKg = twoPlateKg();
+      const plate = heaviestAnyTypedProgress(plateKg);
+      badges.push(makeCountBadge("bro-plate-mafia", "bro", "Plate Mafia", "Log a working set at " + formatWeightWithUnit(plateKg) + " or heavier.", plate.best, plateKg, plate.date, "weight", { liftName: plate.name, progressText: formatWeightWithUnit(plate.best) + " / " + formatWeightWithUnit(plateKg) }));
+      const benchTwo = liftProgress(ACHIEVEMENT_BENCHES, plateKg);
+      badges.push(makeCountBadge("bro-two-plate-bench", "bro", "Two-Plate Club", "A working set at " + formatWeightWithUnit(plateKg) + " or more on a bench press.", benchTwo.best, plateKg, benchTwo.date, "weight", { liftName: benchTwo.name, progressText: formatWeightWithUnit(benchTwo.best) + " / " + formatWeightWithUnit(plateKg) }));
+      const squatTwo = liftProgress(ACHIEVEMENT_SQUATS_ALL, plateKg);
+      badges.push(makeCountBadge("bro-two-plate-squat", "bro", "Squat Two-Plate Club", "A working set at " + formatWeightWithUnit(plateKg) + " or more on a squat.", squatTwo.best, plateKg, squatTwo.date, "weight", { liftName: squatTwo.name, progressText: formatWeightWithUnit(squatTwo.best) + " / " + formatWeightWithUnit(plateKg) }));
+      const curls = countSetsOnIds(ACHIEVEMENT_CURLS, 100);
+      badges.push(makeCountBadge("bro-curl-bro", "bro", "Curl Bro", "Log 100 curling sets in total.", curls.best, 100, curls.date, "count", { progressText: curls.best + " / 100 sets" }));
+      const summer = firstMonthOnIdsProgress(ACHIEVEMENT_CURLS, [6, 7, 8]);
+      badges.push(makeCountBadge("bro-suns-out", "bro", "Sun’s Out, Guns Out", "Log curls in June, July or August.", summer.best, 1, summer.date, "flag", { liftName: summer.name, progressText: summer.date ? "Done" : "Not yet" }));
+      const weekend = weekendWarriorProgress();
+      badges.push(makeCountBadge("bro-weekend", "bro", "Weekend Warrior", "Train on both Saturday and Sunday of the same weekend.", weekend.best, 1, weekend.date, "flag", { progressText: weekend.date ? "Done" : "Not yet" }));
+      const shrugs = countSetsOnIds(ACHIEVEMENT_SHRUGS, 50);
+      badges.push(makeCountBadge("bro-shrug-life", "bro", "Shrug Life", "Log 50 shrug sets in total.", shrugs.best, 50, shrugs.date, "count", { progressText: shrugs.best + " / 50 sets" }));
+      const calfSess = countDatesOnIds(ACHIEVEMENT_CALVES, 20);
+      badges.push(makeCountBadge("bro-calf", "bro", "Calf Commitment", "Train calves in 20 sessions. They’re famously stubborn.", calfSess.best, 20, calfSess.date, "count", { progressText: calfSess.best + " / 20 sessions" }));
+      const bodyKg = Number(normalizeBodyWeight(state.bodyWeight)) || 0;
+      if (bodyKg) {
+        const benchBro = liftProgress(ACHIEVEMENT_BENCHES, bodyKg);
+        badges.push(makeCountBadge("bro-bench-bro", "bro", "Bench Bro", "A working set at or above your body weight on a bench press.", benchBro.best, bodyKg, benchBro.date, "weight", { liftName: benchBro.name, progressText: formatWeightWithUnit(benchBro.best) + " / " + formatWeightWithUnit(bodyKg) }));
+      }
       return badges;
     }
 
@@ -6812,10 +7018,12 @@
         { id: "progression", title: "Progression" },
         { id: "records", title: "Records" },
         { id: "sessions", title: "Sessions" },
-        { id: "other", title: "Other" }
+        { id: "other", title: "Other" },
+        { id: "bro", title: "Bro Culture" }
       ];
       body.innerHTML = groups.map(function (group) {
         const items = badges.filter(function (b) { return b.group === group.id; });
+        if (!items.length) return "";
         return '<section class="ach-group"><h2>' + escapeHtml(group.title) + "</h2><div class=\"ach-grid\">" +
           items.map(renderAchievementBadge).join("") + "</div></section>";
       }).join("");
