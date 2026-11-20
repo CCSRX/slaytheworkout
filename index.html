@@ -1065,6 +1065,7 @@
     .sleep-gentle-note { margin: 8px 0 14px; font-size: 13px; line-height: 1.4; color: var(--mute); }
     .sleep-max-switch { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
     .sleep-max-switch .data-btn { width: auto; min-width: 0; flex: 1; padding: 0 8px; font-size: 14px; }
+    .sleep-offmax-row { margin-top: 14px; }
     .sleep-max-switch .data-btn[aria-pressed="true"] { background: var(--acc); color: var(--acc-ink); border-color: var(--acc); }
     .sleep-setting-stack { display: grid; gap: 10px; margin-top: 6px; }
 
@@ -1462,7 +1463,7 @@
         </div>
         <div class="sleep-setting-stack">
           <button type="button" class="breath-sound" id="sleepGentleBtn" aria-pressed="true">Gentle changes on</button>
-          <p class="sleep-gentle-note" id="sleepGentleNote">When it's on, bedtime and wake-up move by at most a set number of minutes a day, so your body can adjust. Days before an early start get gradually earlier, and after late or night shifts you ease back toward your day-off wake-up. Your shift start always comes first.</p>
+          <p class="sleep-gentle-note" id="sleepGentleNote">When it's on, bedtime and wake-up move by at most a set number of minutes a day, so your body can adjust. Days before an early start get gradually earlier, and after late or night shifts you ease back toward your day-off wake-up. Days off can use a bigger step so you get back to your day-off wake-up sooner. Your shift start always comes first.</p>
           <div id="sleepGentleMaxRow">
             <span id="sleepGentleMaxLabel" class="sleep-time-label">Max change per day</span>
             <div class="sleep-max-switch unit-switch" role="group" aria-label="Max change per day">
@@ -1470,6 +1471,16 @@
               <button type="button" class="data-btn" id="sleepMax45" data-gentle-max="45">45 min</button>
               <button type="button" class="data-btn" id="sleepMax60" data-gentle-max="60">60 min</button>
               <button type="button" class="data-btn" id="sleepMax90" data-gentle-max="90">90 min</button>
+            </div>
+          </div>
+          <div id="sleepGentleOffMaxRow" class="sleep-offmax-row">
+            <span class="sleep-time-label">Max change on days off</span>
+            <div class="sleep-max-switch sleep-offmax-switch unit-switch" role="group" aria-label="Max change on days off">
+              <button type="button" class="data-btn" data-gentle-offmax="60">1 h</button>
+              <button type="button" class="data-btn" data-gentle-offmax="90">1½ h</button>
+              <button type="button" class="data-btn" data-gentle-offmax="120">2 h</button>
+              <button type="button" class="data-btn" data-gentle-offmax="180">3 h</button>
+              <button type="button" class="data-btn" data-gentle-offmax="0">No limit</button>
             </div>
           </div>
         </div>
@@ -2092,6 +2103,7 @@
         sleepOffWake: "07:00",
         sleepGentle: true,
         sleepGentleMax: 60,
+        sleepGentleOffMax: 120,
         bodyWeight: "",
         sessions: [],
         logDates: {},
@@ -2193,6 +2205,7 @@
           sleepOffWake: normalizeSleepOffWake(parsed.sleepOffWake),
           sleepGentle: normalizeSleepGentle(parsed.sleepGentle),
           sleepGentleMax: normalizeSleepGentleMax(parsed.sleepGentleMax),
+          sleepGentleOffMax: normalizeSleepGentleOffMax(parsed.sleepGentleOffMax),
           bodyWeight: normalizeBodyWeight(parsed.bodyWeight),
           lastSavedAt: parsed.lastSavedAt ? String(parsed.lastSavedAt) : "",
           updatedAt: normalizeUpdatedAt(updatedAt),
@@ -2301,6 +2314,7 @@
         sleepOffWake: normalizeSleepOffWake(state.sleepOffWake),
         sleepGentle: normalizeSleepGentle(state.sleepGentle),
         sleepGentleMax: normalizeSleepGentleMax(state.sleepGentleMax),
+        sleepGentleOffMax: normalizeSleepGentleOffMax(state.sleepGentleOffMax),
         lastSavedAt: state.lastSavedAt || exportedAt,
         updatedAt: state.updatedAt,
         sessions: state.sessions,
@@ -2406,6 +2420,7 @@
       state.sleepOffWake = normalizeSleepOffWake(payload.sleepOffWake);
       state.sleepGentle = normalizeSleepGentle(payload.sleepGentle);
       state.sleepGentleMax = normalizeSleepGentleMax(payload.sleepGentleMax);
+      state.sleepGentleOffMax = normalizeSleepGentleOffMax(payload.sleepGentleOffMax);
       if (payload.customExercises || payload.dayCustom) {
         state.customExercises = normalizeCustomExercises(payload.customExercises);
         CUSTOM_EXERCISES = state.customExercises;
@@ -6401,6 +6416,17 @@
       return 60;
     }
 
+    function normalizeSleepGentleOffMax(value) {
+      if (value === 0 || value === "0") return 0;
+      const n = Number(value);
+      if (n === 60 || n === 90 || n === 120 || n === 180) return n;
+      return 120;
+    }
+
+    function sleepGentleOffMaxMinutes() {
+      return normalizeSleepGentleOffMax(state && state.sleepGentleOffMax);
+    }
+
     function sleepOffWakeClock() {
       return normalizeSleepOffWake(state && state.sleepOffWake);
     }
@@ -6487,9 +6513,12 @@
       const dates = enumeratePlanDates();
       const need = sleepNeedMinutes();
       const gentle = sleepGentleOn();
-      const maxC = sleepGentleMaxMinutes();
-      const offWake = sleepOffWakeClock();
+      const maxWork = sleepGentleMaxMinutes();
+      const offMaxSetting = sleepGentleOffMaxMinutes();
       const INF = 1e12;
+      const maxOff = offMaxSetting === 0 ? 1e9 : offMaxSetting;
+      const limitFor = function (r) { return r && kindIsOff(r.kind) ? maxOff : maxWork; };
+      const offWake = sleepOffWakeClock();
       const byDate = {};
 
       for (let i = 0; i < dates.length; i += 1) {
@@ -6575,7 +6604,7 @@
           const next = byDate[dates[i + 1]];
           if (!next || next.wakeAbs == null || row.recovery) continue;
           if (row.wakeAbs == null) continue;
-          const maxAllowed = next.wakeAbs - 1440 + maxC;
+          const maxAllowed = next.wakeAbs - 1440 + limitFor(row);
           if (row.wakeAbs > maxAllowed) {
             let wake = maxAllowed;
             if (row.hasHardWake && row.latestWake < wake) wake = row.latestWake;
@@ -6606,8 +6635,9 @@
           const prev = byDate[dates[i - 1]];
           if (!prev || prev.wakeAbs == null || row.recovery) continue;
           if (row.wakeAbs == null) continue;
-          const earliestGentle = prev.wakeAbs + 1440 - maxC;
-          const latestGentle = prev.wakeAbs + 1440 + maxC;
+          const lim = limitFor(row);
+          const earliestGentle = prev.wakeAbs + 1440 - lim;
+          const latestGentle = prev.wakeAbs + 1440 + lim;
           let wake = row.wakeAbs;
           if (wake < earliestGentle) {
             if (row.hasHardWake && row.latestWake <= earliestGentle) {
@@ -6719,6 +6749,7 @@
         sleepOffWakeClock(),
         sleepGentleOn() ? 1 : 0,
         sleepGentleMaxMinutes(),
+        sleepGentleOffMaxMinutes(),
         JSON.stringify((state.shifts || []).map(function (s) { return [s.date, s.type, s.start, s.end]; }))
       ].join("|");
       if (!sleepPlanMemo || sleepPlanMemo.key !== key) {
@@ -7023,6 +7054,12 @@
         gentleBtn.textContent = gentle ? "Gentle changes on" : "Gentle changes off";
       }
       if (maxRow) maxRow.hidden = !gentle;
+      const offMaxRow = document.getElementById("sleepGentleOffMaxRow");
+      if (offMaxRow) offMaxRow.hidden = !gentle;
+      const offMax = sleepGentleOffMaxMinutes();
+      document.querySelectorAll("[data-gentle-offmax]").forEach(function (btn) {
+        btn.setAttribute("aria-pressed", String(Number(btn.getAttribute("data-gentle-offmax")) === offMax));
+      });
       document.querySelectorAll("[data-gentle-max]").forEach(function (btn) {
         btn.setAttribute("aria-pressed", String(Number(btn.getAttribute("data-gentle-max")) === maxC));
       });
@@ -7078,6 +7115,15 @@
 
     function toggleSleepGentle() {
       state.sleepGentle = !sleepGentleOn();
+      saveState();
+      renderSleepSettings();
+      renderSleep();
+    }
+
+    function setSleepGentleOffMax(value) {
+      const next = normalizeSleepGentleOffMax(value);
+      if (next === sleepGentleOffMaxMinutes()) return;
+      state.sleepGentleOffMax = next;
       saveState();
       renderSleepSettings();
       renderSleep();
@@ -7920,6 +7966,10 @@
     document.getElementById("sleepOffWakeMinus").addEventListener("click", function () { changeSleepOffWake(-15); });
     document.getElementById("sleepOffWakePlus").addEventListener("click", function () { changeSleepOffWake(15); });
     document.getElementById("sleepGentleBtn").addEventListener("click", toggleSleepGentle);
+    document.querySelector(".sleep-offmax-switch").addEventListener("click", function (event) {
+      const btn = event.target.closest("[data-gentle-offmax]");
+      if (btn) setSleepGentleOffMax(btn.getAttribute("data-gentle-offmax"));
+    });
     document.querySelector(".sleep-max-switch").addEventListener("click", function (event) {
       const btn = event.target.closest("[data-gentle-max]");
       if (btn) setSleepGentleMax(btn.getAttribute("data-gentle-max"));
