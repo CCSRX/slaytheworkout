@@ -997,6 +997,9 @@
     body[data-theme="light"] .extra-tile[data-extra="breathing"] .extra-icon { background: #dcebff; border-color: #a9c8ea; }
     .extra-tile[data-extra="sleep"] .extra-icon { color: #b9a6ff; background: #1a1528; border-color: #3b2d5c; }
     body[data-theme="light"] .extra-tile[data-extra="sleep"] .extra-icon { color: #5b21b6; background: #eee8ff; border-color: #c4b5fd; }
+    .extra-tile[data-extra="summary"] .extra-icon { color: #f0a35a; background: #2a1c12; border-color: #5c3a20; }
+    body[data-theme="light"] .extra-tile[data-extra="summary"] .extra-icon { color: #b45309; background: #fff1e0; border-color: #f0c56a; }
+    .summary-screen .week-summary { margin: 8px 0 0; padding-top: 0; border-top: 0; }
     .sleep-screen h1 { color: var(--text); }
     .sleep-tonight { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 18px 18px 20px; margin: 8px 0 22px; }
     .sleep-tonight h2, .sleep-upcoming h2, .sleep-manage h2 { margin: 0 0 10px; font-size: 18px; font-weight: 800; }
@@ -1304,7 +1307,7 @@
             <label for="bodyWeightInput">Your body weight</label>
             <span class="bodyweight-field"><input id="bodyWeightInput" type="text" inputmode="decimal" autocomplete="off" placeholder="—" aria-describedby="bodyWeightNote" aria-invalid="false"> <span id="bodyWeightUnit">kg</span></span>
           </div>
-          <p class="equipment-note" id="bodyWeightNote">Used to estimate kilos for pull-ups, chin-ups, leg raises, bodyweight skull crushers, dips and diamond push-ups in the weekly summary.</p>
+          <p class="equipment-note" id="bodyWeightNote">Used to estimate kilos for pull-ups, chin-ups, leg raises, bodyweight skull crushers, dips and diamond push-ups in the exercise summary.</p>
         </div>
         <div class="equipment-section">
           <h3>Equipment</h3>
@@ -1368,7 +1371,22 @@
         <span class="extra-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 14.62A8.5 8.5 0 1 1 9.38 3 7 7 0 0 0 21 14.62z"/></svg></span>
         <span>Sleep</span>
       </button>
+      <button type="button" class="extra-tile" id="extraSummary" data-extra="summary">
+        <span class="extra-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20V8"/></svg></span>
+        <span>Exercise summary</span>
+      </button>
     </div>
+  </main>
+  <main id="summaryScreen" class="wrap summary-screen" hidden>
+    <div class="breath-top">
+      <button type="button" class="home-back" id="summaryBack" aria-label="Back"><svg class="back-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M15 8H2M7.5 2.5 2 8l5.5 5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Back</button>
+    </div>
+    <header>
+      <p class="eyebrow">Your training</p>
+      <h1>Exercise summary</h1>
+      <p class="history-note" id="exerciseSummaryPeriod"></p>
+    </header>
+    <div id="exerciseSummaryBody"></div>
   </main>
   <main id="breathingScreen" class="wrap breathing-screen" hidden>
     <div class="breath-top">
@@ -4000,7 +4018,7 @@
       "x-glute-bridges": { glutes: 1 }
     };
 
-    // Rough share of body weight moved per rep (v146); only used for weekly summary kilos.
+    // Rough share of body weight moved per rep (v146); only used for exercise summary kilos.
     const BODYWEIGHT_SHARE = {
       pullupsWide: 1,
       pullupsShort: 1,
@@ -4121,7 +4139,8 @@
           : setsText + (item.quarters !== item.direct * 4 ? ' (' + item.direct + ' direct)' : '') + ' · ' + item.reps + ' reps · ' + volumeText;
         return '<div class="summary-row" data-group="' + muscle.id + '"><div class="summary-meta"><strong>' + muscle.name + '</strong><span>' + meta + '</span></div><div class="summary-bar" aria-hidden="true"><i style="width:' + width + '%;background:' + muscle.color + '"></i></div></div>';
       }).join("");
-      return '<section class="week-summary" aria-label="' + title + '"><h3>' + title + '</h3><p class="week-dates">' + (monthLabel ? escapeHtml(monthLabel) : 'Mon–Sun · ' + displaySessionDate(fileStamp(monday), false) + ' – ' + displaySessionDate(fileStamp(end))) + '</p>' + rows + '<p class="summary-note">Sets, reps, and volume are totals from logged working sets this ' + (monthLabel ? 'month' : 'week') + '. Volume is weight × reps. Bodyweight sets count toward sets and reps; bodyweight lifts use your body weight setting for estimated ' + (usesLb() ? "pounds" : "kilos") + ' when it’s set. Each set counts as 1 for its main muscle; helper muscles get ½ or ¼ set. Helper muscles get the same share of the volume. Reps count only for the main muscle, so the same weight can show under more than one muscle.</p></section>';
+      const period = monthLabel ? escapeHtml(monthLabel) : 'Mon–Sun · ' + displaySessionDate(fileStamp(monday), false) + ' – ' + displaySessionDate(fileStamp(end));
+      return '<section class="week-summary" aria-label="' + escapeHtml(title || "Exercise summary") + '">' + (title ? '<h3>' + title + '</h3><p class="week-dates">' + period + '</p>' : '') + rows + '<p class="summary-note">Sets, reps, and volume are totals from logged working sets this ' + (monthLabel ? 'month' : 'week') + '. Volume is weight × reps. Bodyweight sets count toward sets and reps; bodyweight lifts use your body weight setting for estimated ' + (usesLb() ? "pounds" : "kilos") + ' when it’s set. Each set counts as 1 for its main muscle; helper muscles get ½ or ¼ set. Helper muscles get the same share of the volume. Reps count only for the main muscle, so the same weight can show under more than one muscle.</p></section>';
     }
 
     function slotForDate(date) {
@@ -4226,20 +4245,12 @@
       }).join("");
       const streak = dayStreak();
       const streakLabel = streak === 1 ? "1 day" : streak + " days";
-      const thisTotals = weeklyMuscleSummary(month.first, month.last);
-      const lastFirst = new Date(month.first.getFullYear(), month.first.getMonth() - 1, 1);
-      const lastLast = new Date(month.first.getFullYear(), month.first.getMonth(), 0);
-      const lastTotals = weeklyMuscleSummary(lastFirst, lastLast);
-      const useLast = !summaryHasSets(thisTotals) && summaryHasSets(lastTotals);
-      const summary = useLast
-        ? renderMuscleSummary("Last month", lastFirst, lastTotals, lastFirst.toLocaleDateString("en-GB", { month: "long", year: "numeric" }))
-        : renderMuscleSummary("Monthly summary", month.first, thisTotals, monthLabel);
       const nextName = nextSlot ? nextSlot.name : DAY_META[week.next].name;
       const nextDayKey = nextSlot ? nextSlot.dayKey : week.next;
       const view = document.getElementById("weeklyView");
       view.setAttribute("aria-label", "This month");
       view.innerHTML = '<p class="streak-banner">Streak: <span>' + streakLabel + '</span></p><h2>This month</h2><p class="week-dates">' + monthLabel + "</p>" +
-        '<p class="next-up">' + (resumeTarget(nextDayKey) ? "Resume" : "Next up") + ": " + nextName + '</p><div class="month-grid">' + headers + cells + '</div><p class="program-hint" id="programHint">' + escapeHtml(PROGRAMS[state.program].name) + ' · change in Settings</p>' + summary + '<p class="week-note">A check means that day’s workout is done. The outline marks today. Tap a day to see and edit its workout, work and sleep. Press and hold a workout or rest day, then drag it to another date to move it. Work shifts stay on their dates. Your streak counts training days in a row. Rest days do not break it.</p>' + (weekLayoutCustomized() ? '<button type="button" class="week-reset" data-action="reset-week-layout">Reset week layout</button>' : "");
+        '<p class="next-up">' + (resumeTarget(nextDayKey) ? "Resume" : "Next up") + ": " + nextName + '</p><div class="month-grid">' + headers + cells + '</div><p class="program-hint" id="programHint">' + escapeHtml(PROGRAMS[state.program].name) + ' · change in Settings</p><p class="week-note">A check means that day’s workout is done. The outline marks today. Tap a day to see and edit its workout, work and sleep. Press and hold a workout or rest day, then drag it to another date to move it. Work shifts stay on their dates. Your streak counts training days in a row. Rest days do not break it.</p>' + (weekLayoutCustomized() ? '<button type="button" class="week-reset" data-action="reset-week-layout">Reset week layout</button>' : "");
     }
 
     let homeSlotByStamp = {};
@@ -4353,17 +4364,10 @@
       }).join("");
       const streak = dayStreak();
       const streakLabel = streak === 1 ? "1 day" : streak + " days";
-      const thisTotals = weeklyMuscleSummary(week.monday);
-      const lastMonday = addCalendarDays(week.monday, -7);
-      const lastTotals = weeklyMuscleSummary(lastMonday);
-      const useLast = !summaryHasSets(thisTotals) && summaryHasSets(lastTotals);
-      const summary = useLast
-        ? renderMuscleSummary("Last week", lastMonday, lastTotals)
-        : renderMuscleSummary("Weekly summary", week.monday, thisTotals);
       const nextName = nextSlot ? nextSlot.name : DAY_META[week.next].name;
       const nextDayKey = nextSlot ? nextSlot.dayKey : week.next;
       document.getElementById("weeklyView").innerHTML = '<p class="streak-banner">Streak: <span>' + streakLabel + '</span></p><h2>This week</h2><p class="week-dates">Mon–Sun · ' + displaySessionDate(fileStamp(week.monday), false) + ' – ' + displaySessionDate(fileStamp(week.sunday)) + '</p>' +
-        '<p class="next-up">' + (resumeTarget(nextDayKey) ? 'Resume' : 'Next up') + ': ' + nextName + '</p><div class="week-strip">' + cards + '</div><p class="program-hint" id="programHint">' + escapeHtml(PROGRAMS[state.program].name) + ' · change in Settings</p>' + summary + '<p class="week-note">Done means every exercise in the workout has all its sets logged. A workout left unfinished carries over to the next day. Train a different workout than planned and the rest of the week shifts to follow your program’s order from there. Tap a day to see and edit its workout, work and sleep. Your streak counts training days in a row. Rest days do not break it. Press and hold a day, then drag it onto another day to swap them, including rest days.</p>' + (weekLayoutCustomized() ? '<button type="button" class="week-reset" data-action="reset-week-layout">Reset week layout</button>' : '');
+        '<p class="next-up">' + (resumeTarget(nextDayKey) ? 'Resume' : 'Next up') + ': ' + nextName + '</p><div class="week-strip">' + cards + '</div><p class="program-hint" id="programHint">' + escapeHtml(PROGRAMS[state.program].name) + ' · change in Settings</p><p class="week-note">Done means every exercise in the workout has all its sets logged. A workout left unfinished carries over to the next day. Train a different workout than planned and the rest of the week shifts to follow your program’s order from there. Tap a day to see and edit its workout, work and sleep. Your streak counts training days in a row. Rest days do not break it. Press and hold a day, then drag it onto another day to swap them, including rest days.</p>' + (weekLayoutCustomized() ? '<button type="button" class="week-reset" data-action="reset-week-layout">Reset week layout</button>' : '');
     }
 
     function renderSessionHistory(exercise, day) {
@@ -5027,6 +5031,7 @@
       document.getElementById("extraScreen").hidden = view !== "extra";
       document.getElementById("breathingScreen").hidden = view !== "breathing";
       document.getElementById("sleepScreen").hidden = view !== "sleep";
+      document.getElementById("summaryScreen").hidden = view !== "exerciseSummary";
       if (view !== "breathing") {
         stopBreathing();
         stopSlayer();
@@ -5039,7 +5044,7 @@
         closeSleepWeek();
       } else renderSleep();
       const todayIsRest = !logDayKey();
-      const extraViews = view === "extra" || view === "history" || view === "breathing" || view === "sleep";
+      const extraViews = view === "extra" || view === "history" || view === "breathing" || view === "sleep" || view === "exerciseSummary";
       document.querySelectorAll(".nav-button").forEach(button => {
         const on = (button.dataset.view === view || (button.id === "navExtra" && extraViews)) && !(button.id === "navLog" && todayIsRest);
         if (on) button.setAttribute("aria-current", "page");
@@ -5047,6 +5052,7 @@
       });
       updateLogNavLabel();
       if (view === "history") renderGlobalHistory();
+      if (view === "exerciseSummary") renderExerciseSummary();
       if (view !== "workout") return;
 
       const dayKey = state.currentDay;
@@ -5133,8 +5139,8 @@
       const note = document.getElementById("bodyWeightNote");
       if (note) {
         note.textContent = usesLb()
-          ? "Used to estimate pounds for pull-ups, chin-ups, leg raises, bodyweight skull crushers, dips and diamond push-ups in the weekly summary."
-          : "Used to estimate kilos for pull-ups, chin-ups, leg raises, bodyweight skull crushers, dips and diamond push-ups in the weekly summary.";
+          ? "Used to estimate pounds for pull-ups, chin-ups, leg raises, bodyweight skull crushers, dips and diamond push-ups in the exercise summary."
+          : "Used to estimate kilos for pull-ups, chin-ups, leg raises, bodyweight skull crushers, dips and diamond push-ups in the exercise summary.";
       }
     }
 
@@ -5578,6 +5584,54 @@
       cancelLongPress();
       closeSettings();
       view = "extra";
+      render();
+      window.scrollTo(0, 0);
+    }
+
+    function formatSummarySpan(start, end) {
+      const sMon = start.toLocaleDateString("en-GB", { month: "short" });
+      const eMon = end.toLocaleDateString("en-GB", { month: "short" });
+      if (sMon === eMon) return start.getDate() + "–" + end.getDate() + " " + sMon;
+      return start.getDate() + " " + sMon + " – " + end.getDate() + " " + eMon;
+    }
+
+    function renderExerciseSummary() {
+      const periodEl = document.getElementById("exerciseSummaryPeriod");
+      const body = document.getElementById("exerciseSummaryBody");
+      if (!periodEl || !body) return;
+      let start, end, totals, monthLabel = null, heading;
+      if (state.homeRange === "month") {
+        const month = monthProgress();
+        const thisTotals = weeklyMuscleSummary(month.first, month.last);
+        const lastFirst = new Date(month.first.getFullYear(), month.first.getMonth() - 1, 1);
+        const lastLast = new Date(month.first.getFullYear(), month.first.getMonth(), 0);
+        const lastTotals = weeklyMuscleSummary(lastFirst, lastLast);
+        const useLast = !summaryHasSets(thisTotals) && summaryHasSets(lastTotals);
+        start = useLast ? lastFirst : month.first;
+        end = useLast ? lastLast : month.last;
+        totals = useLast ? lastTotals : thisTotals;
+        monthLabel = start.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+        heading = (useLast ? "Last month" : "This month") + " · " + monthLabel;
+      } else {
+        const week = weeklyProgress();
+        const thisTotals = weeklyMuscleSummary(week.monday);
+        const lastMonday = addCalendarDays(week.monday, -7);
+        const lastTotals = weeklyMuscleSummary(lastMonday);
+        const useLast = !summaryHasSets(thisTotals) && summaryHasSets(lastTotals);
+        start = useLast ? lastMonday : week.monday;
+        end = addCalendarDays(start, 6);
+        totals = useLast ? lastTotals : thisTotals;
+        heading = (useLast ? "Last week" : "This week") + " · " + formatSummarySpan(start, end);
+      }
+      periodEl.textContent = heading;
+      body.innerHTML = renderMuscleSummary("", start, totals, monthLabel);
+    }
+
+    function goExerciseSummary() {
+      rememberOnLeave();
+      cancelLongPress();
+      closeSettings();
+      view = "exerciseSummary";
       render();
       window.scrollTo(0, 0);
     }
@@ -8871,6 +8925,8 @@
     document.getElementById("historyBack").addEventListener("click", goHistoryBack);
     document.getElementById("extraBreathing").addEventListener("click", goBreathing);
     document.getElementById("extraSleep").addEventListener("click", goSleep);
+    document.getElementById("extraSummary").addEventListener("click", goExerciseSummary);
+    document.getElementById("summaryBack").addEventListener("click", goExtra);
     document.getElementById("sleepBack").addEventListener("click", goExtra);
     document.getElementById("sleepSettingsBtn").addEventListener("click", openSleepSettings);
     document.getElementById("sleepSettingsClose").addEventListener("click", closeSleepSettings);
