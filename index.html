@@ -6752,6 +6752,25 @@
       return stampFromIndex(Math.floor(abs / 1440));
     }
 
+    function roundDown5(abs) {
+      return Math.floor(abs / 5) * 5;
+    }
+
+    function roundUp5(abs) {
+      return Math.ceil(abs / 5) * 5;
+    }
+
+    // Bedtimes snap to a 5-minute mark. Prefer rounding down (more sleep) and
+    // move the alarm earlier by the same amount so the sleep length stays the
+    // same. If that would be before getting home, use the first 5-minute mark
+    // at or after getting home and only then allow a small loss on the alarm.
+    function roundBedAbs(bedAbs, earliestBed) {
+      if (bedAbs == null || !Number.isFinite(bedAbs)) return bedAbs;
+      const floored = roundDown5(bedAbs);
+      if (!(earliestBed > -1e12 / 2) || floored >= earliestBed) return floored;
+      return roundUp5(earliestBed);
+    }
+
     function formatSleepDate(stamp, withYear) {
       const d = new Date(stamp + "T12:00:00");
       const opts = { weekday: "short", day: "numeric", month: "short" };
@@ -7328,12 +7347,51 @@
 
       for (let i = 0; i < dates.length; i += 1) {
         const row = byDate[dates[i]];
+        if (!row || row.bedAbs == null) continue;
+        const home = row.earliestBed;
+        const newBed = roundBedAbs(row.bedAbs, home);
+        if (newBed == null) continue;
+        if (newBed <= row.bedAbs) {
+          const delta = row.bedAbs - newBed;
+          row.bedAbs = newBed;
+          if (row.wakeAbs != null) row.wakeAbs -= delta;
+        } else {
+          row.bedAbs = newBed;
+          if (row.wakeAbs != null) {
+            row.wakeAbs = roundDown5(row.wakeAbs);
+            if (row.wakeAbs < row.bedAbs) row.wakeAbs = row.bedAbs;
+          }
+        }
+        if (row.napStartAbs != null) {
+          const prevEnd = previousWorkEndAbs(row.napStartAbs);
+          const napHome = prevEnd != null ? prevEnd + sleepCommuteMinutes() : -INF;
+          const newNap = roundBedAbs(row.napStartAbs, napHome);
+          if (newNap <= row.napStartAbs) {
+            const napDelta = row.napStartAbs - newNap;
+            row.napStartAbs = newNap;
+            if (row.napEndAbs != null) row.napEndAbs -= napDelta;
+          } else {
+            row.napStartAbs = newNap;
+            if (row.napEndAbs != null) {
+              row.napEndAbs = roundDown5(row.napEndAbs);
+              if (row.napEndAbs < row.napStartAbs) row.napEndAbs = row.napStartAbs;
+            }
+          }
+        }
+      }
+
+      for (let i = 0; i < dates.length; i += 1) {
+        const row = byDate[dates[i]];
         if (!row || row.recovery || row.wakeAbs == null || row.bedAbs == null) continue;
-        // Bedtime pinned by the previous shift: the times come from that, not from easing.
-        if (row.earliestBed > -INF / 2 && row.bedAbs <= row.earliestBed + 1) row.note = null;
+        // Bedtime pinned by the previous shift (or the first 5-minute mark after getting home).
+        if (row.earliestBed > -INF / 2 && row.bedAbs <= roundUp5(row.earliestBed) + 1) row.note = null;
         // Warn only when the hard limits really prevent the full sleep goal.
         const slept = row.wakeAbs - row.bedAbs - sleepLatencyMinutes();
-        if (row.hasHardWake && slept < sleepGoalHours() * 60 - 1) {
+        const goalMin = sleepGoalHours() * 60;
+        const constraintSlept = row.hasHardWake && row.earliestBed > -INF / 2
+          ? row.latestWake - row.earliestBed - sleepLatencyMinutes()
+          : slept;
+        if (row.hasHardWake && slept < goalMin - 1 && constraintSlept < goalMin - 1) {
           row.maxHours = Math.max(0, Math.round((slept / 60) * 10) / 10);
           row.warn = "Full sleep isn't possible after the previous shift. Longest you can get is " + formatSleepHours(row.maxHours) + ".";
         } else {
@@ -7359,11 +7417,13 @@
           row.napEnd = absToClock(row.napEndAbs);
         }
         if (row.recovery) {
-          row.sleepStart = absToClock(row.recovery.start);
-          row.sleepStartAbs = row.recovery.start;
-          row.sleepEndAbs = row.recovery.end;
-          row.sleepStartDate = absToStamp(row.recovery.start);
-          row.recoveryEnd = absToClock(row.recovery.end);
+          const sleepStart = row.bedAbs != null ? row.bedAbs : row.recovery.start;
+          const sleepEnd = row.wakeAbs != null ? row.wakeAbs : row.recovery.end;
+          row.sleepStart = absToClock(sleepStart);
+          row.sleepStartAbs = sleepStart;
+          row.sleepEndAbs = sleepEnd;
+          row.sleepStartDate = absToStamp(sleepStart);
+          row.recoveryEnd = absToClock(sleepEnd);
           row.recoveryFull = row.recovery.full;
         }
         if (kindIsOff(row.kind) && row.note && row.targetWake != null && Math.abs(row.wakeAbs - row.targetWake) <= 1) {
@@ -7402,23 +7462,28 @@
       const rec = recoveryWindow(sh);
       const plan = currentSleepPlan();
       const morning = plan.byDate[absToStamp(rec.start)] || {};
+      const nightRow = plan.byDate[sh.date] || {};
+      const napStartAbs = nightRow.napStartAbs != null ? nightRow.napStartAbs : startAbs - 210;
+      const napEndAbs = nightRow.napEndAbs != null ? nightRow.napEndAbs : startAbs - 120;
+      const sleepStartAbs = morning.bedAbs != null ? morning.bedAbs : rec.start;
+      const sleepEndAbs = morning.wakeAbs != null ? morning.wakeAbs : rec.end;
       return {
         kind: "night",
         shift: sh,
         night: true,
-        napStartAbs: startAbs - 120 - 90,
-        napEndAbs: startAbs - 120,
-        napStart: absToClock(startAbs - 210),
-        napEnd: absToClock(startAbs - 120),
+        napStartAbs: napStartAbs,
+        napEndAbs: napEndAbs,
+        napStart: absToClock(napStartAbs),
+        napEnd: absToClock(napEndAbs),
         ready: absToClock(startAbs - sleepPrepMinutes()),
-        sleepStartAbs: rec.start,
-        sleepEndAbs: rec.end,
-        sleepStart: absToClock(rec.start),
-        sleepStartDate: absToStamp(rec.start),
+        sleepStartAbs: sleepStartAbs,
+        sleepEndAbs: sleepEndAbs,
+        sleepStart: absToClock(sleepStartAbs),
+        sleepStartDate: absToStamp(sleepStartAbs),
         recoveryFull: rec.full,
-        alarm: absToClock(rec.end),
-        alarmDate: absToStamp(rec.end),
-        wake: absToClock(rec.end),
+        alarm: absToClock(sleepEndAbs),
+        alarmDate: absToStamp(sleepEndAbs),
+        wake: absToClock(sleepEndAbs),
         warn: morning.warn || null
       };
     }
@@ -7954,7 +8019,9 @@
       if (plan.recovery) {
         bed = formatClock(plan.sleepStart);
         wake = formatClock(plan.recoveryEnd);
-        sleepMin = (plan.recovery.end - plan.recovery.start);
+        sleepMin = (plan.sleepEndAbs != null && plan.sleepStartAbs != null)
+          ? (plan.sleepEndAbs - plan.sleepStartAbs)
+          : (plan.recovery.end - plan.recovery.start);
         meta.push(plan.recoveryFull === false ? "short rest after the night shift" : "sleep after the night shift");
       } else if (plan.bedtime) {
         bed = plan.bedtime;
@@ -7971,7 +8038,10 @@
       }
       if (plan.night && sh) {
         const rec = recoveryWindow(sh);
-        html += '<div class="sd-night"><span><em>Nap</em>' + escapeHtml(plan.napStart + "–" + plan.napEnd) + '</span><span><em>Sleep after</em>' + escapeHtml(absToClock(rec.start) + "–" + absToClock(rec.end)) + "</span></div>";
+        const morning = dayPlan(rec.date || absToStamp(rec.start));
+        const afterStart = (morning && (morning.sleepStart || morning.bedtime)) || absToClock(rec.start);
+        const afterEnd = (morning && (morning.recoveryEnd || morning.wake)) || absToClock(rec.end);
+        html += '<div class="sd-night"><span><em>Nap</em>' + escapeHtml(plan.napStart + "–" + plan.napEnd) + '</span><span><em>Sleep after</em>' + escapeHtml(afterStart + "–" + afterEnd) + "</span></div>";
       }
       if (sleepMin != null) meta.unshift(formatSleepHours(Math.max(0, sleepMin) / 60) + " sleep");
       if (plan.note && !plan.recovery) meta.push(plan.note);
