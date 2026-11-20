@@ -1193,6 +1193,13 @@
     .slayer-safety[hidden], .slayer-summary[hidden], .slayer-hold[hidden] { display: none; }
     .slayer-summary { width: min(280px, 86vw); margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
     .slayer-summary li { display: flex; justify-content: space-between; gap: 12px; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .slayer-top[hidden] { display: none; }
+    .slayer-top { width: min(280px, 86vw); margin: 4px 0 0; padding: 12px 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--card-2); box-sizing: border-box; }
+    .slayer-top h3 { margin: 0 0 8px; font-size: 13px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; opacity: .7; }
+    .slayer-top ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+    .slayer-top li { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .slayer-top li small { opacity: .65; font-weight: 600; font-size: 12px; margin-left: 6px; }
+    .slayer-top li.slayer-new strong { color: #ff7a3a; }
     .slayer-summary .slayer-best { color: #ff7a3a; font-weight: 800; }
     .slayer-hold { width: min(260px, 72vw); min-height: 64px; border-radius: 14px; background: #ff7a3a; color: #1a0a04; font-size: 18px; font-weight: 800; touch-action: manipulation; }
     @media (prefers-reduced-motion: reduce) {
@@ -1402,6 +1409,7 @@
         <button type="button" class="slayer-hold" id="slayerHoldBtn" hidden>Breathe in</button>
         <button type="button" class="breath-start" id="slayerToggle" data-running="false" aria-label="Start Inner Slayer">Start</button>
       </div>
+      <div class="slayer-top" id="slayerTop" hidden></div>
     </div>
   </main>
   <div id="breathSettingsOverlay" class="settings-overlay" hidden>
@@ -2205,6 +2213,7 @@
         slayerRounds: 3,
         slayerRecoverySeconds: 15,
         slayerSound: true,
+        slayerTop: [],
         shifts: [],
         sleepGoal: 8,
         sleepPrep: 60,
@@ -2313,6 +2322,7 @@
           slayerRounds: normalizeSlayerRounds(parsed.slayerRounds),
           slayerRecoverySeconds: normalizeSlayerRecovery(parsed.slayerRecoverySeconds),
           slayerSound: normalizeSlayerSound(parsed.slayerSound),
+          slayerTop: normalizeSlayerTop(parsed.slayerTop),
           shifts: normalizeShifts(parsed.shifts),
           sleepGoal: normalizeSleepGoal(parsed.sleepGoal),
           sleepPrep: normalizeSleepPrep(parsed.sleepPrep),
@@ -2428,7 +2438,8 @@
         slayerRounds: normalizeSlayerRounds(state.slayerRounds),
         slayerRecoverySeconds: normalizeSlayerRecovery(state.slayerRecoverySeconds),
         slayerSound: normalizeSlayerSound(state.slayerSound),
-        shifts: normalizeShifts(state.shifts),
+        slayerTop: normalizeSlayerTop(state.slayerTop),
+        shiftsPacked: packShifts(state.shifts),
         sleepGoal: normalizeSleepGoal(state.sleepGoal),
         sleepPrep: normalizeSleepPrep(state.sleepPrep),
         sleepLatency: normalizeSleepLatency(state.sleepLatency),
@@ -2540,7 +2551,8 @@
       state.slayerRounds = normalizeSlayerRounds(payload.slayerRounds);
       state.slayerRecoverySeconds = normalizeSlayerRecovery(payload.slayerRecoverySeconds);
       state.slayerSound = normalizeSlayerSound(payload.slayerSound);
-      state.shifts = normalizeShifts(payload.shifts);
+      if (Array.isArray(payload.slayerTop)) state.slayerTop = normalizeSlayerTop(payload.slayerTop);
+      state.shifts = Array.isArray(payload.shiftsPacked) ? unpackShifts(payload.shiftsPacked) : normalizeShifts(payload.shifts);
       state.sleepGoal = normalizeSleepGoal(payload.sleepGoal);
       state.sleepPrep = normalizeSleepPrep(payload.sleepPrep);
       state.sleepLatency = normalizeSleepLatency(payload.sleepLatency);
@@ -5962,7 +5974,46 @@
       return formatBreathClock(ms);
     }
 
+    function normalizeSlayerTop(value) {
+      if (!Array.isArray(value)) return [];
+      return value.map(function (row) {
+        const ms = Math.round(Number(row && row.ms));
+        const at = row && typeof row.at === "string" ? row.at : "";
+        return ms > 0 && ms < 3600000 ? { ms: ms, at: at } : null;
+      }).filter(Boolean).sort(function (a, b) { return b.ms - a.ms; }).slice(0, 3);
+    }
+
+    let slayerNewTopAt = "";
+
+    function recordSlayerTop(ms) {
+      if (!(ms >= 1000)) return;
+      const at = new Date().toISOString();
+      const list = normalizeSlayerTop((state.slayerTop || []).concat([{ ms: ms, at: at }]));
+      state.slayerTop = list;
+      if (list.some(function (row) { return row.at === at; })) slayerNewTopAt = at;
+      saveState();
+    }
+
+    function renderSlayerTop() {
+      const box = document.getElementById("slayerTop");
+      if (!box) return;
+      const list = normalizeSlayerTop(state.slayerTop);
+      if (slayerRunning || !list.length) {
+        box.hidden = true;
+        return;
+      }
+      const medals = ["1.", "2.", "3."];
+      box.innerHTML = "<h3>Top 3 holds</h3><ol>" + list.map(function (row, i) {
+        const d = row.at ? new Date(row.at) : null;
+        const when = d && Number.isFinite(d.getTime()) ? d.toLocaleDateString(undefined, { day: "numeric", month: "short" }) : "";
+        const cls = row.at && row.at === slayerNewTopAt ? ' class="slayer-new"' : "";
+        return "<li" + cls + "><span>" + medals[i] + (when ? "<small>" + when + "</small>" : "") + "</span><strong>" + slayerHoldLabel(row.ms) + "</strong></li>";
+      }).join("") + "</ol>";
+      box.hidden = false;
+    }
+
     function renderSlayerSummary() {
+      renderSlayerTop();
       const list = document.getElementById("slayerSummary");
       if (!list) return;
       if (slayerPhase !== "done" || !slayerHolds.length) {
@@ -6040,6 +6091,7 @@
     }
 
     function renderSlayerSettings() {
+      renderSlayerTop();
       const breathsVal = document.getElementById("slayerBreathsValue");
       const roundsVal = document.getElementById("slayerRoundsValue");
       const recVal = document.getElementById("slayerRecoveryValue");
@@ -6243,6 +6295,7 @@
       slayerBreathIndex = 1;
       slayerHalf = "in";
       slayerHolds = [];
+      slayerNewTopAt = "";
       slayerPhaseStartedAt = performance.now();
       slayerLastLabel = "";
       renderSlayerSettings();
@@ -6276,6 +6329,7 @@
       if (!slayerRunning || slayerPhase !== "hold") return;
       const held = Math.max(0, performance.now() - slayerPhaseStartedAt);
       slayerHolds.push(held);
+      recordSlayerTop(held);
       if (typeof window.__onSlayerHold === "function") {
         try { window.__onSlayerHold(held); } catch (error) {}
       }
@@ -6415,6 +6469,68 @@
       const d = new Date(s + "T12:00:00");
       if (!Number.isFinite(d.getTime()) || fileStamp(d) !== s) return null;
       return s;
+    }
+
+    function shiftToToken(row) {
+      if (row.type === "vacation") return "V";
+      if (row.type === "work" && row.start && row.end) return row.start.replace(":", "") + "-" + row.end.replace(":", "");
+      return row.tag || 0;
+    }
+
+    function packShifts(list) {
+      const rows = normalizeShifts(list);
+      const groups = [];
+      for (let i = 0; i < rows.length; i += 1) {
+        const row = rows[i];
+        const last = groups[groups.length - 1];
+        if (last && last.src === row.source && addDaysStamp(last.f, last.t.length) === row.date) last.t.push(shiftToToken(row));
+        else groups.push({ f: row.date, src: row.source, t: [shiftToToken(row)] });
+      }
+      return groups.map(function (g) {
+        const toks = g.t;
+        const n = toks.length;
+        const same = function (a, b) { return a === b; };
+        let best = { cost: n, start: n, period: 0 };
+        for (let p = 1; p <= 70 && p < n; p += 1) {
+          let i = n - p;
+          while (i > 0 && same(toks[i - 1], toks[i - 1 + p])) i -= 1;
+          if (n - i < p * 2) continue;
+          const cost = i + p + 2;
+          if (cost < best.cost) best = { cost: cost, start: i, period: p };
+        }
+        const out = { f: g.f, src: g.src, s: toks.slice(0, best.start) };
+        if (best.period) {
+          out.r = toks.slice(best.start, best.start + best.period);
+          out.u = addDaysStamp(g.f, n - 1);
+        }
+        return out;
+      });
+    }
+
+    function unpackShifts(packed) {
+      if (!Array.isArray(packed)) return [];
+      const rows = [];
+      for (let i = 0; i < packed.length; i += 1) {
+        const g = packed[i] || {};
+        const start = normalizeShiftDate(g.f);
+        if (!start) continue;
+        const src = normalizeShiftSource(g.src);
+        const s = Array.isArray(g.s) ? g.s : [];
+        for (let k = 0; k < s.length; k += 1) {
+          const row = tokenToShift(addDaysStamp(start, k), s[k], src);
+          if (row) rows.push(row);
+        }
+        const until = normalizeShiftDate(g.u);
+        if (Array.isArray(g.r) && g.r.length && until) {
+          for (let k = 0; k < 4000; k += 1) {
+            const date = addDaysStamp(start, s.length + k);
+            if (date > until) break;
+            const row = tokenToShift(date, g.r[k % g.r.length], src);
+            if (row) rows.push(row);
+          }
+        }
+      }
+      return normalizeShifts(rows);
     }
 
     function normalizeShiftSource(value) {
