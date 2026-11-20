@@ -7230,6 +7230,15 @@
         const row = tokenToShift(date, tok, source);
         if (row) rows.push(row);
       }
+      const until = normalizeShiftDate(payload.u || payload.until);
+      if (Array.isArray(payload.r) && payload.r.length && until) {
+        for (let k = 0; k < 800; k += 1) {
+          const date = addDaysStamp(start, payload.s.length + k);
+          if (date > until) break;
+          const row = tokenToShift(date, payload.r[k % payload.r.length], "rota");
+          if (row) rows.push(row);
+        }
+      }
       return rows;
     }
 
