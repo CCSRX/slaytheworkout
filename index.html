@@ -1496,9 +1496,9 @@
             <input type="time" step="60" id="trainStart" aria-label="Training window start" value="09:00"><span class="wk-dash">–</span><input type="time" step="60" id="trainEnd" aria-label="Training window end" value="20:00">
           </div>
           <label class="train-minfree">
-            <span class="sleep-time-label">Free time needed after work</span>
+            <span class="sleep-time-label">Travel time to gym</span>
             <span class="train-minfree-row"><input type="number" id="trainMinFree" min="0" max="240" step="5" inputmode="numeric" value="25" aria-describedby="trainMinFreeHint"><span>min</span></span>
-            <span class="sleep-time-note" id="trainMinFreeHint">Minutes free in your window (after getting home) before a workout fits</span>
+            <span class="sleep-time-note" id="trainMinFreeHint">How long it takes you to get to the gym</span>
           </label>
         </div>
       </div>
@@ -6601,7 +6601,7 @@
       return w.start + "-" + w.end + "|" + sleepCommuteMinutes() + "|" + trainMinFreeMinutes() + "|" + effectiveShifts().length;
     }
     let trainBlockMemo = null;
-    // Blocked = the largest free stretch inside the training window is under the "Free time needed
+    // Blocked = the largest free stretch inside the training window is under the "Travel time to gym" (was "Free time needed
     // after work" setting (trainMinFree, default 25 min; 0 = blocked only when nothing is free).
     // Busy: work (shifts and regular hours, incl. a shift from the day before running past midnight)
     // with the time to get home before and after it, the nap before a night shift, the sleep after
