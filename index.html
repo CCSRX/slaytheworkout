@@ -6426,6 +6426,210 @@
       }, extra || {});
     }
 
+
+    function weekStartStamp(stamp) {
+      const d = new Date(stamp + "T12:00:00");
+      d.setDate(d.getDate() - (d.getDay() + 6) % 7);
+      return fileStamp(d);
+    }
+
+    function displayAmountToKg(amount) {
+      const n = Number(amount);
+      if (!Number.isFinite(n)) return 0;
+      return usesLb() ? n / KG_TO_LB : n;
+    }
+
+    function consistentWeekProgress(target) {
+      const dates = {};
+      (state.sessions || []).forEach(function (session) {
+        if (sessionHasSets(session) && session.date) dates[session.date] = true;
+      });
+      const weeks = {};
+      const completed = [];
+      Object.keys(dates).sort().forEach(function (stamp) {
+        const start = weekStartStamp(stamp);
+        if (!weeks[start]) weeks[start] = 0;
+        weeks[start] += 1;
+        if (weeks[start] === 3) completed.push(stamp);
+      });
+      return { best: completed.length, date: target > 0 && completed.length >= target ? completed[target - 1] : "" };
+    }
+
+    function pplRotationProgress() {
+      const last = { push: "", pull: "", legs: "" };
+      let date = "";
+      const sessions = (state.sessions || []).slice().sort(function (a, b) {
+        return String(a.date).localeCompare(String(b.date)) || String(a.updatedAt || "").localeCompare(String(b.updatedAt || ""));
+      });
+      sessions.forEach(function (session) {
+        if (!sessionHasSets(session) || !Object.prototype.hasOwnProperty.call(last, session.day)) return;
+        last[session.day] = session.date;
+        if (date || !last.push || !last.pull || !last.legs) return;
+        const stamps = [last.push, last.pull, last.legs].sort();
+        const span = Math.round((new Date(stamps[2] + "T12:00:00") - new Date(stamps[0] + "T12:00:00")) / 86400000);
+        if (span <= 6) date = session.date;
+      });
+      return { best: date ? 1 : 0, date: date };
+    }
+
+    function sessionVolumeKg(session) {
+      let total = 0;
+      const exercises = (session && session.exercises) || {};
+      Object.keys(exercises).forEach(function (exId) {
+        const entry = exercises[exId];
+        const variantId = entryVariant(entry, exId);
+        const exercise = findExercise(session.day, exId) || EXERCISES[exId] || CUSTOM_EXERCISES[exId] || { id: exId };
+        (entry.sets || []).forEach(function (row) {
+          if (!setHasReps(row)) return;
+          const reps = Number(row.reps);
+          const kg = setKg(row, exercise, variantId);
+          if (Number.isFinite(reps) && reps > 0 && kg > 0) total += kg * reps;
+        });
+      });
+      return total;
+    }
+
+    function bestSessionVolumeProgress(targetKg) {
+      let best = 0, date = "";
+      const sessions = (state.sessions || []).slice().sort(function (a, b) {
+        return String(a.date).localeCompare(String(b.date));
+      });
+      sessions.forEach(function (session) {
+        if (!sessionHasSets(session)) return;
+        const vol = sessionVolumeKg(session);
+        if (vol > best) best = vol;
+        if (!date && targetKg > 0 && vol + 1e-6 >= targetKg) date = session.date;
+      });
+      return { best: best, date: date };
+    }
+
+    function topOfRangeCountProgress(target) {
+      let count = 0, date = "";
+      const sessions = (state.sessions || []).slice().sort(function (a, b) {
+        return String(a.date).localeCompare(String(b.date)) || String(a.updatedAt || "").localeCompare(String(b.updatedAt || ""));
+      });
+      sessions.forEach(function (session) {
+        const exercises = session.exercises || {};
+        Object.keys(exercises).forEach(function (exId) {
+          if (!loggedSets(exercises[exId]).length || !sessionTopOfRange(session, exId)) return;
+          count += 1;
+          if (!date && count >= target) date = session.date;
+        });
+      });
+      return { best: count, date: date };
+    }
+
+    function heaviestTypedOf(entry) {
+      let best = 0;
+      ((entry && entry.sets) || []).forEach(function (row) {
+        if (setHasReps(row)) best = Math.max(best, typedSetKg(row));
+      });
+      return best;
+    }
+
+    function rotationAllIncreasedProgress() {
+      const history = {};
+      let bucket = [];
+      let seen = {};
+      let date = "";
+      const sessions = (state.sessions || []).slice().sort(function (a, b) {
+        return String(a.date).localeCompare(String(b.date)) || String(a.updatedAt || "").localeCompare(String(b.updatedAt || ""));
+      });
+      function applyBucket() {
+        bucket.forEach(function (session) {
+          Object.keys(session.exercises || {}).forEach(function (exId) {
+            const heavy = heaviestTypedOf(session.exercises[exId]);
+            if (heavy > 0) history[exId] = Math.max(history[exId] || 0, heavy);
+          });
+        });
+        bucket = [];
+        seen = {};
+      }
+      sessions.forEach(function (session) {
+        if (!sessionHasSets(session) || (session.day !== "push" && session.day !== "pull" && session.day !== "legs")) return;
+        bucket.push(session);
+        seen[session.day] = true;
+        if (!(seen.push && seen.pull && seen.legs)) return;
+        if (!date) {
+          const latest = {};
+          bucket.forEach(function (item) {
+            Object.keys(item.exercises || {}).forEach(function (exId) {
+              const heavy = heaviestTypedOf(item.exercises[exId]);
+              if (heavy > 0) latest[exId] = heavy;
+            });
+          });
+          let comparable = 0, increased = 0, missing = 0;
+          Object.keys(latest).forEach(function (exId) {
+            if (!history[exId]) { missing += 1; return; }
+            comparable += 1;
+            if (latest[exId] > history[exId] + 0.049) increased += 1;
+          });
+          if (comparable > 0 && increased === comparable && missing === 0) date = session.date;
+        }
+        applyBucket();
+      });
+      return { best: date ? 1 : 0, date: date };
+    }
+
+    function liftGainProgress(targetKg) {
+      const first = {};
+      let best = 0, date = "", name = "";
+      const sessions = (state.sessions || []).slice().sort(function (a, b) {
+        return String(a.date).localeCompare(String(b.date));
+      });
+      sessions.forEach(function (session) {
+        const exercises = session.exercises || {};
+        Object.keys(exercises).forEach(function (exId) {
+          const heavy = heaviestTypedOf(exercises[exId]);
+          if (heavy <= 0) return;
+          if (first[exId] == null) { first[exId] = heavy; return; }
+          const gain = heavy - first[exId];
+          if (gain > best) {
+            best = gain;
+            name = achievementEntryName(exId, exercises[exId], session);
+          }
+          if (!date && targetKg > 0 && gain + 1e-6 >= targetKg) date = session.date;
+        });
+      });
+      return { best: best, date: date, name: name };
+    }
+
+    function prStatsProgress() {
+      const bests = {};
+      const seenEx = {};
+      let total = 0, distinct = 0, date5 = "", date10 = "";
+      const sessions = (state.sessions || []).slice().sort(function (a, b) {
+        return String(a.date).localeCompare(String(b.date)) || String(a.updatedAt || "").localeCompare(String(b.updatedAt || ""));
+      });
+      sessions.forEach(function (session) {
+        const exercises = session.exercises || {};
+        Object.keys(exercises).forEach(function (exId) {
+          const entry = exercises[exId];
+          let heavy = 0, load = 0;
+          (entry.sets || []).forEach(function (row) {
+            if (!setHasReps(row)) return;
+            const kg = typedSetKg(row);
+            const reps = Number(row.reps) || 0;
+            if (kg > heavy) heavy = kg;
+            const setLoad = kg * reps;
+            if (setLoad > load) load = setLoad;
+          });
+          if (heavy <= 0 && load <= 0) return;
+          const prev = bests[exId];
+          if (prev && (heavy > prev.heavy + 1e-6 || load > prev.load + 1e-6)) {
+            total += 1;
+            if (!seenEx[exId]) { seenEx[exId] = true; distinct += 1; }
+            if (!date5 && distinct >= 5) date5 = session.date;
+            if (!date10 && total >= 10) date10 = session.date;
+          }
+          if (!prev || heavy > prev.heavy || load > prev.load) {
+            bests[exId] = { heavy: Math.max(heavy, prev ? prev.heavy : 0), load: Math.max(load, prev ? prev.load : 0) };
+          }
+        });
+      });
+      return { distinct: distinct, total: total, date5: date5, date10: date10 };
+    }
+
     function evaluateAchievements() {
       const badges = [];
       badges.push(makeLiftBadge("starter-squat", "starter", "Squat body weight", "A working set at or above your body weight on a squat.", ACHIEVEMENT_SQUATS, 1));
@@ -6447,6 +6651,45 @@
       });
       const pr = firstPersonalBestProgress();
       badges.push(makeCountBadge("first-pr", "other", "New personal best", "Beat a previous best on a single exercise.", pr.best, 1, pr.date, "flag", { liftName: pr.name, progressText: pr.date ? "Done" : "Not yet" }));
+
+      [4, 12, 26, 52].forEach(function (n) {
+        const week = consistentWeekProgress(n);
+        badges.push(makeCountBadge("consistent-weeks-" + n, "consistency", n + " weeks of 3+ workouts", "A week counts when you train on at least three different days, Monday to Sunday. Not a daily counter.", week.best, n, week.date, "count", { progressText: week.best + " / " + n + " weeks" }));
+      });
+      const ppl = pplRotationProgress();
+      badges.push(makeCountBadge("ppl-rotation", "consistency", "Push, pull and legs in 7 days", "Complete a push, a pull and a legs workout within seven days.", ppl.best, 1, ppl.date, "flag", { progressText: ppl.date ? "Done" : "Not yet" }));
+
+      [5000, 10000].forEach(function (amount) {
+        const target = displayAmountToKg(amount);
+        const sess = bestSessionVolumeProgress(target);
+        badges.push(makeCountBadge("session-volume-" + amount, "volume", formatAchievementVolume(target) + " in one session", "Reach " + formatAchievementVolume(target) + " of volume in a single workout.", sess.best, target, sess.date, "volume", { progressText: formatAchievementVolume(sess.best) + " / " + formatAchievementVolume(target) }));
+      });
+      [250000, 500000, 1000000].forEach(function (amount) {
+        const target = displayAmountToKg(amount);
+        const vol = volumeProgress(target);
+        badges.push(makeCountBadge("volume-life-" + amount, "volume", formatAchievementVolume(target) + " volume", "Reach a lifetime training volume of " + formatAchievementVolume(target) + ".", vol.best, target, vol.date, "volume", { progressText: formatAchievementVolume(vol.best) + " / " + formatAchievementVolume(target) }));
+      });
+
+      [[1, "Top of the range"], [10, "Top of the range 10 times"], [50, "Top of the range 50 times"]].forEach(function (item) {
+        const top = topOfRangeCountProgress(item[0]);
+        badges.push(makeCountBadge("top-range-" + item[0], "progression", item[1], "Hit the top of a lift’s rep range on all working sets. After that, add weight next time.", top.best, item[0], top.date, "count", { progressText: top.best + " / " + item[0] }));
+      });
+      const rotUp = rotationAllIncreasedProgress();
+      badges.push(makeCountBadge("rotation-all-up", "progression", "Every lift up in a rotation", "Add weight to every lift in a push, pull and legs rotation, compared with the last time you did each one.", rotUp.best, 1, rotUp.date, "flag", { progressText: rotUp.date ? "Done" : "Not yet" }));
+      [10, 20].forEach(function (amount) {
+        const target = displayAmountToKg(amount);
+        const gain = liftGainProgress(target);
+        badges.push(makeCountBadge("lift-gain-" + amount, "progression", "+" + amount + " " + weightUnitLabel() + " on a lift", "Add " + formatWeightWithUnit(target) + " to a lift since the first time you logged it.", gain.best, target, gain.date, "weight", { liftName: gain.name, progressText: formatWeightWithUnit(gain.best) + " / " + formatWeightWithUnit(target) }));
+      });
+
+      const prs = prStatsProgress();
+      badges.push(makeCountBadge("pr-exercises-5", "records", "PRs on 5 exercises", "Beat a previous best on five different exercises.", prs.distinct, 5, prs.date5, "count", { progressText: prs.distinct + " / 5 exercises" }));
+      badges.push(makeCountBadge("pr-total-10", "records", "10 personal bests", "Log ten personal bests in total, across any lifts.", prs.total, 10, prs.date10, "count", { progressText: prs.total + " / 10 PRs" }));
+
+      [25, 50, 100, 250].forEach(function (n) {
+        const sess = sessionCountProgress(n);
+        badges.push(makeCountBadge("sessions-" + n, "sessions", n + " sessions logged", "Log " + n + " training sessions.", sess.best, n, sess.date, "count", { progressText: sess.best + " / " + n + " sessions" }));
+      });
       return badges;
     }
 
@@ -6540,6 +6783,11 @@
       const groups = [
         { id: "starter", title: "Starter" },
         { id: "advanced", title: "Advanced" },
+        { id: "consistency", title: "Consistency" },
+        { id: "volume", title: "Volume" },
+        { id: "progression", title: "Progression" },
+        { id: "records", title: "Records" },
+        { id: "sessions", title: "Sessions" },
         { id: "other", title: "Other" }
       ];
       body.innerHTML = groups.map(function (group) {
