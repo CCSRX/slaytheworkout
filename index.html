@@ -1023,6 +1023,13 @@
     .sleep-editor-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
     .sleep-editor-actions .data-btn { width: auto; flex: 1; }
     .sleep-hint { margin: 0 0 10px; }
+    .sleep-ease-note { display: block; margin-top: 2px; font-size: 12px; font-weight: 700; color: var(--mute); }
+    .sleep-gentle-note { margin: 8px 0 14px; font-size: 13px; line-height: 1.4; color: var(--mute); }
+    .sleep-max-switch { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+    .sleep-max-switch .data-btn { width: auto; min-width: 0; flex: 1; padding: 0 8px; font-size: 14px; }
+    .sleep-max-switch .data-btn[aria-pressed="true"] { background: var(--acc); color: var(--acc-ink); border-color: var(--acc); }
+    .sleep-setting-stack { display: grid; gap: 10px; margin-top: 6px; }
+
 
     .extra-tile span { font-size: 14px; font-weight: 800; }
     .breath-top { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: calc(-16px - var(--sat)) calc(-16px - var(--sar)) 10px calc(-16px - var(--sal)); padding: calc(10px + var(--sat)) calc(16px + var(--sar)) 10px calc(16px + var(--sal)); background: var(--bg); border-bottom: 1px solid var(--line); }
@@ -1411,6 +1418,27 @@
             <button type="button" id="sleepLatencyMinus" aria-label="Less time to fall asleep">−</button>
             <output id="sleepLatencyValue" for="sleepLatencyMinus sleepLatencyPlus">15 min</output>
             <button type="button" id="sleepLatencyPlus" aria-label="More time to fall asleep">+</button>
+          </div>
+        </div>
+        <div class="breath-setting">
+          <span id="sleepOffWakeLabel">Wake on days off</span>
+          <div class="breath-stepper">
+            <button type="button" id="sleepOffWakeMinus" aria-label="Earlier day-off wake">−</button>
+            <output id="sleepOffWakeValue" for="sleepOffWakeMinus sleepOffWakePlus">07:00</output>
+            <button type="button" id="sleepOffWakePlus" aria-label="Later day-off wake">+</button>
+          </div>
+        </div>
+        <div class="sleep-setting-stack">
+          <button type="button" class="breath-sound" id="sleepGentleBtn" aria-pressed="true">Gentle changes on</button>
+          <p class="sleep-gentle-note" id="sleepGentleNote">When it's on, bedtime and wake-up move by at most a set number of minutes a day, so your body can adjust. Days before an early start get gradually earlier, and after late or night shifts you ease back toward your day-off wake-up. Your shift start always comes first.</p>
+          <div id="sleepGentleMaxRow">
+            <span id="sleepGentleMaxLabel" class="sleep-time-label">Max change per day</span>
+            <div class="sleep-max-switch unit-switch" role="group" aria-label="Max change per day">
+              <button type="button" class="data-btn" id="sleepMax30" data-gentle-max="30">30 min</button>
+              <button type="button" class="data-btn" id="sleepMax45" data-gentle-max="45">45 min</button>
+              <button type="button" class="data-btn" id="sleepMax60" data-gentle-max="60">60 min</button>
+              <button type="button" class="data-btn" id="sleepMax90" data-gentle-max="90">90 min</button>
+            </div>
           </div>
         </div>
       </div>
@@ -2029,6 +2057,9 @@
         sleepGoal: 8,
         sleepPrep: 60,
         sleepLatency: 15,
+        sleepOffWake: "07:00",
+        sleepGentle: true,
+        sleepGentleMax: 60,
         bodyWeight: "",
         sessions: [],
         logDates: {},
@@ -2127,6 +2158,9 @@
           sleepGoal: normalizeSleepGoal(parsed.sleepGoal),
           sleepPrep: normalizeSleepPrep(parsed.sleepPrep),
           sleepLatency: normalizeSleepLatency(parsed.sleepLatency),
+          sleepOffWake: normalizeSleepOffWake(parsed.sleepOffWake),
+          sleepGentle: normalizeSleepGentle(parsed.sleepGentle),
+          sleepGentleMax: normalizeSleepGentleMax(parsed.sleepGentleMax),
           bodyWeight: normalizeBodyWeight(parsed.bodyWeight),
           lastSavedAt: parsed.lastSavedAt ? String(parsed.lastSavedAt) : "",
           updatedAt: normalizeUpdatedAt(updatedAt),
@@ -2232,6 +2266,9 @@
         sleepGoal: normalizeSleepGoal(state.sleepGoal),
         sleepPrep: normalizeSleepPrep(state.sleepPrep),
         sleepLatency: normalizeSleepLatency(state.sleepLatency),
+        sleepOffWake: normalizeSleepOffWake(state.sleepOffWake),
+        sleepGentle: normalizeSleepGentle(state.sleepGentle),
+        sleepGentleMax: normalizeSleepGentleMax(state.sleepGentleMax),
         lastSavedAt: state.lastSavedAt || exportedAt,
         updatedAt: state.updatedAt,
         sessions: state.sessions,
@@ -2334,6 +2371,9 @@
       state.sleepGoal = normalizeSleepGoal(payload.sleepGoal);
       state.sleepPrep = normalizeSleepPrep(payload.sleepPrep);
       state.sleepLatency = normalizeSleepLatency(payload.sleepLatency);
+      state.sleepOffWake = normalizeSleepOffWake(payload.sleepOffWake);
+      state.sleepGentle = normalizeSleepGentle(payload.sleepGentle);
+      state.sleepGentleMax = normalizeSleepGentleMax(payload.sleepGentleMax);
       if (payload.customExercises || payload.dayCustom) {
         state.customExercises = normalizeCustomExercises(payload.customExercises);
         CUSTOM_EXERCISES = state.customExercises;
@@ -6309,29 +6349,40 @@
       return normalizeSleepLatency(state && state.sleepLatency);
     }
 
-    function workBedtimes(aroundStamp) {
-      const times = [];
-      const list = state.shifts || [];
-      for (let i = 0; i < list.length; i += 1) {
-        const sh = list[i];
-        if (sh.type !== "work" || isNightShift(sh)) continue;
-        if (clockToMin(sh.start) >= 12 * 60) continue;
-        const startIdx = stampIndex(sh.date);
-        const around = stampIndex(aroundStamp);
-        if (Math.abs(startIdx - around) > 21) continue;
-        const plan = planForWorkShift(sh, false);
-        if (!plan || plan.bedAbs == null) continue;
-        const clock = ((plan.bedAbs % 1440) + 1440) % 1440;
-        if (clock >= 18 * 60 || clock <= 60) times.push(clock);
-      }
-      times.sort(function (a, b) { return a - b; });
-      return times;
+    function normalizeSleepOffWake(value) {
+      const clock = normalizeClock(value);
+      if (!clock) return "07:00";
+      let min = clockToMin(clock);
+      min = Math.round(min / 15) * 15;
+      min = Math.min(10 * 60, Math.max(5 * 60, min));
+      return minToClock(min);
     }
 
-    function typicalBedtime(aroundStamp) {
-      const times = workBedtimes(aroundStamp);
-      if (!times.length) return "23:00";
-      return minToClock(times[Math.floor((times.length - 1) / 2)]);
+    function normalizeSleepGentle(value) {
+      if (value === false || value === "false" || value === 0 || value === "0") return false;
+      return true;
+    }
+
+    function normalizeSleepGentleMax(value) {
+      const n = Number(value);
+      if (n === 30 || n === 45 || n === 60 || n === 90) return n;
+      return 60;
+    }
+
+    function sleepOffWakeClock() {
+      return normalizeSleepOffWake(state && state.sleepOffWake);
+    }
+
+    function sleepGentleOn() {
+      return normalizeSleepGentle(state && state.sleepGentle);
+    }
+
+    function sleepGentleMaxMinutes() {
+      return normalizeSleepGentleMax(state && state.sleepGentleMax);
+    }
+
+    function sleepNeedMinutes() {
+      return sleepGoalHours() * 60 + sleepLatencyMinutes();
     }
 
     function nextWorkAfter(date) {
@@ -6342,107 +6393,376 @@
       return null;
     }
 
-    function planForWorkShift(sh, withWarn) {
-      if (!sh || sh.type !== "work") return null;
-      if (isNightShift(sh)) return planForNightShift(sh, withWarn);
-      const startAbs = shiftStartAbs(sh);
-      const alarmAbs = startAbs - sleepPrepMinutes();
-      const need = sleepGoalHours() * 60 + sleepLatencyMinutes();
-      let bedAbs = alarmAbs - need;
-      let warn = null;
-      let maxHours = sleepGoalHours();
-      if (withWarn !== false) {
-        const prev = previousWorkShift(sh.date);
-        if (prev) {
-          const earliest = shiftEndAbs(prev) + 45;
-          if (bedAbs < earliest) {
-            const available = alarmAbs - earliest - sleepLatencyMinutes();
-            maxHours = Math.max(0, Math.round((available / 60) * 10) / 10);
-            bedAbs = earliest;
-            warn = "Full sleep isn't possible after the previous shift. Longest you can get is " + formatSleepHours(maxHours) + ".";
-          }
-        }
-      }
-      return {
-        kind: "work",
-        shift: sh,
-        night: false,
-        alarmAbs: alarmAbs,
-        bedAbs: bedAbs,
-        alarm: absToClock(alarmAbs),
-        alarmDate: absToStamp(alarmAbs),
-        bedtime: absToClock(bedAbs),
-        bedtimeDate: absToStamp(bedAbs),
-        warn: warn,
-        maxHours: maxHours
-      };
+    function nightEndingOn(date) {
+      const prev = addDaysStamp(date, -1);
+      const sh = shiftByDate(prev);
+      if (sh && sh.type === "work" && isNightShift(sh) && absToStamp(shiftEndAbs(sh)) === date) return sh;
+      return null;
     }
 
-    function planForNightShift(sh, withWarn) {
-      const startAbs = shiftStartAbs(sh);
-      const endAbs = shiftEndAbs(sh);
-      const napEnd = startAbs - 120;
-      const napStart = napEnd - 90;
-      const sleepStart = endAbs + 45;
-      const sleepEnd = sleepStart + sleepGoalHours() * 60;
-      let warn = null;
-      if (withWarn !== false) {
-        const prev = previousWorkShift(sh.date);
-        if (prev) {
-          const earliest = shiftEndAbs(prev) + 45;
-          if (napStart < earliest) {
-            warn = "The nap starts soon after your previous shift ends. Rest as much as you can before you go in.";
+    function anotherNightFollows(nightShift) {
+      if (!nightShift) return false;
+      const endDate = absToStamp(shiftEndAbs(nightShift));
+      const next = nextWorkAfter(nightShift.date);
+      return !!(next && isNightShift(next) && next.date === endDate);
+    }
+
+    function previousWorkEndAbs(beforeAbs) {
+      const list = state.shifts || [];
+      let end = null;
+      for (let i = 0; i < list.length; i += 1) {
+        if (list[i].type !== "work") continue;
+        const e = shiftEndAbs(list[i]);
+        if (e <= beforeAbs && (end == null || e > end)) end = e;
+      }
+      return end;
+    }
+
+    function recoveryWindow(nightShift) {
+      const start = shiftEndAbs(nightShift) + 45;
+      const endDate = absToStamp(start);
+      const full = anotherNightFollows(nightShift) || !sleepGentleOn();
+      if (full) {
+        return { start: start, end: start + sleepGoalHours() * 60, full: true, date: endDate };
+      }
+      const cap = absMin(endDate, "13:00");
+      let end = start + 4.5 * 60;
+      if (end > cap) end = cap;
+      if (end - start < 4 * 60) end = start + 4 * 60;
+      return { start: start, end: end, full: false, date: endDate };
+    }
+
+    function enumeratePlanDates() {
+      const today = sleepToday();
+      const shifts = state.shifts || [];
+      let start = addDaysStamp(today, -1);
+      let end = addDaysStamp(today, 21);
+      if (shifts.length) {
+        if (shifts[0].date < start) start = shifts[0].date;
+        const last = addDaysStamp(shifts[shifts.length - 1].date, 7);
+        if (last > end) end = last;
+      }
+      const dates = [];
+      let d = start;
+      while (d <= end) {
+        dates.push(d);
+        d = addDaysStamp(d, 1);
+      }
+      return dates;
+    }
+
+    function buildSleepPlan() {
+      const dates = enumeratePlanDates();
+      const need = sleepNeedMinutes();
+      const gentle = sleepGentleOn();
+      const maxC = sleepGentleMaxMinutes();
+      const offWake = sleepOffWakeClock();
+      const INF = 1e12;
+      const byDate = {};
+
+      for (let i = 0; i < dates.length; i += 1) {
+        const date = dates[i];
+        const sh = shiftByDate(date);
+        const ending = nightEndingOn(date);
+        const rec = ending ? recoveryWindow(ending) : null;
+        const kind = sh
+          ? (sh.type === "work" ? (isNightShift(sh) ? "night" : "work") : (sh.type === "vacation" ? "vacation" : "off"))
+          : "none";
+        const row = {
+          date: date,
+          kind: kind,
+          shift: sh,
+          night: kind === "night",
+          recovery: rec && rec.date === date ? rec : null,
+          napStartAbs: null,
+          napEndAbs: null,
+          latestWake: INF,
+          earliestBed: -INF,
+          hasHardWake: false,
+          targetWake: null,
+          bedAbs: null,
+          wakeAbs: null,
+          note: null,
+          warn: null,
+          maxHours: sleepGoalHours()
+        };
+        if (kind === "night") {
+          const startAbs = shiftStartAbs(sh);
+          row.napEndAbs = startAbs - 120;
+          row.napStartAbs = row.napEndAbs - 90;
+        }
+        if (row.recovery) {
+          row.bedAbs = rec.start;
+          row.wakeAbs = rec.end;
+          row.hasHardWake = true;
+          row.latestWake = rec.end;
+          row.targetWake = rec.end;
+          row.earliestBed = rec.start;
+        } else if (kind === "work") {
+          const alarmAbs = shiftStartAbs(sh) - sleepPrepMinutes();
+          row.hasHardWake = true;
+          row.latestWake = alarmAbs;
+          row.targetWake = alarmAbs;
+          const prevEnd = previousWorkEndAbs(alarmAbs);
+          row.earliestBed = prevEnd != null ? prevEnd + 45 : -INF;
+        } else if (kind === "off" || kind === "vacation" || kind === "night" || kind === "none") {
+          row.targetWake = absMin(date, offWake);
+          const prevEnd = previousWorkEndAbs(row.targetWake);
+          row.earliestBed = prevEnd != null ? prevEnd + 45 : -INF;
+        }
+        byDate[date] = row;
+      }
+
+      for (let i = 0; i < dates.length; i += 1) {
+        const row = byDate[dates[i]];
+        if (row.recovery) continue;
+        if (row.targetWake == null) continue;
+        let wake = row.targetWake;
+        let bed = wake - need;
+        if (bed < row.earliestBed) {
+          bed = row.earliestBed;
+          if (row.hasHardWake) {
+            if (wake < bed) wake = bed;
+            const available = wake - bed - sleepLatencyMinutes();
+            row.maxHours = Math.max(0, Math.round((available / 60) * 10) / 10);
+            if (available < sleepGoalHours() * 60 - 1) {
+              row.warn = "Full sleep isn't possible after the previous shift. Longest you can get is " + formatSleepHours(row.maxHours) + ".";
+            }
+          } else {
+            wake = bed + need;
+          }
+        }
+        if (row.hasHardWake && wake > row.latestWake) wake = row.latestWake;
+        row.wakeAbs = wake;
+        row.bedAbs = bed;
+      }
+
+      if (gentle && dates.length) {
+        for (let i = dates.length - 2; i >= 0; i -= 1) {
+          const row = byDate[dates[i]];
+          const next = byDate[dates[i + 1]];
+          if (!next || next.wakeAbs == null || row.recovery) continue;
+          if (row.wakeAbs == null) continue;
+          const maxAllowed = next.wakeAbs - 1440 + maxC;
+          if (row.wakeAbs > maxAllowed) {
+            let wake = maxAllowed;
+            if (row.hasHardWake && row.latestWake < wake) wake = row.latestWake;
+            if (wake < row.wakeAbs) {
+              row.wakeAbs = wake;
+              row.bedAbs = wake - need;
+              if (row.bedAbs < row.earliestBed) {
+                row.bedAbs = row.earliestBed;
+                if (row.hasHardWake) {
+                  const available = row.wakeAbs - row.bedAbs - sleepLatencyMinutes();
+                  row.maxHours = Math.max(0, Math.round((available / 60) * 10) / 10);
+                  if (available < sleepGoalHours() * 60 - 1) {
+                    row.warn = "Full sleep isn't possible after the previous shift. Longest you can get is " + formatSleepHours(row.maxHours) + ".";
+                  }
+                } else {
+                  row.wakeAbs = row.bedAbs + need;
+                }
+              }
+              if (row.targetWake != null && row.wakeAbs < row.targetWake - 1) {
+                row.note = "getting ready for early start";
+              }
+            }
+          }
+        }
+
+        for (let i = 1; i < dates.length; i += 1) {
+          const row = byDate[dates[i]];
+          const prev = byDate[dates[i - 1]];
+          if (!prev || prev.wakeAbs == null || row.recovery) continue;
+          if (row.wakeAbs == null) continue;
+          const earliestGentle = prev.wakeAbs + 1440 - maxC;
+          const latestGentle = prev.wakeAbs + 1440 + maxC;
+          let wake = row.wakeAbs;
+          if (wake < earliestGentle) {
+            if (row.hasHardWake && row.latestWake <= earliestGentle) {
+              wake = Math.min(row.latestWake, wake < row.latestWake ? wake : row.latestWake);
+              if (row.latestWake < earliestGentle) wake = row.latestWake;
+            } else {
+              wake = earliestGentle;
+              if (row.hasHardWake && wake > row.latestWake) wake = row.latestWake;
+              if (row.targetWake != null && wake > row.targetWake + 1) row.note = "easing back from late shifts";
+              else if (row.targetWake != null && wake < row.targetWake - 1) row.note = "getting ready for early start";
+              else if (!row.note) row.note = "easing back from late shifts";
+            }
+          } else if (wake > latestGentle) {
+            wake = latestGentle;
+            if (row.hasHardWake && wake > row.latestWake) wake = row.latestWake;
+            if (row.targetWake != null && wake < row.targetWake - 1) row.note = "getting ready for early start";
+            else if (!row.hasHardWake) row.note = row.note || "easing back from late shifts";
+          }
+          if (wake !== row.wakeAbs) {
+            row.wakeAbs = wake;
+            row.bedAbs = wake - need;
+            if (row.bedAbs < row.earliestBed) {
+              row.bedAbs = row.earliestBed;
+              if (row.hasHardWake) {
+                if (row.wakeAbs < row.bedAbs) row.wakeAbs = row.hasHardWake ? Math.max(row.bedAbs, Math.min(row.latestWake, row.wakeAbs)) : row.bedAbs + need;
+                const available = row.wakeAbs - row.bedAbs - sleepLatencyMinutes();
+                row.maxHours = Math.max(0, Math.round((available / 60) * 10) / 10);
+                if (available < sleepGoalHours() * 60 - 1) {
+                  row.warn = "Full sleep isn't possible after the previous shift. Longest you can get is " + formatSleepHours(row.maxHours) + ".";
+                }
+              } else {
+                row.wakeAbs = row.bedAbs + need;
+              }
+            }
           }
         }
       }
+
+      const earlyLimit = absMin(dates[0], "08:00") - stampIndex(dates[0]) * 1440;
+      for (let i = 0; i < dates.length; i += 1) {
+        const row = byDate[dates[i]];
+        if (!row || row.wakeAbs == null || row.recovery) {
+          if (row && row.recovery) row.note = null;
+          continue;
+        }
+        const offTarget = absMin(row.date, offWake);
+        let earlyAhead = false;
+        for (let j = i + 1; j < dates.length && j <= i + 6; j += 1) {
+          const nxt = byDate[dates[j]];
+          if (nxt && nxt.hasHardWake && !nxt.recovery && nxt.latestWake < INF && (nxt.latestWake % 1440) < 8 * 60) {
+            earlyAhead = true;
+            break;
+          }
+        }
+        if (kindIsOff(row.kind) || row.kind === "night") {
+          if (row.wakeAbs > offTarget + 15) row.note = "easing back from late shifts";
+          else if (row.wakeAbs < offTarget - 15 && earlyAhead) row.note = "getting ready for early start";
+          else row.note = null;
+        } else if (row.kind === "work") {
+          if (earlyAhead && row.wakeAbs < row.latestWake - 15 && row.latestWake < INF) row.note = "getting ready for early start";
+          else if (row.wakeAbs > offTarget + 15 && row.wakeAbs < row.latestWake - 15) row.note = "easing back from late shifts";
+          else row.note = null;
+        }
+      }
+
+      for (let i = 0; i < dates.length; i += 1) {
+        const row = byDate[dates[i]];
+        if (row.wakeAbs != null) {
+          row.wake = absToClock(row.wakeAbs);
+          row.wakeDate = absToStamp(row.wakeAbs);
+          row.alarm = row.wake;
+          row.alarmAbs = row.wakeAbs;
+          row.alarmDate = row.wakeDate;
+        }
+        if (row.bedAbs != null) {
+          row.bedtime = absToClock(row.bedAbs);
+          row.bedtimeDate = absToStamp(row.bedAbs);
+        }
+        if (row.napStartAbs != null) {
+          row.napStart = absToClock(row.napStartAbs);
+          row.napEnd = absToClock(row.napEndAbs);
+        }
+        if (row.recovery) {
+          row.sleepStart = absToClock(row.recovery.start);
+          row.sleepStartAbs = row.recovery.start;
+          row.sleepEndAbs = row.recovery.end;
+          row.sleepStartDate = absToStamp(row.recovery.start);
+          row.recoveryEnd = absToClock(row.recovery.end);
+          row.recoveryFull = row.recovery.full;
+        }
+        if (kindIsOff(row.kind) && row.note && row.targetWake != null && Math.abs(row.wakeAbs - row.targetWake) <= 1) {
+          row.note = null;
+        }
+      }
+      return { dates: dates, byDate: byDate };
+    }
+
+    function kindIsOff(kind) {
+      return kind === "off" || kind === "vacation";
+    }
+
+    let sleepPlanMemo = null;
+    function currentSleepPlan() {
+      const key = [
+        sleepToday(),
+        sleepGoalHours(),
+        sleepPrepMinutes(),
+        sleepLatencyMinutes(),
+        sleepOffWakeClock(),
+        sleepGentleOn() ? 1 : 0,
+        sleepGentleMaxMinutes(),
+        JSON.stringify((state.shifts || []).map(function (s) { return [s.date, s.type, s.start, s.end]; }))
+      ].join("|");
+      if (!sleepPlanMemo || sleepPlanMemo.key !== key) {
+        sleepPlanMemo = { key: key, plan: buildSleepPlan() };
+      }
+      return sleepPlanMemo.plan;
+    }
+
+    function planForNightShift(sh) {
+      const startAbs = shiftStartAbs(sh);
+      const rec = recoveryWindow(sh);
+      const plan = currentSleepPlan();
+      const morning = plan.byDate[absToStamp(rec.start)] || {};
       return {
         kind: "night",
         shift: sh,
         night: true,
-        napStartAbs: napStart,
-        napEndAbs: napEnd,
-        napStart: absToClock(napStart),
-        napEnd: absToClock(napEnd),
+        napStartAbs: startAbs - 120 - 90,
+        napEndAbs: startAbs - 120,
+        napStart: absToClock(startAbs - 210),
+        napEnd: absToClock(startAbs - 120),
         ready: absToClock(startAbs - sleepPrepMinutes()),
-        sleepStartAbs: sleepStart,
-        sleepEndAbs: sleepEnd,
-        sleepStart: absToClock(sleepStart),
-        sleepStartDate: absToStamp(sleepStart),
-        alarm: absToClock(sleepEnd),
-        alarmDate: absToStamp(sleepEnd),
-        warn: warn
+        sleepStartAbs: rec.start,
+        sleepEndAbs: rec.end,
+        sleepStart: absToClock(rec.start),
+        sleepStartDate: absToStamp(rec.start),
+        recoveryFull: rec.full,
+        alarm: absToClock(rec.end),
+        alarmDate: absToStamp(rec.end),
+        wake: absToClock(rec.end),
+        warn: morning.warn || null
       };
     }
 
-    function planForOff(date, type) {
-      const upcoming = nextWorkAfter(date);
-      if (upcoming && !isNightShift(upcoming)) {
-        const plan = planForWorkShift(upcoming, true);
-        if (plan && plan.bedtimeDate === date) {
-          return {
-            kind: type === "vacation" ? "vacation" : "off",
-            date: date,
-            night: false,
-            bedtime: plan.bedtime,
-            bedAbs: plan.bedAbs,
-            alarm: plan.alarm,
-            alarmDate: plan.alarmDate,
-            forShift: upcoming,
-            warn: plan.warn,
-            maxHours: plan.maxHours
-          };
+    function dayPlan(date) {
+      const plan = currentSleepPlan();
+      const row = plan.byDate[date];
+      if (!row) {
+        const sh = shiftByDate(date);
+        if (!sh) return { kind: "none", date: date };
+        return { kind: sh.type === "work" ? (isNightShift(sh) ? "night" : "work") : sh.type, date: date, shift: sh };
+      }
+      return row;
+    }
+
+    function tonightPlan() {
+      const now = sleepNowDate();
+      const today = fileStamp(now);
+      const nowAbs = stampIndex(today) * 1440 + now.getHours() * 60 + now.getMinutes();
+      const plan = currentSleepPlan();
+      if (!(state.shifts && state.shifts.length)) return { kind: "empty" };
+
+      const todayRow = plan.byDate[today];
+      if (todayRow && todayRow.recovery && nowAbs >= todayRow.recovery.start - 180 && nowAbs < todayRow.recovery.end) {
+        const night = nightEndingOn(today);
+        if (night) return Object.assign(planForNightShift(night), { showing: "recovery" });
+      }
+
+      if (todayRow && todayRow.night && todayRow.shift && nowAbs < shiftEndAbs(todayRow.shift)) {
+        if (nowAbs <= (todayRow.napEndAbs || 0) + 60 || nowAbs < shiftStartAbs(todayRow.shift)) {
+          return planForNightShift(todayRow.shift);
         }
       }
-      const clock = typicalBedtime(date);
-      const bedAbs = absMin(date, clock);
-      return {
-        kind: type === "vacation" ? "vacation" : "off",
-        date: date,
-        night: false,
-        bedtime: clock,
-        bedAbs: bedAbs,
-        alarm: null
-      };
+
+      const tomorrow = addDaysStamp(today, 1);
+      const tomorrowRow = plan.byDate[tomorrow];
+      if (tomorrowRow && tomorrowRow.wakeAbs != null && tomorrowRow.bedAbs != null && !tomorrowRow.recovery) {
+        return Object.assign({}, tomorrowRow, { showing: "tonight" });
+      }
+      if (todayRow && kindIsOff(todayRow.kind) && todayRow.wakeAbs != null) {
+        return Object.assign({}, todayRow, { showing: "off" });
+      }
+      if (todayRow && todayRow.night) return planForNightShift(todayRow.shift);
+      if (tomorrowRow) return tomorrowRow;
+      if (todayRow) return todayRow;
+      return { kind: "empty-soon" };
     }
 
     function formatSleepHours(hours) {
@@ -6474,58 +6794,6 @@
       if (!sh) return "";
       if (sh.source === "rota") return "Rota";
       return "";
-    }
-
-    function nextWorkFrom(stamp, nowAbs) {
-      const list = state.shifts || [];
-      for (let i = 0; i < list.length; i += 1) {
-        const sh = list[i];
-        if (sh.type !== "work") continue;
-        if (shiftEndAbs(sh) > nowAbs) return sh;
-      }
-      return null;
-    }
-
-    function tonightPlan() {
-      const now = sleepNowDate();
-      const today = fileStamp(now);
-      const nowAbs = stampIndex(today) * 1440 + now.getHours() * 60 + now.getMinutes();
-      const list = state.shifts || [];
-      if (!list.length) return { kind: "empty" };
-
-      for (let i = 0; i < list.length; i += 1) {
-        const sh = list[i];
-        if (sh.type !== "work" || !isNightShift(sh)) continue;
-        const plan = planForNightShift(sh, true);
-        if (nowAbs >= plan.sleepStartAbs - 180 && nowAbs < plan.sleepEndAbs) return plan;
-      }
-
-      const upcoming = nextWorkFrom(today, nowAbs);
-      if (upcoming) {
-        const plan = planForWorkShift(upcoming, true);
-        if (plan.night) {
-          if (nowAbs <= plan.napEndAbs + 60 || nowAbs < shiftStartAbs(upcoming)) return plan;
-        } else {
-          const evening = absMin(today, "12:00");
-          if (plan.bedAbs >= evening - 6 * 60 || plan.alarmAbs >= nowAbs) return plan;
-        }
-      }
-
-      const tomorrow = addDaysStamp(today, 1);
-      const todayShift = shiftByDate(today);
-      const tomorrowShift = shiftByDate(tomorrow);
-      const offDay = (tomorrowShift && tomorrowShift.type !== "work") ? tomorrowShift
-        : (todayShift && todayShift.type !== "work" ? todayShift : null);
-      if (offDay) return planForOff(offDay.date, offDay.type);
-      if (!upcoming) return { kind: "empty-soon" };
-      return planForWorkShift(upcoming, true);
-    }
-
-    function dayPlan(date) {
-      const sh = shiftByDate(date);
-      if (!sh) return { kind: "none", date: date };
-      if (sh.type !== "work") return Object.assign(planForOff(date, sh.type), { shift: sh });
-      return planForWorkShift(sh, true);
     }
 
     function decodeBase64Url(text) {
@@ -6703,12 +6971,27 @@
       const goal = sleepGoalHours();
       const prep = sleepPrepMinutes();
       const latency = sleepLatencyMinutes();
+      const offWake = sleepOffWakeClock();
+      const gentle = sleepGentleOn();
+      const maxC = sleepGentleMaxMinutes();
       const goalVal = document.getElementById("sleepGoalValue");
       const prepVal = document.getElementById("sleepPrepValue");
       const latVal = document.getElementById("sleepLatencyValue");
+      const offVal = document.getElementById("sleepOffWakeValue");
+      const gentleBtn = document.getElementById("sleepGentleBtn");
+      const maxRow = document.getElementById("sleepGentleMaxRow");
       if (goalVal) goalVal.textContent = formatSleepHours(goal);
       if (prepVal) prepVal.textContent = prep + " min";
       if (latVal) latVal.textContent = latency + " min";
+      if (offVal) offVal.textContent = offWake;
+      if (gentleBtn) {
+        gentleBtn.setAttribute("aria-pressed", String(gentle));
+        gentleBtn.textContent = gentle ? "Gentle changes on" : "Gentle changes off";
+      }
+      if (maxRow) maxRow.hidden = !gentle;
+      document.querySelectorAll("[data-gentle-max]").forEach(function (btn) {
+        btn.setAttribute("aria-pressed", String(Number(btn.getAttribute("data-gentle-max")) === maxC));
+      });
       const setDisabled = function (id, on) {
         const el = document.getElementById(id);
         if (el) el.disabled = on;
@@ -6719,6 +7002,8 @@
       setDisabled("sleepPrepPlus", prep >= 120);
       setDisabled("sleepLatencyMinus", latency <= 0);
       setDisabled("sleepLatencyPlus", latency >= 45);
+      setDisabled("sleepOffWakeMinus", clockToMin(offWake) <= 5 * 60);
+      setDisabled("sleepOffWakePlus", clockToMin(offWake) >= 10 * 60);
     }
 
     function changeSleepGoal(delta) {
@@ -6748,6 +7033,35 @@
       renderSleep();
     }
 
+    function changeSleepOffWake(delta) {
+      const next = normalizeSleepOffWake(minToClock(clockToMin(sleepOffWakeClock()) + delta));
+      if (next === sleepOffWakeClock()) return;
+      state.sleepOffWake = next;
+      saveState();
+      renderSleepSettings();
+      renderSleep();
+    }
+
+    function toggleSleepGentle() {
+      state.sleepGentle = !sleepGentleOn();
+      saveState();
+      renderSleepSettings();
+      renderSleep();
+    }
+
+    function setSleepGentleMax(value) {
+      const next = normalizeSleepGentleMax(value);
+      if (next === sleepGentleMaxMinutes()) return;
+      state.sleepGentleMax = next;
+      saveState();
+      renderSleepSettings();
+      renderSleep();
+    }
+
+    function easeNoteHtml(plan) {
+      return plan && plan.note ? '<span class="sleep-ease-note">' + escapeHtml(plan.note) + "</span>" : "";
+    }
+
     function tonightHtml(plan) {
       if (!plan || plan.kind === "empty") {
         return '<p class="history-note">Add your shifts to get a bedtime and an alarm.</p>';
@@ -6756,28 +7070,38 @@
         return '<p class="history-note">No upcoming shifts in your list.</p>';
       }
       if (plan.kind === "off" || plan.kind === "vacation") {
-        const title = plan.kind === "vacation" ? "Vacation, no alarm" : "Day off, no alarm";
+        const title = plan.kind === "vacation" ? "Vacation" : "Day off";
+        const wakeNote = plan.note ? plan.note.charAt(0).toUpperCase() + plan.note.slice(1) : "Wake " + formatClock(plan.wake || plan.alarm);
         return '<p class="sleep-kicker">' + escapeHtml(formatSleepDate(plan.date)) + '</p>' +
           '<p class="sleep-headline">' + title + '</p>' +
-          '<div class="sleep-times single"><div class="sleep-time-block"><span class="sleep-time-label">Bedtime</span><span class="sleep-time-value">' + escapeHtml(plan.bedtime) + '</span><span class="sleep-time-note">Keeps a steady rhythm</span></div></div>';
+          '<div class="sleep-times">' +
+            '<div class="sleep-time-block"><span class="sleep-time-label">Bedtime</span><span class="sleep-time-value">' + escapeHtml(plan.bedtime) + '</span><span class="sleep-time-note">The evening before</span></div>' +
+            '<div class="sleep-time-block"><span class="sleep-time-label">Wake</span><span class="sleep-time-value">' + escapeHtml(plan.wake || plan.alarm) + '</span><span class="sleep-time-note">' + escapeHtml(wakeNote) + "</span></div>" +
+          "</div>" +
+          (plan.warn ? '<p class="sleep-warn">' + escapeHtml(plan.warn) + "</p>" : "");
       }
       const sh = plan.shift;
-      const when = escapeHtml(formatSleepDate(sh.date)) + " · " + escapeHtml(shiftRangeLabel(sh));
+      const when = sh ? escapeHtml(formatSleepDate(sh.date)) + " · " + escapeHtml(shiftRangeLabel(sh)) : escapeHtml(formatSleepDate(plan.date));
       if (plan.night) {
+        const recNote = plan.recoveryFull === false
+          ? "Shorter rest, then ease back toward your day-off wake"
+          : (formatSleepHours(sleepGoalHours()) + " of sleep");
+        const recEnd = plan.alarm || plan.recoveryEnd || plan.wake;
         return '<p class="sleep-kicker">Next shift · ' + when + '</p>' +
           '<p class="sleep-headline">Night shift</p>' +
           '<div class="sleep-times night">' +
             '<div class="sleep-time-block"><span class="sleep-time-label">Nap before</span><span class="sleep-time-value sleep-time-mid">' + escapeHtml(plan.napStart) + "–" + escapeHtml(plan.napEnd) + '</span><span class="sleep-time-note">90 min, ending 2 h before start</span></div>' +
-            '<div class="sleep-time-block"><span class="sleep-time-label">Sleep after</span><span class="sleep-time-value">' + escapeHtml(plan.sleepStart) + '</span><span class="sleep-time-note">About 45 min after the shift ends</span></div>' +
-            '<div class="sleep-time-block"><span class="sleep-time-label">Alarm</span><span class="sleep-time-value">' + escapeHtml(plan.alarm) + '</span><span class="sleep-time-note">' + escapeHtml(formatSleepHours(sleepGoalHours())) + " of sleep</span></div>" +
+            '<div class="sleep-time-block"><span class="sleep-time-label">Sleep after</span><span class="sleep-time-value sleep-time-mid">' + escapeHtml(plan.sleepStart) + (recEnd ? "–" + escapeHtml(recEnd) : "") + '</span><span class="sleep-time-note">' + escapeHtml(recNote) + "</span></div>" +
+            '<div class="sleep-time-block"><span class="sleep-time-label">Wake</span><span class="sleep-time-value">' + escapeHtml(recEnd) + '</span><span class="sleep-time-note">After the night shift</span></div>' +
           "</div>" +
           (plan.warn ? '<p class="sleep-warn">' + escapeHtml(plan.warn) + "</p>" : "");
       }
-      const bedNote = plan.bedtimeDate !== sh.date ? "The evening before" : "Same day";
+      const bedNote = plan.bedtimeDate && plan.shift && plan.bedtimeDate !== plan.shift.date ? "The evening before" : "Same day";
+      const alarmNote = plan.note ? plan.note.charAt(0).toUpperCase() + plan.note.slice(1) : (sleepPrepMinutes() + " min before start");
       return '<p class="sleep-kicker">Next shift · ' + when + '</p>' +
         '<div class="sleep-times">' +
           '<div class="sleep-time-block"><span class="sleep-time-label">Bedtime</span><span class="sleep-time-value">' + escapeHtml(plan.bedtime) + '</span><span class="sleep-time-note">' + bedNote + "</span></div>" +
-          '<div class="sleep-time-block"><span class="sleep-time-label">Alarm</span><span class="sleep-time-value">' + escapeHtml(plan.alarm) + '</span><span class="sleep-time-note">' + sleepPrepMinutes() + " min before start</span></div>" +
+          '<div class="sleep-time-block"><span class="sleep-time-label">Alarm</span><span class="sleep-time-value">' + escapeHtml(plan.alarm || plan.wake) + '</span><span class="sleep-time-note">' + escapeHtml(alarmNote) + "</span></div>" +
         "</div>" +
         (plan.warn ? '<p class="sleep-warn">' + escapeHtml(plan.warn) + "</p>" : "");
     }
@@ -6785,25 +7109,37 @@
     function dayRowHtml(date) {
       const plan = dayPlan(date);
       const sh = shiftByDate(date);
-      const today = date === sleepToday() ? " today" : "";
+      const todayMark = date === sleepToday() ? " today" : "";
       const source = sourceLabel(sh);
       const sourceHtml = source ? '<span class="sleep-source">' + escapeHtml(source) + "</span>" : "";
       let detail;
-      if (!sh) detail = '<span class="sleep-day-meta">No shift planned</span>';
-      else if (sh.type !== "work") {
+      if (!sh) {
+        detail = '<span class="sleep-day-meta">No shift planned</span>';
+      } else if (sh.type !== "work") {
         const label = offLabel(sh);
-        if (plan.alarm && plan.forShift) {
-          detail = '<span class="sleep-day-meta">' + escapeHtml(label) + ' · work in the morning</span><span class="sleep-day-times">Bedtime ' + escapeHtml(plan.bedtime) + ' · Alarm ' + escapeHtml(plan.alarm) + '</span>';
+        const planAll = currentSleepPlan();
+        const tomorrow = planAll.byDate[addDaysStamp(date, 1)];
+        let evening = "";
+        if (plan.recovery) {
+          evening = "Sleep " + formatClock(plan.sleepStart) + "–" + formatClock(plan.recoveryEnd);
+          if (tomorrow && tomorrow.bedtime && !tomorrow.recovery) {
+            evening += " · Then bedtime " + tomorrow.bedtime + " · Wake " + (tomorrow.wake || tomorrow.alarm);
+          }
         } else {
-          detail = '<span class="sleep-day-meta">' + escapeHtml(label) + ' · no alarm</span><span class="sleep-day-times">Bedtime ' + escapeHtml(plan.bedtime) + '</span>';
+          evening = "Wake " + formatClock(plan.wake || plan.alarm);
+          if (tomorrow && tomorrow.bedtime && !tomorrow.recovery) evening += " · Bedtime " + tomorrow.bedtime;
         }
+        const notePlan = plan.recovery && tomorrow ? tomorrow : plan;
+        detail = '<span class="sleep-day-meta">' + escapeHtml(label) + (plan.recovery ? " · after a night shift" : "") + '</span><span class="sleep-day-times">' + escapeHtml(evening) + "</span>" + easeNoteHtml(notePlan);
       } else if (plan.night) {
-        detail = '<span class="sleep-day-meta">Night · ' + escapeHtml(shiftRangeLabel(sh)) + '</span><span class="sleep-day-times">Nap ' + escapeHtml(plan.napStart) + '–' + escapeHtml(plan.napEnd) + ' · Sleep ' + escapeHtml(plan.sleepStart) + ' · Alarm ' + escapeHtml(plan.alarm) + '</span>';
+        const rec2 = recoveryWindow(plan.shift);
+        const after = " · Sleep " + absToClock(rec2.start) + "–" + absToClock(rec2.end);
+        detail = '<span class="sleep-day-meta">Night · ' + escapeHtml(shiftRangeLabel(sh)) + '</span><span class="sleep-day-times">Nap ' + escapeHtml(plan.napStart) + "–" + escapeHtml(plan.napEnd) + escapeHtml(after) + "</span>";
       } else {
-        detail = '<span class="sleep-day-meta">' + escapeHtml(shiftRangeLabel(sh)) + '</span><span class="sleep-day-times">Bedtime ' + escapeHtml(plan.bedtime) + ' · Alarm ' + escapeHtml(plan.alarm) + '</span>';
+        detail = '<span class="sleep-day-meta">' + escapeHtml(shiftRangeLabel(sh)) + '</span><span class="sleep-day-times">Bedtime ' + escapeHtml(plan.bedtime) + " · Alarm " + escapeHtml(plan.alarm || plan.wake) + "</span>" + easeNoteHtml(plan);
       }
       const warn = plan && plan.warn ? '<span class="sleep-day-warn">Short night</span>' : "";
-      return '<button type="button" class="sleep-day' + today + '" data-sleep-edit="' + date + '"><div class="sleep-day-head"><strong>' + escapeHtml(formatSleepDate(date)) + "</strong>" + sourceHtml + warn + "</div>" + detail + "</button>";
+      return '<button type="button" class="sleep-day' + todayMark + '" data-sleep-edit="' + date + '"><div class="sleep-day-head"><strong>' + escapeHtml(formatSleepDate(date)) + "</strong>" + sourceHtml + warn + "</div>" + detail + "</button>";
     }
 
     function manageRowHtml(sh) {
@@ -6937,7 +7273,8 @@
       suggestion: dayPlan,
       tonight: tonightPlan,
       parse: parseShiftsPayload,
-      today: sleepToday
+      today: sleepToday,
+      plan: currentSleepPlan
     };
 
     // First run = nothing saved at all (v154). Read before anything below can save.
@@ -7455,6 +7792,13 @@
     document.getElementById("sleepPrepPlus").addEventListener("click", function () { changeSleepPrep(15); });
     document.getElementById("sleepLatencyMinus").addEventListener("click", function () { changeSleepLatency(-5); });
     document.getElementById("sleepLatencyPlus").addEventListener("click", function () { changeSleepLatency(5); });
+    document.getElementById("sleepOffWakeMinus").addEventListener("click", function () { changeSleepOffWake(-15); });
+    document.getElementById("sleepOffWakePlus").addEventListener("click", function () { changeSleepOffWake(15); });
+    document.getElementById("sleepGentleBtn").addEventListener("click", toggleSleepGentle);
+    document.querySelector(".sleep-max-switch").addEventListener("click", function (event) {
+      const btn = event.target.closest("[data-gentle-max]");
+      if (btn) setSleepGentleMax(btn.getAttribute("data-gentle-max"));
+    });
     document.getElementById("sleepAddBtn").addEventListener("click", function () { openSleepEditor(null); });
     document.getElementById("sleepPasteBtn").addEventListener("click", openSleepPaste);
     document.getElementById("sleepClearBtn").addEventListener("click", clearAllShifts);
