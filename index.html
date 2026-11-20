@@ -1908,6 +1908,8 @@
     // Legs uses its own partial-squat label; other programs keep the plain Back Squats name on the same lift id.
     EXERCISES.squat = Object.assign({}, EXERCISES.squat, { name: "Back Squats" });
     const lifts = ids => ids.map(id => EXERCISES[id]);
+    // Lying Neck Extension is removed from the PPL Pull day (Carl, 2026-11-20); the lift itself stays for other programs and old logs.
+    ROUTINE.pull = ROUTINE.pull.filter(ex => ex.id !== "neckExt");
     Object.assign(ROUTINE, {
       upperA: lifts(["bench", "ohp", "pullupsWide", "rows", "laterals", "ezCurls", "skulls"]),
       lowerA: lifts(["squat", "rdl", "calves", "legRaises", "neckFlex"]),
