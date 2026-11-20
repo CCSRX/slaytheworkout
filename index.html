@@ -744,6 +744,7 @@
     .history-session p { margin: 0; color: var(--mute); }
     .today-shortcut { margin: 0 0 16px; }
     #weeklyView { position: relative; }
+    .weekly-view h2, .weekly-view > .week-dates { padding-right: 132px; box-sizing: border-box; }
     .home-sleep { position: absolute; top: 14px; right: 14px; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; padding: 8px 10px; background: var(--card-2); border: 0; border-radius: 12px; color: var(--text); font: inherit; touch-action: manipulation; z-index: 1; }
     .home-sleep .hs-lbl { font-size: 10px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mute); }
     .home-sleep .hs-item { display: inline-flex; align-items: baseline; gap: 6px; font-size: 18px; font-weight: 800; line-height: 1.15; font-variant-numeric: tabular-nums; }
@@ -759,8 +760,6 @@
     .program-option[aria-pressed="true"] { background: var(--acc); color: var(--acc-ink); border-color: var(--acc); }
     .program-option:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
     .week-strip { grid-template-columns: 1fr; }
-    .streak-banner { margin: 0 0 12px; font-size: 20px; font-weight: 800; color: var(--text); }
-    .streak-banner span { color: var(--acc); }
     .week-summary { margin: 16px 0 0; padding-top: 14px; border-top: 1px solid var(--line); }
     .week-summary h3 { margin: 0 0 4px; font-size: 16px; }
     .summary-row { margin: 12px 0 0; }
@@ -1000,6 +999,49 @@
     .extra-tile[data-extra="summary"] .extra-icon { color: #f0a35a; background: #2a1c12; border-color: #5c3a20; }
     body[data-theme="light"] .extra-tile[data-extra="summary"] .extra-icon { color: #b45309; background: #fff1e0; border-color: #f0c56a; }
     .summary-screen .week-summary { margin: 8px 0 0; padding-top: 0; border-top: 0; }
+    .summary-screen header { margin-bottom: 4px; }
+    .summary-range { margin: 12px 0 0; }
+    .summary-tabs { margin: 14px 0 12px; }
+    .summary-insights { display: grid; gap: 10px; margin: 16px 0 4px; }
+    .insight-card { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border-radius: 16px; border: 1px solid var(--line); background: var(--card); }
+    .insight-card strong { display: block; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--mute); margin-bottom: 3px; }
+    .insight-card p { margin: 0; font-size: 14px; font-weight: 650; line-height: 1.35; }
+    .insight-card.amber { border-color: #6a5420; background: #1c1810; }
+    .insight-card.green { border-color: #2e5c28; background: #121a12; }
+    body[data-theme="light"] .insight-card.amber { border-color: #e6c56a; background: #fff7e0; }
+    body[data-theme="light"] .insight-card.green { border-color: #9dce9a; background: #eef8ee; }
+    .insight-ico { flex: 0 0 20px; font-size: 16px; line-height: 1.2; margin-top: 2px; }
+    .insight-empty { margin: 8px 0 0; color: var(--mute); font-size: 14px; line-height: 1.4; }
+    .summary-card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 14px; margin: 0 0 10px; }
+    .summary-card-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+    .summary-card-head strong { font-size: 16px; font-weight: 800; }
+    .summary-card-meta { margin: 4px 0 0; font-size: 13px; color: var(--mute); line-height: 1.35; }
+    .summary-card .summary-bar { margin-top: 8px; }
+    .summary-cues { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; align-items: center; }
+    .cue-up { color: #5dcf6e; font-weight: 800; font-size: 13px; }
+    .cue-same { color: var(--mute); font-weight: 800; font-size: 13px; }
+    .cue-down { color: #8a93a3; font-weight: 800; font-size: 13px; }
+    body[data-theme="light"] .cue-up { color: #1f7a32; }
+    .cue-badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 800; letter-spacing: 0.02em; }
+    .cue-badge.pr { background: #2a2410; color: #f0c56a; border: 1px solid #6a5420; }
+    .cue-badge.top { background: #1c2410; color: var(--acc); border: 1px solid #2e3c16; }
+    body[data-theme="light"] .cue-badge.pr { background: #fff0c7; color: #805200; border-color: #e6c56a; }
+    body[data-theme="light"] .cue-badge.top { background: #eef6d4; color: #426800; border-color: #c6d88a; }
+    .record-line { display: grid; grid-template-columns: 78px 1fr auto; gap: 8px; align-items: baseline; margin-top: 8px; font-size: 13px; }
+    .record-line span { color: var(--mute); }
+    .record-line strong { font-weight: 800; }
+    .record-line em { color: var(--mute); font-style: normal; font-size: 12px; }
+    .record-line.new strong { color: #f0c56a; }
+    body[data-theme="light"] .record-line.new strong { color: #805200; }
+    .summary-legend { margin: 14px 0 28px; padding: 12px 14px; border-radius: 14px; background: var(--card-2); color: var(--mute); font-size: 12px; line-height: 1.5; }
+    .home-insight { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; margin: 12px 0 0; padding: 10px 12px; border-radius: 14px; border: 1px solid var(--line); background: var(--card-2); color: var(--text); font: inherit; text-align: left; touch-action: manipulation; }
+    .home-insight.green { border-color: #2e5c28; }
+    .home-insight.amber { border-color: #6a5420; }
+    body[data-theme="light"] .home-insight.green { border-color: #9dce9a; background: #eef8ee; }
+    body[data-theme="light"] .home-insight.amber { border-color: #e6c56a; background: #fff7e0; }
+    .home-insight strong { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--mute); }
+    .home-insight span { font-size: 14px; font-weight: 700; line-height: 1.35; }
+
     .sleep-screen h1 { color: var(--text); }
     .sleep-tonight { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 18px 18px 20px; margin: 8px 0 22px; }
     .sleep-tonight h2, .sleep-upcoming h2, .sleep-manage h2 { margin: 0 0 10px; font-size: 18px; font-weight: 800; }
@@ -1385,8 +1427,19 @@
       <p class="eyebrow">Your training</p>
       <h1>Exercise summary</h1>
       <p class="history-note" id="exerciseSummaryPeriod"></p>
+      <div class="breath-mode summary-range" role="group" aria-label="Period">
+        <button type="button" id="summaryRangeWeek" data-summary-range="week">This week</button>
+        <button type="button" id="summaryRangeMonth" data-summary-range="month">This month</button>
+      </div>
     </header>
+    <div id="summaryInsights"></div>
+    <div class="breath-mode summary-tabs" role="tablist" aria-label="Summary type">
+      <button type="button" id="summaryTabMuscles" data-summary-tab="muscles" aria-pressed="true">Muscles</button>
+      <button type="button" id="summaryTabExercises" data-summary-tab="exercises" aria-pressed="false">Exercises</button>
+      <button type="button" id="summaryTabRecords" data-summary-tab="records" aria-pressed="false">Records</button>
+    </div>
     <div id="exerciseSummaryBody"></div>
+    <div id="summaryLegend"></div>
   </main>
   <main id="breathingScreen" class="wrap breathing-screen" hidden>
     <div class="breath-top">
@@ -4143,30 +4196,6 @@
       return '<section class="week-summary" aria-label="' + escapeHtml(title || "Exercise summary") + '">' + (title ? '<h3>' + title + '</h3><p class="week-dates">' + period + '</p>' : '') + rows + '<p class="summary-note">Sets, reps, and volume are totals from logged working sets this ' + (monthLabel ? 'month' : 'week') + '. Volume is weight × reps. Bodyweight sets count toward sets and reps; bodyweight lifts use your body weight setting for estimated ' + (usesLb() ? "pounds" : "kilos") + ' when it’s set. Each set counts as 1 for its main muscle; helper muscles get ½ or ¼ set. Helper muscles get the same share of the volume. Reps count only for the main muscle, so the same weight can show under more than one muscle.</p></section>';
     }
 
-    function slotForDate(date) {
-      const monday = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-      monday.setDate(monday.getDate() - (monday.getDay() + 6) % 7);
-      const stamp = fileStamp(date);
-      return weekSlots(monday).find(slot => slot.stamp === stamp) || null;
-    }
-
-    function dayStreak(now = new Date()) {
-      const today = fileStamp(now);
-      let date = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      let streak = 0;
-      for (let i = 0; i < 730; i += 1) {
-        const stamp = fileStamp(date);
-        if (workoutOnDate(stamp)) {
-          streak += 1;
-        } else if (stamp !== today) {
-          const slot = slotForDate(date);
-          if (slot && slot.dayKey) break;
-        }
-        date = addCalendarDays(date, -1);
-      }
-      return streak;
-    }
-
     function todaysSlot(now = new Date()) {
       const week = weeklyProgress(now);
       return week.slots.find(slot => slot.stamp === week.today) || null;
@@ -4243,14 +4272,12 @@
         const movable = !trained && slot.stamp >= month.today;
         return '<button type="button" class="' + classes + '" data-home-day="' + slot.stamp + '" data-stamp="' + slot.stamp + '"' + (movable ? ' data-movable="1"' : '') + ' aria-label="' + (slot.dayKey ? slot.name : (slot.workBlocked ? "Work" : "Rest")) + " on " + displaySessionDate(slot.stamp, false) + (trained ? ", done" : "") + ', tap to see and edit"' + colorStyle + ">" + inner + "</button>";
       }).join("");
-      const streak = dayStreak();
-      const streakLabel = streak === 1 ? "1 day" : streak + " days";
       const nextName = nextSlot ? nextSlot.name : DAY_META[week.next].name;
       const nextDayKey = nextSlot ? nextSlot.dayKey : week.next;
       const view = document.getElementById("weeklyView");
       view.setAttribute("aria-label", "This month");
-      view.innerHTML = '<p class="streak-banner">Streak: <span>' + streakLabel + '</span></p><h2>This month</h2><p class="week-dates">' + monthLabel + "</p>" +
-        '<p class="next-up">' + (resumeTarget(nextDayKey) ? "Resume" : "Next up") + ": " + nextName + '</p><div class="month-grid">' + headers + cells + '</div><p class="program-hint" id="programHint">' + escapeHtml(PROGRAMS[state.program].name) + ' · change in Settings</p><p class="week-note">A check means that day’s workout is done. The outline marks today. Tap a day to see and edit its workout, work and sleep. Press and hold a workout or rest day, then drag it to another date to move it. Work shifts stay on their dates. Your streak counts training days in a row. Rest days do not break it.</p>' + (weekLayoutCustomized() ? '<button type="button" class="week-reset" data-action="reset-week-layout">Reset week layout</button>' : "");
+      view.innerHTML = '<h2>This month</h2><p class="week-dates">' + monthLabel + "</p>" +
+        '<p class="next-up">' + (resumeTarget(nextDayKey) ? "Resume" : "Next up") + ": " + nextName + '</p><div class="month-grid">' + headers + cells + '</div>' + homeInsightHtml() + '<p class="program-hint" id="programHint">' + escapeHtml(PROGRAMS[state.program].name) + ' · change in Settings</p><p class="week-note">A check means that day’s workout is done. The outline marks today. Tap a day to see and edit its workout, work and sleep. Press and hold a workout or rest day, then drag it to another date to move it. Work shifts stay on their dates.</p>' + (weekLayoutCustomized() ? '<button type="button" class="week-reset" data-action="reset-week-layout">Reset week layout</button>' : "");
     }
 
     let homeSlotByStamp = {};
@@ -4362,12 +4389,10 @@
         const movable = !trained && slot.stamp >= week.today;
         return '<div data-slot-index="' + slotIndex + '" data-stamp="' + slot.stamp + '"' + (movable ? ' data-movable="1"' : '') + ' class="week-status' + (trained ? " trained" : "") + (today ? " today" : "") + (isNext ? " next-up" : "") + (slot.dayKey ? " workout" : " rest") + '" title="' + (slot.dayKey ? slot.label + ' · tap to open ' + slot.name : slot.label) + '"' + colorStyle + '>' + open + '</div>';
       }).join("");
-      const streak = dayStreak();
-      const streakLabel = streak === 1 ? "1 day" : streak + " days";
       const nextName = nextSlot ? nextSlot.name : DAY_META[week.next].name;
       const nextDayKey = nextSlot ? nextSlot.dayKey : week.next;
-      document.getElementById("weeklyView").innerHTML = '<p class="streak-banner">Streak: <span>' + streakLabel + '</span></p><h2>This week</h2><p class="week-dates">Mon–Sun · ' + displaySessionDate(fileStamp(week.monday), false) + ' – ' + displaySessionDate(fileStamp(week.sunday)) + '</p>' +
-        '<p class="next-up">' + (resumeTarget(nextDayKey) ? 'Resume' : 'Next up') + ': ' + nextName + '</p><div class="week-strip">' + cards + '</div><p class="program-hint" id="programHint">' + escapeHtml(PROGRAMS[state.program].name) + ' · change in Settings</p><p class="week-note">Done means every exercise in the workout has all its sets logged. A workout left unfinished carries over to the next day. Train a different workout than planned and the rest of the week shifts to follow your program’s order from there. Tap a day to see and edit its workout, work and sleep. Your streak counts training days in a row. Rest days do not break it. Press and hold a day, then drag it onto another day to swap them, including rest days.</p>' + (weekLayoutCustomized() ? '<button type="button" class="week-reset" data-action="reset-week-layout">Reset week layout</button>' : '');
+      document.getElementById("weeklyView").innerHTML = '<h2>This week</h2><p class="week-dates">Mon–Sun · ' + displaySessionDate(fileStamp(week.monday), false) + ' – ' + displaySessionDate(fileStamp(week.sunday)) + '</p>' +
+        '<p class="next-up">' + (resumeTarget(nextDayKey) ? 'Resume' : 'Next up') + ': ' + nextName + '</p><div class="week-strip">' + cards + '</div>' + homeInsightHtml() + '<p class="program-hint" id="programHint">' + escapeHtml(PROGRAMS[state.program].name) + ' · change in Settings</p><p class="week-note">Done means every exercise in the workout has all its sets logged. A workout left unfinished carries over to the next day. Train a different workout than planned and the rest of the week shifts to follow your program’s order from there. Tap a day to see and edit its workout, work and sleep. Press and hold a day, then drag it onto another day to swap them, including rest days.</p>' + (weekLayoutCustomized() ? '<button type="button" class="week-reset" data-action="reset-week-layout">Reset week layout</button>' : '');
     }
 
     function renderSessionHistory(exercise, day) {
@@ -5595,36 +5620,479 @@
       return start.getDate() + " " + sMon + " – " + end.getDate() + " " + eMon;
     }
 
-    function renderExerciseSummary() {
-      const periodEl = document.getElementById("exerciseSummaryPeriod");
-      const body = document.getElementById("exerciseSummaryBody");
-      if (!periodEl || !body) return;
-      let start, end, totals, monthLabel = null, heading;
-      if (state.homeRange === "month") {
+    let summaryTab = "muscles";
+    let summaryRange = null;
+
+    function summaryTodayStamp() {
+      return fileStamp(new Date());
+    }
+
+    function resolveExercise(session, id) {
+      return findExercise(session && session.day, id) || EXERCISES[id] || CUSTOM_EXERCISES[id] || { id: id, name: id, minReps: 8, maxReps: 12, setsFull: 3 };
+    }
+
+    function loggedSets(entry) {
+      return ((entry && entry.sets) || []).filter(setHasReps);
+    }
+
+    function setKg(row, exercise, variantId) {
+      const typed = Number(normalizeWeightText(row && row.weight));
+      const bodyKg = Number(normalizeBodyWeight(state.bodyWeight)) || 0;
+      const share = bodyweightShareFor(exercise && exercise.id, variantId || (exercise && exercise.id)) || 0;
+      return (Number.isFinite(typed) && typed > 0 ? typed : 0) + bodyKg * share;
+    }
+
+    function epley1RM(kg, reps) {
+      if (!Number.isFinite(kg) || kg <= 0 || !Number.isFinite(reps) || reps <= 0) return 0;
+      if (reps <= 1) return kg;
+      return kg * (1 + reps / 30);
+    }
+
+    function formatDeltaKg(kg, up) {
+      const text = formatWeightWithUnit(kg);
+      if (!text) return "";
+      return (up ? "+" : "") + text;
+    }
+
+    function heaviestKgOf(entry, exercise) {
+      let max = 0;
+      loggedSets(entry).forEach(function (row) {
+        const kg = setKg(row, exercise, entry.variant);
+        if (kg > max) max = kg;
+      });
+      return max;
+    }
+
+    function bestSetOf(entry, exercise) {
+      let best = null;
+      loggedSets(entry).forEach(function (row) {
+        const kg = setKg(row, exercise, entry.variant);
+        const reps = Number(row.reps);
+        if (!Number.isFinite(reps) || reps <= 0) return;
+        const load = kg * reps;
+        if (!best || load > best.load || (load === best.load && kg > best.kg)) {
+          best = { kg: kg, reps: reps, load: load };
+        }
+      });
+      return best;
+    }
+
+    function entrySetCount(entry) {
+      const logged = loggedSets(entry);
+      return Number(entry && entry.programmedSets) || logged.length;
+    }
+
+    function sessionTopOfRange(session, id) {
+      const entry = session.exercises && session.exercises[id];
+      const ex = resolveExercise(session, id);
+      if (!entry || !ex || !ex.maxReps) return false;
+      return topOfRange(ex, entry.sets, entrySetCount(entry));
+    }
+
+    function allExerciseSessions(id) {
+      return (state.sessions || []).filter(function (s) {
+        return s.exercises && s.exercises[id] && loggedSets(s.exercises[id]).length;
+      }).sort(function (a, b) { return a.date.localeCompare(b.date); });
+    }
+
+    function uniqueExerciseIds() {
+      const ids = [];
+      (state.sessions || []).forEach(function (s) {
+        Object.keys(s.exercises || {}).forEach(function (id) {
+          if (ids.indexOf(id) < 0 && loggedSets(s.exercises[id]).length) ids.push(id);
+        });
+      });
+      return ids;
+    }
+
+    function periodStamps(start, end) {
+      return { start: fileStamp(start), end: fileStamp(end) };
+    }
+
+    function sessionTrend(id, startStamp, endStamp) {
+      const all = allExerciseSessions(id);
+      const inP = all.filter(function (s) { return s.date >= startStamp && s.date <= endStamp; });
+      if (!inP.length) return null;
+      const last = inP[inP.length - 1];
+      const idx = all.indexOf(last);
+      const prev = idx > 0 ? all[idx - 1] : null;
+      const ex = resolveExercise(last, id);
+      const lastKg = heaviestKgOf(last.exercises[id], ex);
+      const prevKg = prev ? heaviestKgOf(prev.exercises[id], resolveExercise(prev, id)) : null;
+      let dir = "same";
+      let delta = 0;
+      if (prevKg != null && lastKg > prevKg + 0.049) { dir = "up"; delta = lastKg - prevKg; }
+      else if (prevKg != null && lastKg < prevKg - 0.049) { dir = "down"; delta = prevKg - lastKg; }
+      const sets = loggedSets(last.exercises[id]);
+      const reps = sets.reduce(function (n, row) { return n + (Number(row.reps) || 0); }, 0);
+      return {
+        last: last,
+        prev: prev,
+        ex: ex,
+        lastKg: lastKg,
+        dir: dir,
+        delta: delta,
+        top: sessionTopOfRange(last, id),
+        sets: sets.length,
+        reps: reps,
+        best: bestSetOf(last.exercises[id], ex)
+      };
+    }
+
+    function recordBook(id) {
+      const all = allExerciseSessions(id);
+      if (!all.length) return null;
+      const first = resolveExercise(all[0], id);
+      const rec = {
+        id: id,
+        name: first.name,
+        heavy: null,
+        oneRm: null,
+        load: null,
+        repsAt: null
+      };
+      all.forEach(function (s) {
+        const ex = resolveExercise(s, id);
+        const entry = s.exercises[id];
+        loggedSets(entry).forEach(function (row) {
+          const kg = setKg(row, ex, entry.variant);
+          const reps = Number(row.reps);
+          if (!Number.isFinite(reps) || reps <= 0) return;
+          if (!rec.heavy || kg > rec.heavy.kg + 0.001) rec.heavy = { kg: kg, reps: reps, date: s.date };
+          const rm = epley1RM(kg, reps);
+          if (!rec.oneRm || rm > rec.oneRm.rm + 0.001) rec.oneRm = { rm: rm, kg: kg, reps: reps, date: s.date };
+          const load = kg * reps;
+          if (!rec.load || load > rec.load.load + 0.001) rec.load = { load: load, kg: kg, reps: reps, date: s.date };
+          if (!rec.repsAt || reps > rec.repsAt.reps || (reps === rec.repsAt.reps && kg > rec.repsAt.kg)) {
+            rec.repsAt = { kg: kg, reps: reps, date: s.date };
+          }
+        });
+      });
+      return rec;
+    }
+
+    function recordIsNew(rec, startStamp, endStamp) {
+      if (!rec) return false;
+      return [rec.heavy, rec.oneRm, rec.load, rec.repsAt].some(function (item) {
+        return item && item.date >= startStamp && item.date <= endStamp;
+      });
+    }
+
+    function cueHtml(trend, isPr) {
+      const parts = [];
+      if (trend && trend.prev && trend.dir === "up") parts.push('<span class="cue-up">↑ ' + escapeHtml(formatDeltaKg(trend.delta, true)) + "</span>");
+      else if (trend && trend.prev && trend.dir === "down") parts.push('<span class="cue-down">↓ ' + escapeHtml(formatDeltaKg(trend.delta, false)) + "</span>");
+      else if (trend && trend.prev) parts.push('<span class="cue-same">=</span>');
+      if (trend && trend.top) parts.push('<span class="cue-badge top">Top of range</span>');
+      if (isPr) parts.push('<span class="cue-badge pr">PR</span>');
+      return parts.length ? '<div class="summary-cues">' + parts.join("") + "</div>" : "";
+    }
+
+    function computeSummaryInsights() {
+      const today = summaryTodayStamp();
+      const fromDate = addCalendarDays(new Date(today + "T12:00:00"), -27);
+      const from = fileStamp(fromDate);
+      const cards = [];
+      const ids = uniqueExerciseIds();
+
+      // Push next: just hit top of range, else closest to the top.
+      let topHit = null, close = null;
+      ids.forEach(function (id) {
+        const all = allExerciseSessions(id).filter(function (s) { return s.date >= from && s.date <= today; });
+        if (!all.length) return;
+        const last = all[all.length - 1];
+        const ex = resolveExercise(last, id);
+        const entry = last.exercises[id];
+        const sets = loggedSets(entry);
+        if (!sets.length || !ex.maxReps) return;
+        if (sessionTopOfRange(last, id)) {
+          if (!topHit || last.date > topHit.date) {
+            const inc = formatWeightWithUnit(weightIncrement(ex));
+            topHit = {
+              kind: "top",
+              tone: "green",
+              date: last.date,
+              priority: 1,
+              text: ex.name + " hit the top of its range. Next time, add " + inc + "."
+            };
+          }
+          return;
+        }
+        const reps = sets.reduce(function (n, row) { return n + (Number(row.reps) || 0); }, 0);
+        const denom = sets.length * ex.maxReps;
+        const ratio = denom ? reps / denom : 0;
+        if (ratio > 0 && ratio < 1 && (!close || ratio > close.ratio)) {
+          close = {
+            kind: "push",
+            tone: "green",
+            ratio: ratio,
+            priority: 2,
+            text: ex.name + " is closest to the top of its range at " + reps + " of " + denom + " reps. Push for " + ex.maxReps + "."
+          };
+        }
+      });
+      if (topHit) cards.push(topHit);
+      else if (close) cards.push(close);
+
+      // Stalled: no weight increase across 3+ sessions spanning 2+ weeks, not at top of range.
+      let stalled = null;
+      ids.forEach(function (id) {
+        const all = allExerciseSessions(id);
+        if (all.length < 3) return;
+        const last = all[all.length - 1];
+        if (sessionTopOfRange(last, id)) return;
+        const ex = resolveExercise(last, id);
+        const lastKg = heaviestKgOf(last.exercises[id], ex);
+        // Walk back while weight did not increase
+        let i = all.length - 1;
+        while (i > 0) {
+          const prev = all[i - 1];
+          const prevKg = heaviestKgOf(prev.exercises[id], resolveExercise(prev, id));
+          if (lastKg > prevKg + 0.049) break;
+          i -= 1;
+        }
+        const streak = all.slice(i);
+        if (streak.length < 3) return;
+        const first = streak[0];
+        const days = Math.round((new Date(last.date + "T12:00:00") - new Date(first.date + "T12:00:00")) / 86400000);
+        if (days < 14) return;
+        const weeks = Math.max(2, Math.round(days / 7));
+        const wtxt = lastKg > 0 ? " at " + formatWeightWithUnit(lastKg) : "";
+        const cand = {
+          kind: "stall",
+          tone: "amber",
+          priority: 3,
+          days: days,
+          text: ex.name + " has stayed" + wtxt + " for " + streak.length + " sessions over " + weeks + " weeks."
+        };
+        if (!stalled || cand.days > stalled.days) stalled = cand;
+      });
+      if (stalled) cards.push(stalled);
+
+      // Lagging muscle over the last 4 weeks.
+      const totals = weeklyMuscleSummary(fromDate, new Date(today + "T12:00:00"));
+      const trained = MUSCLE_ORDER.filter(function (m) { return totals[m.id] && totals[m.id].direct > 0; });
+      if (trained.length >= 3) {
+        const vols = trained.map(function (m) { return totals[m.id].directVolume || 0; });
+        const sum = vols.reduce(function (a, b) { return a + b; }, 0);
+        const avg = sum / vols.length;
+        let worst = null;
+        trained.forEach(function (m) {
+          const v = totals[m.id].directVolume || 0;
+          if (!worst || v < worst.v) worst = { m: m, v: v };
+        });
+        const others = (sum - worst.v) / Math.max(1, trained.length - 1);
+        if (worst && others > 0 && worst.v < others * 0.5) {
+          cards.push({
+            kind: "lag",
+            tone: "amber",
+            priority: 4,
+            text: worst.m.name + " has had less volume than your other muscles over the last 4 weeks."
+          });
+        }
+      }
+      if (!cards.some(function (c) { return c.kind === "lag"; })) {
+        // Fallback: a muscle with no weight increases while others progressed.
+        const progressed = [];
+        const flat = [];
+        MUSCLE_ORDER.forEach(function (m) {
+          let had = false, up = false, sessions = 0;
+          ids.forEach(function (id) {
+            const all = allExerciseSessions(id).filter(function (s) { return s.date >= from && s.date <= today; });
+            if (all.length < 2) return;
+            const last = all[all.length - 1];
+            const ex = resolveExercise(last, id);
+            if (muscleGroupFor(id) !== m.id) return;
+            had = true;
+            sessions += all.length;
+            const firstKg = heaviestKgOf(all[0].exercises[id], resolveExercise(all[0], id));
+            const lastKg = heaviestKgOf(last.exercises[id], ex);
+            if (lastKg > firstKg + 0.049) up = true;
+          });
+          if (had && sessions >= 2) {
+            if (up) progressed.push(m);
+            else flat.push(m);
+          }
+        });
+        if (progressed.length >= 1 && flat.length >= 1) {
+          cards.push({
+            kind: "lag",
+            tone: "amber",
+            priority: 4,
+            text: flat[0].name + " hasn't gone up in weight, unlike your other lifts."
+          });
+        }
+      }
+
+      cards.sort(function (a, b) { return a.priority - b.priority; });
+      return cards;
+    }
+
+    function homeInsightHtml() {
+      const cards = computeSummaryInsights();
+      if (!cards.length) return "";
+      const top = cards[0];
+      const label = top.kind === "top" ? "Add weight" : (top.kind === "push" ? "Push next" : (top.kind === "stall" ? "Stalled" : "Lagging"));
+      return '<button type="button" class="home-insight ' + top.tone + '" data-home-insight="1" aria-label="Open exercise summary: ' + escapeHtml(top.text) + '"><strong>' + label + '</strong><span>' + escapeHtml(top.text) + "</span></button>";
+    }
+
+    function insightsHtml() {
+      const cards = computeSummaryInsights();
+      if (!cards.length) {
+        return '<section class="summary-insights" aria-label="Insights"><p class="insight-empty">Log a few more workouts to see insights.</p></section>';
+      }
+      const items = cards.slice(0, 3).map(function (c) {
+        const ico = c.tone === "green" ? "↑" : "!";
+        const label = c.kind === "top" ? "Add weight" : (c.kind === "push" ? "Push next" : (c.kind === "stall" ? "Stalled" : "Lagging"));
+        return '<div class="insight-card ' + c.tone + '"><span class="insight-ico" aria-hidden="true">' + ico + '</span><div><strong>' + label + "</strong><p>" + escapeHtml(c.text) + "</p></div></div>";
+      }).join("");
+      return '<section class="summary-insights" aria-label="Insights">' + items + "</section>";
+    }
+
+    function muscleTrendCues(muscleId, startStamp, endStamp) {
+      let best = null, anyTop = false, anyPr = false;
+      uniqueExerciseIds().forEach(function (id) {
+        if (muscleGroupFor(id) !== muscleId) return;
+        const trend = sessionTrend(id, startStamp, endStamp);
+        if (!trend) return;
+        if (trend.top) anyTop = true;
+        if (recordIsNew(recordBook(id), startStamp, endStamp)) anyPr = true;
+        if (trend.prev && trend.dir === "up" && (!best || trend.delta > best.delta)) best = trend;
+        else if (!best && trend.prev) best = trend;
+      });
+      return cueHtml(best, anyPr).replace("</div>", (anyTop && !(best && best.top) ? '<span class="cue-badge top">Top of range</span>' : "") + "</div>");
+    }
+
+    function periodFromRange() {
+      const range = summaryRange || (state.homeRange === "month" ? "month" : "week");
+      let start, end, monthLabel = null, heading, usedLast = false;
+      if (range === "month") {
         const month = monthProgress();
         const thisTotals = weeklyMuscleSummary(month.first, month.last);
         const lastFirst = new Date(month.first.getFullYear(), month.first.getMonth() - 1, 1);
         const lastLast = new Date(month.first.getFullYear(), month.first.getMonth(), 0);
         const lastTotals = weeklyMuscleSummary(lastFirst, lastLast);
-        const useLast = !summaryHasSets(thisTotals) && summaryHasSets(lastTotals);
-        start = useLast ? lastFirst : month.first;
-        end = useLast ? lastLast : month.last;
-        totals = useLast ? lastTotals : thisTotals;
+        usedLast = !summaryHasSets(thisTotals) && summaryHasSets(lastTotals);
+        start = usedLast ? lastFirst : month.first;
+        end = usedLast ? lastLast : month.last;
         monthLabel = start.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
-        heading = (useLast ? "Last month" : "This month") + " · " + monthLabel;
+        heading = (usedLast ? "Last month" : "This month") + " · " + monthLabel;
       } else {
         const week = weeklyProgress();
         const thisTotals = weeklyMuscleSummary(week.monday);
         const lastMonday = addCalendarDays(week.monday, -7);
         const lastTotals = weeklyMuscleSummary(lastMonday);
-        const useLast = !summaryHasSets(thisTotals) && summaryHasSets(lastTotals);
-        start = useLast ? lastMonday : week.monday;
+        usedLast = !summaryHasSets(thisTotals) && summaryHasSets(lastTotals);
+        start = usedLast ? lastMonday : week.monday;
         end = addCalendarDays(start, 6);
-        totals = useLast ? lastTotals : thisTotals;
-        heading = (useLast ? "Last week" : "This week") + " · " + formatSummarySpan(start, end);
+        heading = (usedLast ? "Last week" : "This week") + " · " + formatSummarySpan(start, end);
       }
-      periodEl.textContent = heading;
-      body.innerHTML = renderMuscleSummary("", start, totals, monthLabel);
+      return { range: range, start: start, end: end, startStamp: fileStamp(start), endStamp: fileStamp(end), monthLabel: monthLabel, heading: heading, usedLast: usedLast };
+    }
+
+    function renderMusclesTab(period) {
+      const totals = weeklyMuscleSummary(period.start, period.end);
+      const maxVolume = Math.max.apply(null, MUSCLE_ORDER.map(function (m) { return (totals[m.id] && totals[m.id].volume) || 0; }).concat([1]));
+      const rows = MUSCLE_ORDER.map(function (muscle) {
+        const item = totals[muscle.id] || { quarters: 0, direct: 0, reps: 0, volume: 0, directVolume: 0 };
+        if (!item.quarters) return "";
+        const width = item.volume > 0 ? Math.max(8, Math.round((item.volume / maxVolume) * 100)) : 0;
+        const volumeText = formatVolume(item.volume) + (item.volume > 0 && Math.abs(item.volume - item.directVolume) > 0.01 ? (item.directVolume > 0 ? " (" + formatVolume(item.directVolume) + " direct)" : "") : "");
+        const setsText = formatSetCount(item.quarters) + " sets";
+        const meta = item.quarters > 0 && !item.direct
+          ? setsText + " · " + formatVolume(item.volume) + " (from other lifts)"
+          : setsText + (item.quarters !== item.direct * 4 ? " (" + item.direct + " direct)" : "") + " · " + item.reps + " reps · " + volumeText;
+        const recs = uniqueExerciseIds().filter(function (id) { return muscleGroupFor(id) === muscle.id; });
+        let best = null, anyTop = false, anyPr = false;
+        recs.forEach(function (id) {
+          const trend = sessionTrend(id, period.startStamp, period.endStamp);
+          if (!trend) return;
+          if (trend.top) anyTop = true;
+          if (recordIsNew(recordBook(id), period.startStamp, period.endStamp)) anyPr = true;
+          if (trend.prev && (!best || (trend.dir === "up" && trend.delta > (best.delta || 0)) || (!best.prev))) best = trend;
+        });
+        const fakeTrend = best ? best : (anyTop ? { top: true } : null);
+        return '<article class="summary-card" data-group="' + muscle.id + '"><div class="summary-card-head"><strong>' + muscle.name + "</strong></div>" +
+          '<p class="summary-card-meta">' + meta + "</p>" +
+          '<div class="summary-bar" aria-hidden="true"><i style="width:' + width + "%;background:" + muscle.color + '"></i></div>' +
+          cueHtml(fakeTrend, anyPr) + "</article>";
+      }).join("");
+      if (!rows.replace(/\s/g, "")) return '<p class="insight-empty">No workouts logged in this period.</p>';
+      return '<section class="week-summary" aria-label="Muscle totals">' + rows +
+        '<p class="summary-note">Sets, reps and volume are totals from logged working sets this ' + (period.monthLabel ? "month" : "week") + ". Volume is weight × reps. Bodyweight lifts use your body weight setting for estimated " + (usesLb() ? "pounds" : "kilos") + " when it’s set. Helper muscles get a share of the set and the volume.</p></section>";
+    }
+
+    function renderExercisesTab(period) {
+      const rows = uniqueExerciseIds().map(function (id) {
+        const trend = sessionTrend(id, period.startStamp, period.endStamp);
+        if (!trend) return "";
+        const isPr = recordIsNew(recordBook(id), period.startStamp, period.endStamp);
+        const best = trend.best;
+        const bestTxt = best
+          ? (best.kg > 0 ? formatWeightWithUnit(best.kg) + " × " + best.reps : best.reps + " reps")
+          : "—";
+        return '<article class="summary-card" data-exercise="' + id + '"><div class="summary-card-head"><strong>' + escapeHtml(trend.ex.name) + "</strong></div>" +
+          '<p class="summary-card-meta">' + trend.sets + (trend.sets === 1 ? " set" : " sets") + " · " + trend.reps + " reps · Best " + escapeHtml(bestTxt) +
+          " · " + displaySessionDate(trend.last.date, false) + "</p>" +
+          cueHtml(trend, isPr) + "</article>";
+      }).join("");
+      if (!rows.replace(/\s/g, "")) return '<p class="insight-empty">No workouts logged in this period.</p>';
+      return '<section class="week-summary" aria-label="Exercises">' + rows + "</section>";
+    }
+
+    function renderRecordsTab(period) {
+      const recs = uniqueExerciseIds().map(function (id) { return recordBook(id); }).filter(Boolean);
+      recs.sort(function (a, b) {
+        const an = recordIsNew(a, period.startStamp, period.endStamp) ? 0 : 1;
+        const bn = recordIsNew(b, period.startStamp, period.endStamp) ? 0 : 1;
+        if (an !== bn) return an - bn;
+        return a.name.localeCompare(b.name);
+      });
+      if (!recs.length) return '<p class="insight-empty">No lifts logged yet.</p>';
+      const rows = recs.map(function (rec) {
+        const isNew = recordIsNew(rec, period.startStamp, period.endStamp);
+        function line(item, label, text) {
+          if (!item) return "";
+          const fresh = item.date >= period.startStamp && item.date <= period.endStamp;
+          return '<div class="record-line' + (fresh ? " new" : "") + '"><span>' + label + "</span><strong>" + escapeHtml(text) + "</strong><em>" + displaySessionDate(item.date, false) + (fresh ? " · New" : "") + "</em></div>";
+        }
+        return '<article class="summary-card' + (isNew ? " has-pr" : "") + '" data-exercise="' + rec.id + '"><div class="summary-card-head"><strong>' + escapeHtml(rec.name) + "</strong>" +
+          (isNew ? '<span class="cue-badge pr">PR</span>' : "") + "</div>" +
+          line(rec.heavy, "Heaviest", rec.heavy && rec.heavy.kg > 0 ? formatWeightWithUnit(rec.heavy.kg) : "—") +
+          line(rec.oneRm, "Est. 1RM", rec.oneRm && rec.oneRm.rm > 0 ? formatWeightWithUnit(rec.oneRm.rm) : "—") +
+          line(rec.load, "Best set", rec.load ? (rec.load.kg > 0 ? formatWeightWithUnit(rec.load.kg) + " × " + rec.load.reps : rec.load.reps + " reps") : "—") +
+          line(rec.repsAt, "Most reps", rec.repsAt ? rec.repsAt.reps + (rec.repsAt.kg > 0 ? " at " + formatWeightWithUnit(rec.repsAt.kg) : " reps") : "—") +
+          "</article>";
+      }).join("");
+      return '<section class="week-summary" aria-label="Records">' + rows + "</section>";
+    }
+
+    function summaryLegendHtml() {
+      return '<p class="summary-legend"><span class="cue-up">↑ +2.5 kg</span> weight went up · <span class="cue-same">=</span> same weight · <span class="cue-down">↓</span> weight went down · <span class="cue-badge top">Top of range</span> all working sets hit the max reps, so add weight next time · <span class="cue-badge pr">PR</span> a new personal best in this period</p>';
+    }
+
+    function renderExerciseSummary() {
+      const periodEl = document.getElementById("exerciseSummaryPeriod");
+      const body = document.getElementById("exerciseSummaryBody");
+      const insights = document.getElementById("summaryInsights");
+      const legend = document.getElementById("summaryLegend");
+      if (!periodEl || !body) return;
+      if (summaryRange !== "week" && summaryRange !== "month") summaryRange = state.homeRange === "month" ? "month" : "week";
+      const period = periodFromRange();
+      periodEl.textContent = period.heading;
+      const weekBtn = document.getElementById("summaryRangeWeek");
+      const monthBtn = document.getElementById("summaryRangeMonth");
+      if (weekBtn) weekBtn.setAttribute("aria-pressed", period.range === "week" ? "true" : "false");
+      if (monthBtn) monthBtn.setAttribute("aria-pressed", period.range === "month" ? "true" : "false");
+      ["muscles", "exercises", "records"].forEach(function (tab) {
+        const btn = document.getElementById("summaryTab" + tab.charAt(0).toUpperCase() + tab.slice(1));
+        if (btn) btn.setAttribute("aria-pressed", summaryTab === tab ? "true" : "false");
+      });
+      if (insights) insights.innerHTML = insightsHtml();
+      if (summaryTab === "exercises") body.innerHTML = renderExercisesTab(period);
+      else if (summaryTab === "records") body.innerHTML = renderRecordsTab(period);
+      else body.innerHTML = renderMusclesTab(period);
+      if (legend) legend.innerHTML = summaryLegendHtml();
     }
 
     function goExerciseSummary() {
@@ -8875,6 +9343,7 @@
     })();
     document.getElementById("weeklyView").addEventListener("click", event => {
       if (event.target.closest("[data-home-sleep]")) { goSleep(); return; }
+      if (event.target.closest("[data-home-insight]")) { goExerciseSummary(); return; }
       const day = event.target.closest("[data-home-day]");
       if (day) { openHomeDay(day.getAttribute("data-home-day")); return; }
       const open = event.target.closest("[data-open-day]");
@@ -8927,6 +9396,11 @@
     document.getElementById("extraSleep").addEventListener("click", goSleep);
     document.getElementById("extraSummary").addEventListener("click", goExerciseSummary);
     document.getElementById("summaryBack").addEventListener("click", goExtra);
+    document.getElementById("summaryRangeWeek").addEventListener("click", function () { summaryRange = "week"; if (view === "exerciseSummary") renderExerciseSummary(); });
+    document.getElementById("summaryRangeMonth").addEventListener("click", function () { summaryRange = "month"; if (view === "exerciseSummary") renderExerciseSummary(); });
+    document.getElementById("summaryTabMuscles").addEventListener("click", function () { summaryTab = "muscles"; if (view === "exerciseSummary") renderExerciseSummary(); });
+    document.getElementById("summaryTabExercises").addEventListener("click", function () { summaryTab = "exercises"; if (view === "exerciseSummary") renderExerciseSummary(); });
+    document.getElementById("summaryTabRecords").addEventListener("click", function () { summaryTab = "records"; if (view === "exerciseSummary") renderExerciseSummary(); });
     document.getElementById("sleepBack").addEventListener("click", goExtra);
     document.getElementById("sleepSettingsBtn").addEventListener("click", openSleepSettings);
     document.getElementById("sleepSettingsClose").addEventListener("click", closeSleepSettings);
