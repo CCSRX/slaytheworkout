@@ -1033,6 +1033,10 @@
     .sleep-cal-nav button:disabled { opacity: 0.3; }
     .sleep-cal .month-cell { position: relative; min-height: 50px; border: 1px solid transparent; }
     .sleep-cal .month-cell .month-kind { font-variant-numeric: tabular-nums; }
+    .sleep-cal .month-cell.s-work .month-kind, .sleep-cal .month-cell.s-night .month-kind { font-size: 9.5px; line-height: 1.15; letter-spacing: -0.02em; overflow-wrap: normal; white-space: nowrap; }
+    .sleep-cal .month-cell { min-height: 58px; padding: 3px 1px 4px; }
+    .sleep-detail { margin-top: 8px; }
+    .sleep-rel { margin-left: auto; font-size: 11px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: var(--acc); }
     .sleep-cal .month-cell.s-none { color: var(--mute); }
     .sleep-cal .month-cell.s-work { background: #7cc4ff; color: #0c1a26; }
     .sleep-cal .month-cell.s-night { background: #b9a6ff; color: #1a1030; }
@@ -1403,12 +1407,9 @@
       <p class="eyebrow">Bedtime and alarm</p>
       <h1>Sleep</h1>
     </header>
-    <section class="sleep-tonight" aria-label="Tonight">
-      <h2>Tonight</h2>
-      <div id="sleepTonight"></div>
-    </section>
-    <section class="sleep-cal" aria-label="Shift calendar" id="sleepCal"></section>
+    <section id="sleepEmpty" class="sleep-tonight" aria-label="No shifts" hidden><p class="history-note">Add your shifts to get a bedtime and an alarm.</p></section>
     <section id="sleepDetail" class="sleep-detail" aria-label="Selected day" hidden></section>
+    <section class="sleep-cal" aria-label="Shift calendar" id="sleepCal"></section>
     <section class="sleep-manage" aria-label="Shift list">
       <h2>Shifts</h2>
       <p class="history-note sleep-hint">Your shifts stay on this device. Add them here, paste a list, or open your import link.</p>
@@ -7174,7 +7175,7 @@
 
     function sleepCellLabel(sh) {
       if (!sh) return "";
-      if (sh.type === "work") return formatClock(sh.start);
+      if (sh.type === "work") return formatClock(sh.start) + "\n" + formatClock(sh.end);
       if (sh.type === "vacation") return "Vac";
       if (sh.tag === "X" || sh.tag === "O" || sh.tag === "T") return sh.tag;
       return "Off";
@@ -7182,7 +7183,7 @@
 
     function sleepCalendarHtml() {
       const bounds = sleepCalBounds();
-      if (!sleepCalMonth || sleepCalMonth < bounds.min || sleepCalMonth > bounds.max) sleepCalMonth = sleepToday().slice(0, 7);
+      if (!sleepCalMonth || sleepCalMonth < bounds.min || sleepCalMonth > bounds.max) sleepCalMonth = (sleepSelDate || sleepToday()).slice(0, 7);
       const ym = sleepCalMonth;
       const first = new Date(Number(ym.slice(0, 4)), Number(ym.slice(5, 7)) - 1, 1, 12);
       const last = new Date(first.getFullYear(), first.getMonth() + 1, 0, 12);
@@ -7203,7 +7204,7 @@
         const label = sleepCellLabel(sh);
         const warn = row && row.warn ? '<span class="cal-warn" aria-hidden="true"></span>' : "";
         const aria = formatSleepDate(stamp) + (sh ? " · " + (sh.type === "work" ? shiftRangeLabel(sh) : offLabel(sh)) : "");
-        cells.push('<button type="button" class="' + cls + '" data-sleep-day="' + stamp + '" aria-label="' + escapeHtml(aria) + '">' + warn + '<span class="month-num">' + d.getDate() + '</span><span class="month-kind">' + escapeHtml(label || "·") + "</span></button>");
+        cells.push('<button type="button" class="' + cls + '" data-sleep-day="' + stamp + '" aria-label="' + escapeHtml(aria) + '">' + warn + '<span class="month-num">' + d.getDate() + '</span><span class="month-kind">' + escapeHtml(label || "·").replace("\n", "<br>") + "</span></button>");
       }
       const monthLabel = first.toLocaleDateString("nb-NO", { month: "long", year: "numeric" });
       return '<div class="sleep-cal-head"><h2>' + escapeHtml(monthLabel) + '</h2><div class="sleep-cal-nav">' +
@@ -7225,7 +7226,7 @@
       if (!sh) title = "No shift";
       else if (sh.type === "work") title = isNightShift(sh) ? "Night shift" : "";
       else title = offLabel(sh);
-      let html = '<div class="sleep-detail-head"><strong>' + escapeHtml(formatSleepDate(date)) + '</strong><span class="sleep-source">' + escapeHtml([title, source].filter(Boolean).join(" · ")) + "</span></div>";
+      let html = '<div class="sleep-detail-head"><strong>' + escapeHtml(formatSleepDate(date)) + '</strong><span class="sleep-source">' + escapeHtml([title, source].filter(Boolean).join(" · ")) + "</span>" + (date === sleepToday() ? '<span class="sleep-rel">Today</span>' : date === addDaysStamp(sleepToday(), 1) ? '<span class="sleep-rel">Tomorrow</span>' : "") + "</div>";
       if (sh && sh.type === "work") {
         html += '<p class="sleep-shift-line"><span>Work</span>' + escapeHtml(shiftRangeLabel(sh)) + "</p>";
       }
@@ -7257,6 +7258,16 @@
       return html;
     }
 
+    function defaultSleepDate() {
+      const today = sleepToday();
+      try {
+        const tp = tonightPlan();
+        const d = (tp && tp.showing === "recovery") ? today : (tp && (tp.date || (tp.shift && tp.shift.date)));
+        if (d && d >= today) return d;
+      } catch (e) {}
+      return today;
+    }
+
     function deleteShiftOn(date) {
       if (!date || !shiftByDate(date)) return;
       if (!window.confirm("Delete this shift?")) return;
@@ -7267,13 +7278,13 @@
 
     function renderSleep() {
       if (view !== "sleep") return;
-      const tonight = document.getElementById("sleepTonight");
+      const empty = document.getElementById("sleepEmpty");
       const cal = document.getElementById("sleepCal");
       const detail = document.getElementById("sleepDetail");
       const clearBtn = document.getElementById("sleepClearBtn");
-      if (tonight) tonight.innerHTML = tonightHtml(tonightPlan());
       const hasShifts = !!(state.shifts && state.shifts.length);
-      if (!sleepSelDate) sleepSelDate = sleepToday();
+      if (empty) empty.hidden = hasShifts;
+      if (!sleepSelDate) sleepSelDate = defaultSleepDate();
       if (cal) {
         cal.hidden = !hasShifts;
         cal.innerHTML = hasShifts ? sleepCalendarHtml() : "";
