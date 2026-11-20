@@ -1061,6 +1061,38 @@
     .sleep-detail .sleep-ease-note::first-letter { text-transform: uppercase; }
     .sleep-detail-actions { display: flex; gap: 8px; margin-top: 14px; }
     .sleep-detail-actions .data-btn { width: auto; flex: 1; }
+    .sleep-screen header { margin-bottom: 4px; }
+    .sleep-screen header h1 { margin-bottom: 0; }
+    .sleep-detail { padding: 14px 16px 16px; margin: 6px 0 22px; }
+    .sd-head { display: flex; align-items: center; gap: 6px; margin: 0 0 12px; }
+    .sd-date { font-size: 17px; font-weight: 800; margin-right: 2px; }
+    .sd-date::first-letter { text-transform: uppercase; }
+    .sd-pill { font-size: 10px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; padding: 3px 7px; border-radius: 999px; border: 1px solid var(--line); color: var(--mute); }
+    .sd-pill.acc { border-color: var(--acc); color: var(--acc); }
+    .sd-edit { margin-left: auto; display: inline-flex; align-items: center; gap: 5px; min-height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--card-2); color: var(--text); font: inherit; font-size: 13px; font-weight: 800; touch-action: manipulation; }
+    .sd-edit svg { width: 14px; height: 14px; }
+    .sd-work { display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-radius: 12px; background: var(--card-2); margin: 0 0 14px; }
+    .sd-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--mute); flex: none; }
+    .sd-work.s-work .sd-dot { background: #7cc4ff; }
+    .sd-work.s-night .sd-dot { background: #b9a6ff; }
+    .sd-work.s-off .sd-dot { background: #8fb86a; }
+    .sd-work.s-vacation .sd-dot { background: #f0c56a; }
+    .sd-work-label { font-size: 12px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: var(--mute); }
+    .sd-work.s-off .sd-work-label, .sd-work.s-vacation .sd-work-label { font-size: 15px; letter-spacing: 0; text-transform: none; color: var(--text); }
+    .sd-work-time { margin-left: auto; font-size: 18px; font-weight: 900; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+    .sd-work-time small { font-size: 11px; font-weight: 800; color: var(--mute); margin-left: 3px; vertical-align: 3px; }
+    .sd-main { display: grid; grid-template-columns: 1fr auto 1fr; align-items: end; gap: 8px; }
+    .sd-col { display: flex; flex-direction: column; }
+    .sd-col:last-child { text-align: right; }
+    .sd-lbl { font-size: 11px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; color: var(--mute); }
+    .sd-big { font-size: 40px; font-weight: 900; letter-spacing: -0.04em; line-height: 1.05; font-variant-numeric: tabular-nums; }
+    .sd-arrow { font-size: 22px; font-weight: 800; color: var(--mute); padding-bottom: 8px; }
+    .sd-night { display: flex; gap: 16px; margin: 12px 0 0; font-size: 14px; font-weight: 800; font-variant-numeric: tabular-nums; }
+    .sd-night em { font-style: normal; font-size: 11px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; color: var(--mute); margin-right: 6px; }
+    .sd-meta { margin: 10px 0 0; font-size: 13px; color: var(--mute); }
+    .sd-meta::first-letter { text-transform: uppercase; }
+    .sd-warn { margin: 10px 0 0; padding: 6px 10px; border-radius: 10px; background: #2a2210; color: #f0c56a; font-size: 12px; line-height: 1.35; }
+    body[data-theme="light"] .sd-warn { background: #fff4d6; color: #6a4b00; }
     .sleep-ease-note { display: block; margin-top: 2px; font-size: 12px; font-weight: 700; color: var(--mute); }
     .sleep-gentle-note { margin: 8px 0 14px; font-size: 13px; line-height: 1.4; color: var(--mute); }
     .sleep-max-switch { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
@@ -7334,40 +7366,52 @@
     function sleepDetailHtml(date) {
       const plan = dayPlan(date);
       const sh = shiftByDate(date);
-      const source = sourceLabel(sh);
-      let title;
-      if (!sh) title = "No shift";
-      else if (sh.type === "work") title = isNightShift(sh) ? "Night shift" : "";
-      else title = offLabel(sh);
-      let html = '<div class="sleep-detail-head"><strong>' + escapeHtml(formatSleepDate(date)) + '</strong><span class="sleep-source">' + escapeHtml([title, source].filter(Boolean).join(" · ")) + "</span>" + (date === sleepToday() ? '<span class="sleep-rel">Today</span>' : date === addDaysStamp(sleepToday(), 1) ? '<span class="sleep-rel">Tomorrow</span>' : "") + "</div>";
-      if (sh && sh.type === "work") {
-        html += '<p class="sleep-shift-line"><span>Work</span>' + escapeHtml(shiftRangeLabel(sh)) + "</p>";
-      }
-      const blocks = [];
+      const today = sleepToday();
+      const pills = [];
+      if (date === today) pills.push('<span class="sd-pill acc">Today</span>');
+      else if (date === addDaysStamp(today, 1)) pills.push('<span class="sd-pill acc">Tomorrow</span>');
+      if (sh && sh.source === "rota") pills.push('<span class="sd-pill">Rota</span>');
+      const editIcon = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M11.3 2.3a1.4 1.4 0 0 1 2 2L5.5 12.1 2.8 13l.9-2.7z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>';
+      let html = '<div class="sd-head"><strong class="sd-date">' + escapeHtml(formatSleepDate(date)) + "</strong>" + pills.join("") +
+        '<button type="button" class="sd-edit" data-sleep-edit="' + date + '" aria-label="' + (sh ? "Edit shift" : "Add shift") + '">' + (sh ? editIcon + "Edit" : "+ Add") + "</button></div>";
+
+      const kind = sleepCellKind(sh);
+      let rowLabel, rowValue = "";
+      if (!sh) rowLabel = "No shift";
+      else if (sh.type === "work") {
+        rowLabel = isNightShift(sh) ? "Night shift" : "Work";
+        rowValue = formatClock(sh.start) + "–" + formatClock(sh.end) + (shiftEndsNextDay(sh) ? '<small>+1</small>' : "");
+      } else rowLabel = offLabel(sh);
+      html += '<div class="sd-work s-' + kind + '"><span class="sd-dot"></span><span class="sd-work-label">' + escapeHtml(rowLabel) + "</span>" + (rowValue ? '<span class="sd-work-time">' + rowValue + "</span>" : "") + "</div>";
+
+      let bed = null, wake = null, wakeLabel = "Wake", sleepMin = null;
+      const meta = [];
       if (plan.recovery) {
-        blocks.push(timeBlock("Sleep after night", formatClock(plan.sleepStart) + "–" + formatClock(plan.recoveryEnd), plan.recoveryFull === false ? "Shorter rest" : formatSleepHours(sleepGoalHours()), true));
-      } else if (plan.bedtime && plan.night) {
-        blocks.push(timeBlock("Bedtime", plan.bedtime, plan.bedtimeDate && plan.bedtimeDate !== date ? "Evening before" : "Same day"));
+        bed = formatClock(plan.sleepStart);
+        wake = formatClock(plan.recoveryEnd);
+        sleepMin = (plan.recovery.end - plan.recovery.start);
+        meta.push(plan.recoveryFull === false ? "short rest after the night shift" : "sleep after the night shift");
       } else if (plan.bedtime) {
-        const bedNote = plan.bedtimeDate && plan.bedtimeDate !== date ? "Evening before" : "Same day";
-        blocks.push(timeBlock("Bedtime", plan.bedtime, bedNote));
-        blocks.push(timeBlock(sh && sh.type === "work" && !plan.night ? "Alarm" : "Wake", plan.alarm || plan.wake, ""));
-        if (plan.wakeAbs != null && plan.bedAbs != null) {
-          const hrs = Math.max(0, (plan.wakeAbs - plan.bedAbs - sleepLatencyMinutes()) / 60);
-          blocks.push(timeBlock("Sleep", formatSleepHours(hrs), ""));
-        }
+        bed = plan.bedtime;
+        wake = plan.alarm || plan.wake;
+        if (sh && sh.type === "work" && !plan.night) wakeLabel = "Alarm";
+        if (plan.wakeAbs != null && plan.bedAbs != null) sleepMin = plan.wakeAbs - plan.bedAbs - sleepLatencyMinutes();
+      }
+      if (bed && wake) {
+        html += '<div class="sd-main"><div class="sd-col"><span class="sd-lbl">Bedtime</span><span class="sd-big">' + escapeHtml(bed) + '</span></div>' +
+          '<span class="sd-arrow" aria-hidden="true">→</span>' +
+          '<div class="sd-col"><span class="sd-lbl">' + wakeLabel + '</span><span class="sd-big">' + escapeHtml(wake) + "</span></div></div>";
+      } else if (!sh) {
+        html += '<p class="sd-meta">Nothing planned for this day.</p>';
       }
       if (plan.night && sh) {
         const rec = recoveryWindow(sh);
-        blocks.push(timeBlock("Nap before", plan.napStart + "–" + plan.napEnd, "", true));
-        blocks.push(timeBlock("Sleep after", absToClock(rec.start) + "–" + absToClock(rec.end), "", true));
+        html += '<div class="sd-night"><span><em>Nap</em>' + escapeHtml(plan.napStart + "–" + plan.napEnd) + '</span><span><em>Sleep after</em>' + escapeHtml(absToClock(rec.start) + "–" + absToClock(rec.end)) + "</span></div>";
       }
-      if (blocks.length) html += '<div class="sleep-times' + (blocks.length === 2 ? " two" : "") + '">' + blocks.join("") + "</div>";
-      else if (!sh) html += '<p class="history-note">Nothing planned for this day.</p>';
-      html += easeNoteHtml(plan);
-      if (plan.warn) html += '<p class="sleep-warn">' + escapeHtml(plan.warn) + "</p>";
-      html += '<div class="sleep-detail-actions"><button type="button" class="data-btn" data-sleep-edit="' + date + '">' + (sh ? "Edit shift" : "Add shift") + "</button>" +
-        (sh ? '<button type="button" class="data-btn danger" data-sleep-delete="' + date + '">Delete</button>' : "") + "</div>";
+      if (sleepMin != null) meta.unshift(formatSleepHours(Math.max(0, sleepMin) / 60) + " sleep");
+      if (plan.note && !plan.recovery) meta.push(plan.note);
+      if (meta.length) html += '<p class="sd-meta">' + escapeHtml(meta.join(" · ")) + "</p>";
+      if (plan.warn) html += '<p class="sd-warn">⚠ ' + escapeHtml(plan.warn) + "</p>";
       return html;
     }
 
