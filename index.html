@@ -1489,7 +1489,7 @@
           <span class="sleep-time-label">Training window</span>
           <div class="wk-row train-window">
             <span class="train-window-label">Daily</span>
-            <input type="time" step="60" id="trainStart" aria-label="Training window start" value="10:00"><span class="wk-dash">–</span><input type="time" step="60" id="trainEnd" aria-label="Training window end" value="20:00">
+            <input type="time" step="60" id="trainStart" aria-label="Training window start" value="09:00"><span class="wk-dash">–</span><input type="time" step="60" id="trainEnd" aria-label="Training window end" value="20:00">
           </div>
         </div>
       </div>
@@ -2203,7 +2203,7 @@
         sleepCommute: 45,
         weekSchedule: null,
         trainLink: false,
-        trainStart: "10:00",
+        trainStart: "09:00",
         trainEnd: "20:00",
         sleepOffWake: "07:00",
         sleepGentle: true,
@@ -2310,7 +2310,7 @@
           sleepCommute: normalizeSleepCommute(parsed.sleepCommute),
           weekSchedule: normalizeWeekSchedule(parsed.weekSchedule),
           trainLink: parsed.trainLink === true,
-          trainStart: normalizeClock(parsed.trainStart) || "10:00",
+          trainStart: (parsed.trainLink !== true && parsed.trainStart === "10:00" && (parsed.trainEnd || "20:00") === "20:00") ? "09:00" : (normalizeClock(parsed.trainStart) || "09:00"),
           trainEnd: normalizeClock(parsed.trainEnd) || "20:00",
           sleepOffWake: normalizeSleepOffWake(parsed.sleepOffWake),
           sleepGentle: normalizeSleepGentle(parsed.sleepGentle),
@@ -2424,7 +2424,7 @@
         sleepCommute: normalizeSleepCommute(state.sleepCommute),
         weekSchedule: normalizeWeekSchedule(state.weekSchedule),
         trainLink: state.trainLink === true,
-        trainStart: normalizeClock(state.trainStart) || "10:00",
+        trainStart: normalizeClock(state.trainStart) || "09:00",
         trainEnd: normalizeClock(state.trainEnd) || "20:00",
         sleepOffWake: normalizeSleepOffWake(state.sleepOffWake),
         sleepGentle: normalizeSleepGentle(state.sleepGentle),
@@ -2535,7 +2535,7 @@
       state.sleepCommute = normalizeSleepCommute(payload.sleepCommute);
       state.weekSchedule = normalizeWeekSchedule(payload.weekSchedule);
       state.trainLink = payload.trainLink === true;
-      state.trainStart = normalizeClock(payload.trainStart) || "10:00";
+      state.trainStart = normalizeClock(payload.trainStart) || "09:00";
       state.trainEnd = normalizeClock(payload.trainEnd) || "20:00";
       state.sleepOffWake = normalizeSleepOffWake(payload.sleepOffWake);
       state.sleepGentle = normalizeSleepGentle(payload.sleepGentle);
@@ -6570,7 +6570,7 @@
       return !!(state && state.trainLink === true);
     }
     function trainWindow() {
-      const start = normalizeClock(state.trainStart) || "10:00";
+      const start = normalizeClock(state.trainStart) || "09:00";
       const end = normalizeClock(state.trainEnd) || "20:00";
       return { start: start, end: end };
     }
