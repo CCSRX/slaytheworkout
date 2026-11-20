@@ -6888,7 +6888,7 @@
       [shiftByDate(addDaysStamp(stamp, -1)), shiftByDate(stamp)].forEach(function (sh) {
         if (!sh || sh.type !== "work") return;
         busy.push([shiftStartAbs(sh) - commute, shiftEndAbs(sh) + commute]);
-        if (isNightShift(sh)) busy.push([shiftStartAbs(sh) - 210, shiftStartAbs(sh) - 120]);
+        if (isNightShift(sh)) busy.push([shiftStartAbs(sh) - sleepPrepMinutes() - 90, shiftStartAbs(sh) - sleepPrepMinutes()]);
       });
       const night = nightEndingOn(stamp);
       if (night) {
@@ -7171,7 +7171,7 @@
         };
         if (kind === "night") {
           const startAbs = shiftStartAbs(sh);
-          row.napEndAbs = startAbs - 120;
+          row.napEndAbs = startAbs - sleepPrepMinutes();
           row.napStartAbs = row.napEndAbs - 90;
         }
         if (row.recovery) {
@@ -7463,8 +7463,8 @@
       const plan = currentSleepPlan();
       const morning = plan.byDate[absToStamp(rec.start)] || {};
       const nightRow = plan.byDate[sh.date] || {};
-      const napStartAbs = nightRow.napStartAbs != null ? nightRow.napStartAbs : startAbs - 210;
-      const napEndAbs = nightRow.napEndAbs != null ? nightRow.napEndAbs : startAbs - 120;
+      const napStartAbs = nightRow.napStartAbs != null ? nightRow.napStartAbs : startAbs - sleepPrepMinutes() - 90;
+      const napEndAbs = nightRow.napEndAbs != null ? nightRow.napEndAbs : startAbs - sleepPrepMinutes();
       const sleepStartAbs = morning.bedAbs != null ? morning.bedAbs : rec.start;
       const sleepEndAbs = morning.wakeAbs != null ? morning.wakeAbs : rec.end;
       return {
@@ -7900,7 +7900,7 @@
           '<p class="sleep-headline">Night shift</p>' +
           (sh ? '<p class="sleep-shift-line"><span>Work</span>' + escapeHtml(shiftRangeLabel(sh)) + "</p>" : "") +
           '<div class="sleep-times night">' +
-            '<div class="sleep-time-block"><span class="sleep-time-label">Nap before</span><span class="sleep-time-value sleep-time-mid">' + escapeHtml(plan.napStart) + "–" + escapeHtml(plan.napEnd) + '</span><span class="sleep-time-note">90 min, ending 2 h before start</span></div>' +
+            '<div class="sleep-time-block"><span class="sleep-time-label">Nap before</span><span class="sleep-time-value sleep-time-mid">' + escapeHtml(plan.napStart) + "–" + escapeHtml(plan.napEnd) + '</span><span class="sleep-time-note">90 min, ending ' + sleepPrepMinutes() + ' min before start</span></div>' +
             '<div class="sleep-time-block"><span class="sleep-time-label">Sleep after</span><span class="sleep-time-value sleep-time-mid">' + escapeHtml(plan.sleepStart) + (recEnd ? "–" + escapeHtml(recEnd) : "") + '</span><span class="sleep-time-note">' + escapeHtml(recNote) + "</span></div>" +
             '<div class="sleep-time-block"><span class="sleep-time-label">Wake</span><span class="sleep-time-value">' + escapeHtml(recEnd) + '</span><span class="sleep-time-note">After the night shift</span></div>' +
           "</div>" +
@@ -9524,6 +9524,7 @@
     })();
     if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
       window.addEventListener("load", () => { navigator.serviceWorker.register("./sw.js").catch(() => {}); });
+      if (navigator.storage && navigator.storage.persist) { navigator.storage.persist().catch(() => {}); }
     }
   
 
