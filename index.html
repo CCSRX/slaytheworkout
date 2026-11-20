@@ -1023,6 +1023,40 @@
     .sleep-editor-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
     .sleep-editor-actions .data-btn { width: auto; flex: 1; }
     .sleep-hint { margin: 0 0 10px; }
+    .sleep-shift-line { margin: -6px 0 14px; font-size: 20px; font-weight: 900; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+    .sleep-shift-line span { font-size: 12px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: var(--mute); margin-right: 6px; }
+    .sleep-cal { margin: 0 0 22px; }
+    .sleep-cal-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 4px; }
+    .sleep-cal-head h2 { margin: 0; font-size: 18px; font-weight: 800; text-transform: capitalize; }
+    .sleep-cal-nav { display: flex; gap: 6px; }
+    .sleep-cal-nav button { width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--line); background: var(--card); color: var(--text); font: inherit; font-size: 18px; font-weight: 900; touch-action: manipulation; }
+    .sleep-cal-nav button:disabled { opacity: 0.3; }
+    .sleep-cal .month-cell { position: relative; min-height: 50px; border: 1px solid transparent; }
+    .sleep-cal .month-cell .month-kind { font-variant-numeric: tabular-nums; }
+    .sleep-cal .month-cell.s-none { color: var(--mute); }
+    .sleep-cal .month-cell.s-work { background: #7cc4ff; color: #0c1a26; }
+    .sleep-cal .month-cell.s-night { background: #b9a6ff; color: #1a1030; }
+    .sleep-cal .month-cell.s-off { background: #2a3a26; color: #b8d99a; }
+    .sleep-cal .month-cell.s-vacation { background: #f0c56a; color: #2a1e00; }
+    body[data-theme="light"] .sleep-cal .month-cell.s-off { background: #e3f0d6; color: #36551c; }
+    .sleep-cal .month-cell.rota { border-style: dashed; border-color: currentColor; }
+    .sleep-cal .month-cell.sel { box-shadow: 0 0 0 3px var(--acc); }
+    .sleep-cal .month-cell .cal-warn { position: absolute; top: 3px; right: 4px; width: 6px; height: 6px; border-radius: 50%; background: #e0912a; }
+    .sleep-cal-legend { display: flex; flex-wrap: wrap; gap: 6px 12px; margin: 10px 0 0; font-size: 12px; color: var(--mute); }
+    .sleep-cal-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 4px; vertical-align: -1px; }
+    .sleep-detail { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 16px 18px 18px; margin: 0 0 26px; }
+    .sleep-detail-head { display: flex; align-items: baseline; gap: 8px; margin: 0 0 8px; }
+    .sleep-detail-head strong { font-size: 16px; font-weight: 800; }
+    .sleep-detail-head strong::first-letter { text-transform: uppercase; }
+    .sleep-detail .sleep-shift-line { margin: 0 0 12px; }
+    .sleep-detail .sleep-time-value { font-size: 28px; }
+    .sleep-detail .sleep-times { grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+    .sleep-detail .sleep-times.two { grid-template-columns: 1fr 1fr; }
+    .sleep-detail .sleep-time-value.sleep-time-mid { font-size: 20px; }
+    .sleep-detail .sleep-ease-note { margin-top: 10px; }
+    .sleep-detail .sleep-ease-note::first-letter { text-transform: uppercase; }
+    .sleep-detail-actions { display: flex; gap: 8px; margin-top: 14px; }
+    .sleep-detail-actions .data-btn { width: auto; flex: 1; }
     .sleep-ease-note { display: block; margin-top: 2px; font-size: 12px; font-weight: 700; color: var(--mute); }
     .sleep-gentle-note { margin: 8px 0 14px; font-size: 13px; line-height: 1.4; color: var(--mute); }
     .sleep-max-switch { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
@@ -1373,10 +1407,8 @@
       <h2>Tonight</h2>
       <div id="sleepTonight"></div>
     </section>
-    <section class="sleep-upcoming" aria-label="Next 14 days">
-      <h2>Next 14 days</h2>
-      <div class="sleep-days" id="sleepDays"></div>
-    </section>
+    <section class="sleep-cal" aria-label="Shift calendar" id="sleepCal"></section>
+    <section id="sleepDetail" class="sleep-detail" aria-label="Selected day" hidden></section>
     <section class="sleep-manage" aria-label="Shift list">
       <h2>Shifts</h2>
       <p class="history-note sleep-hint">Your shifts stay on this device. Add them here, paste a list, or open your import link.</p>
@@ -1384,7 +1416,6 @@
         <button type="button" class="data-btn" id="sleepAddBtn">Add shift</button>
         <button type="button" class="data-btn" id="sleepPasteBtn">Paste shifts</button>
       </div>
-      <div class="sleep-shift-list" id="sleepShiftList"></div>
       <button type="button" class="data-btn danger" id="sleepClearBtn" hidden>Clear all shifts</button>
     </section>
   </main>
@@ -6941,6 +6972,8 @@
       cancelLongPress();
       closeSettings();
       closeBreathSettings();
+      sleepCalMonth = null;
+      sleepSelDate = null;
       view = "sleep";
       render();
       window.scrollTo(0, 0);
@@ -7087,8 +7120,9 @@
           ? "Shorter rest, then ease back toward your day-off wake"
           : (formatSleepHours(sleepGoalHours()) + " of sleep");
         const recEnd = plan.alarm || plan.recoveryEnd || plan.wake;
-        return '<p class="sleep-kicker">Next shift · ' + when + '</p>' +
+        return '<p class="sleep-kicker">Next shift · ' + escapeHtml(formatSleepDate(sh ? sh.date : plan.date)) + '</p>' +
           '<p class="sleep-headline">Night shift</p>' +
+          (sh ? '<p class="sleep-shift-line"><span>Work</span>' + escapeHtml(shiftRangeLabel(sh)) + "</p>" : "") +
           '<div class="sleep-times night">' +
             '<div class="sleep-time-block"><span class="sleep-time-label">Nap before</span><span class="sleep-time-value sleep-time-mid">' + escapeHtml(plan.napStart) + "–" + escapeHtml(plan.napEnd) + '</span><span class="sleep-time-note">90 min, ending 2 h before start</span></div>' +
             '<div class="sleep-time-block"><span class="sleep-time-label">Sleep after</span><span class="sleep-time-value sleep-time-mid">' + escapeHtml(plan.sleepStart) + (recEnd ? "–" + escapeHtml(recEnd) : "") + '</span><span class="sleep-time-note">' + escapeHtml(recNote) + "</span></div>" +
@@ -7098,7 +7132,8 @@
       }
       const bedNote = plan.bedtimeDate && plan.shift && plan.bedtimeDate !== plan.shift.date ? "The evening before" : "Same day";
       const alarmNote = plan.note ? plan.note.charAt(0).toUpperCase() + plan.note.slice(1) : (sleepPrepMinutes() + " min before start");
-      return '<p class="sleep-kicker">Next shift · ' + when + '</p>' +
+      return '<p class="sleep-kicker">Next shift · ' + escapeHtml(sh ? formatSleepDate(sh.date) : formatSleepDate(plan.date)) + '</p>' +
+        (sh ? '<p class="sleep-shift-line"><span>Work</span>' + escapeHtml(shiftRangeLabel(sh)) + "</p>" : "") +
         '<div class="sleep-times">' +
           '<div class="sleep-time-block"><span class="sleep-time-label">Bedtime</span><span class="sleep-time-value">' + escapeHtml(plan.bedtime) + '</span><span class="sleep-time-note">' + bedNote + "</span></div>" +
           '<div class="sleep-time-block"><span class="sleep-time-label">Alarm</span><span class="sleep-time-value">' + escapeHtml(plan.alarm || plan.wake) + '</span><span class="sleep-time-note">' + escapeHtml(alarmNote) + "</span></div>" +
@@ -7106,69 +7141,148 @@
         (plan.warn ? '<p class="sleep-warn">' + escapeHtml(plan.warn) + "</p>" : "");
     }
 
-    function dayRowHtml(date) {
-      const plan = dayPlan(date);
-      const sh = shiftByDate(date);
-      const todayMark = date === sleepToday() ? " today" : "";
-      const source = sourceLabel(sh);
-      const sourceHtml = source ? '<span class="sleep-source">' + escapeHtml(source) + "</span>" : "";
-      let detail;
-      if (!sh) {
-        detail = '<span class="sleep-day-meta">No shift planned</span>';
-      } else if (sh.type !== "work") {
-        const label = offLabel(sh);
-        const planAll = currentSleepPlan();
-        const tomorrow = planAll.byDate[addDaysStamp(date, 1)];
-        let evening = "";
-        if (plan.recovery) {
-          evening = "Sleep " + formatClock(plan.sleepStart) + "–" + formatClock(plan.recoveryEnd);
-          if (tomorrow && tomorrow.bedtime && !tomorrow.recovery) {
-            evening += " · Then bedtime " + tomorrow.bedtime + " · Wake " + (tomorrow.wake || tomorrow.alarm);
-          }
-        } else {
-          evening = "Wake " + formatClock(plan.wake || plan.alarm);
-          if (tomorrow && tomorrow.bedtime && !tomorrow.recovery) evening += " · Bedtime " + tomorrow.bedtime;
-        }
-        const notePlan = plan.recovery && tomorrow ? tomorrow : plan;
-        detail = '<span class="sleep-day-meta">' + escapeHtml(label) + (plan.recovery ? " · after a night shift" : "") + '</span><span class="sleep-day-times">' + escapeHtml(evening) + "</span>" + easeNoteHtml(notePlan);
-      } else if (plan.night) {
-        const rec2 = recoveryWindow(plan.shift);
-        const after = " · Sleep " + absToClock(rec2.start) + "–" + absToClock(rec2.end);
-        detail = '<span class="sleep-day-meta">Night · ' + escapeHtml(shiftRangeLabel(sh)) + '</span><span class="sleep-day-times">Nap ' + escapeHtml(plan.napStart) + "–" + escapeHtml(plan.napEnd) + escapeHtml(after) + "</span>";
-      } else {
-        detail = '<span class="sleep-day-meta">' + escapeHtml(shiftRangeLabel(sh)) + '</span><span class="sleep-day-times">Bedtime ' + escapeHtml(plan.bedtime) + " · Alarm " + escapeHtml(plan.alarm || plan.wake) + "</span>" + easeNoteHtml(plan);
-      }
-      const warn = plan && plan.warn ? '<span class="sleep-day-warn">Short night</span>' : "";
-      return '<button type="button" class="sleep-day' + todayMark + '" data-sleep-edit="' + date + '"><div class="sleep-day-head"><strong>' + escapeHtml(formatSleepDate(date)) + "</strong>" + sourceHtml + warn + "</div>" + detail + "</button>";
+    let sleepCalMonth = null;
+    let sleepSelDate = null;
+
+    function shiftRangeBounds() {
+      const list = (state.shifts || []).slice().sort(function (x, y) { return x.date < y.date ? -1 : x.date > y.date ? 1 : 0; });
+      if (!list.length) return null;
+      return { first: list[0].date, last: list[list.length - 1].date };
     }
 
-    function manageRowHtml(sh) {
-      let meta;
-      if (sh.type === "vacation") meta = "Vacation";
-      else if (sh.type !== "work") meta = offLabel(sh);
-      else meta = shiftRangeLabel(sh) + (isNightShift(sh) ? " · Night" : "");
+    function sleepCalBounds() {
+      const today = sleepToday();
+      const r = shiftRangeBounds();
+      let min = today.slice(0, 7), max = today.slice(0, 7);
+      if (r) {
+        if (r.first.slice(0, 7) < min) min = r.first.slice(0, 7);
+        if (r.last.slice(0, 7) > max) max = r.last.slice(0, 7);
+      }
+      return { min: min, max: max };
+    }
+
+    function shiftMonth(ym, delta) {
+      const d = new Date(Number(ym.slice(0, 4)), Number(ym.slice(5, 7)) - 1 + delta, 1, 12);
+      return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
+    }
+
+    function sleepCellKind(sh) {
+      if (!sh) return "none";
+      if (sh.type === "work") return isNightShift(sh) ? "night" : "work";
+      return sh.type === "vacation" ? "vacation" : "off";
+    }
+
+    function sleepCellLabel(sh) {
+      if (!sh) return "";
+      if (sh.type === "work") return formatClock(sh.start);
+      if (sh.type === "vacation") return "Vac";
+      if (sh.tag === "X" || sh.tag === "O" || sh.tag === "T") return sh.tag;
+      return "Off";
+    }
+
+    function sleepCalendarHtml() {
+      const bounds = sleepCalBounds();
+      if (!sleepCalMonth || sleepCalMonth < bounds.min || sleepCalMonth > bounds.max) sleepCalMonth = sleepToday().slice(0, 7);
+      const ym = sleepCalMonth;
+      const first = new Date(Number(ym.slice(0, 4)), Number(ym.slice(5, 7)) - 1, 1, 12);
+      const last = new Date(first.getFullYear(), first.getMonth() + 1, 0, 12);
+      const start = new Date(first);
+      start.setDate(start.getDate() - (start.getDay() + 6) % 7);
+      const today = sleepToday();
+      const plan = currentSleepPlan();
+      const headers = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(function (l) { return '<div class="month-dow">' + l + "</div>"; }).join("");
+      const cells = [];
+      for (let d = new Date(start); d <= last || (cells.length % 7) !== 0; d.setDate(d.getDate() + 1)) {
+        const stamp = fileStamp(d);
+        const outside = stamp.slice(0, 7) !== ym;
+        if (outside) { cells.push('<div class="month-cell outside" aria-hidden="true"></div>'); continue; }
+        const sh = shiftByDate(stamp);
+        const kind = sleepCellKind(sh);
+        const row = plan.byDate[stamp];
+        const cls = "month-cell s-" + kind + (stamp === today ? " today" : "") + (stamp === sleepSelDate ? " sel" : "") + (sh && sh.source === "rota" ? " rota" : "");
+        const label = sleepCellLabel(sh);
+        const warn = row && row.warn ? '<span class="cal-warn" aria-hidden="true"></span>' : "";
+        const aria = formatSleepDate(stamp) + (sh ? " · " + (sh.type === "work" ? shiftRangeLabel(sh) : offLabel(sh)) : "");
+        cells.push('<button type="button" class="' + cls + '" data-sleep-day="' + stamp + '" aria-label="' + escapeHtml(aria) + '">' + warn + '<span class="month-num">' + d.getDate() + '</span><span class="month-kind">' + escapeHtml(label || "·") + "</span></button>");
+      }
+      const monthLabel = first.toLocaleDateString("nb-NO", { month: "long", year: "numeric" });
+      return '<div class="sleep-cal-head"><h2>' + escapeHtml(monthLabel) + '</h2><div class="sleep-cal-nav">' +
+        '<button type="button" data-sleep-month="-1" aria-label="Previous month"' + (ym <= bounds.min ? " disabled" : "") + '>‹</button>' +
+        '<button type="button" data-sleep-month="1" aria-label="Next month"' + (ym >= bounds.max ? " disabled" : "") + '>›</button></div></div>' +
+        '<div class="month-grid">' + headers + cells.join("") + "</div>" +
+        '<div class="sleep-cal-legend"><span><i style="background:#7cc4ff"></i>Work</span><span><i style="background:#b9a6ff"></i>Night</span><span><i style="background:#8fb86a"></i>Off</span><span><i style="background:#f0c56a"></i>Vacation</span><span><i style="background:#e0912a;border-radius:50%"></i>Short night</span></div>';
+    }
+
+    function timeBlock(label, value, note, mid) {
+      return '<div class="sleep-time-block"><span class="sleep-time-label">' + escapeHtml(label) + '</span><span class="sleep-time-value' + (mid ? " sleep-time-mid" : "") + '">' + escapeHtml(value || "–") + "</span>" + (note ? '<span class="sleep-time-note">' + escapeHtml(note) + "</span>" : "") + "</div>";
+    }
+
+    function sleepDetailHtml(date) {
+      const plan = dayPlan(date);
+      const sh = shiftByDate(date);
       const source = sourceLabel(sh);
-      return '<button type="button" class="sleep-manage-row" data-sleep-edit="' + sh.date + '"><strong>' + escapeHtml(formatSleepDate(sh.date, true)) + "</strong><span>" + escapeHtml(meta) + (source ? " · " + source : "") + "</span></button>";
+      let title;
+      if (!sh) title = "No shift";
+      else if (sh.type === "work") title = isNightShift(sh) ? "Night shift" : "";
+      else title = offLabel(sh);
+      let html = '<div class="sleep-detail-head"><strong>' + escapeHtml(formatSleepDate(date)) + '</strong><span class="sleep-source">' + escapeHtml([title, source].filter(Boolean).join(" · ")) + "</span></div>";
+      if (sh && sh.type === "work") {
+        html += '<p class="sleep-shift-line"><span>Work</span>' + escapeHtml(shiftRangeLabel(sh)) + "</p>";
+      }
+      const blocks = [];
+      if (plan.recovery) {
+        blocks.push(timeBlock("Sleep after night", formatClock(plan.sleepStart) + "–" + formatClock(plan.recoveryEnd), plan.recoveryFull === false ? "Shorter rest" : formatSleepHours(sleepGoalHours()), true));
+      } else if (plan.bedtime && plan.night) {
+        blocks.push(timeBlock("Bedtime", plan.bedtime, plan.bedtimeDate && plan.bedtimeDate !== date ? "Evening before" : "Same day"));
+      } else if (plan.bedtime) {
+        const bedNote = plan.bedtimeDate && plan.bedtimeDate !== date ? "Evening before" : "Same day";
+        blocks.push(timeBlock("Bedtime", plan.bedtime, bedNote));
+        blocks.push(timeBlock(sh && sh.type === "work" && !plan.night ? "Alarm" : "Wake", plan.alarm || plan.wake, ""));
+        if (plan.wakeAbs != null && plan.bedAbs != null) {
+          const hrs = Math.max(0, (plan.wakeAbs - plan.bedAbs - sleepLatencyMinutes()) / 60);
+          blocks.push(timeBlock("Sleep", formatSleepHours(hrs), ""));
+        }
+      }
+      if (plan.night && sh) {
+        const rec = recoveryWindow(sh);
+        blocks.push(timeBlock("Nap before", plan.napStart + "–" + plan.napEnd, "", true));
+        blocks.push(timeBlock("Sleep after", absToClock(rec.start) + "–" + absToClock(rec.end), "", true));
+      }
+      if (blocks.length) html += '<div class="sleep-times' + (blocks.length === 2 ? " two" : "") + '">' + blocks.join("") + "</div>";
+      else if (!sh) html += '<p class="history-note">Nothing planned for this day.</p>';
+      html += easeNoteHtml(plan);
+      if (plan.warn) html += '<p class="sleep-warn">' + escapeHtml(plan.warn) + "</p>";
+      html += '<div class="sleep-detail-actions"><button type="button" class="data-btn" data-sleep-edit="' + date + '">' + (sh ? "Edit shift" : "Add shift") + "</button>" +
+        (sh ? '<button type="button" class="data-btn danger" data-sleep-delete="' + date + '">Delete</button>' : "") + "</div>";
+      return html;
+    }
+
+    function deleteShiftOn(date) {
+      if (!date || !shiftByDate(date)) return;
+      if (!window.confirm("Delete this shift?")) return;
+      state.shifts = (state.shifts || []).filter(function (row) { return row.date !== date; });
+      saveState();
+      renderSleep();
     }
 
     function renderSleep() {
       if (view !== "sleep") return;
       const tonight = document.getElementById("sleepTonight");
-      const days = document.getElementById("sleepDays");
-      const list = document.getElementById("sleepShiftList");
+      const cal = document.getElementById("sleepCal");
+      const detail = document.getElementById("sleepDetail");
       const clearBtn = document.getElementById("sleepClearBtn");
       if (tonight) tonight.innerHTML = tonightHtml(tonightPlan());
-      if (days) {
-        const start = sleepToday();
-        const rows = [];
-        for (let i = 0; i < 14; i += 1) rows.push(dayRowHtml(addDaysStamp(start, i)));
-        days.innerHTML = rows.join("");
+      const hasShifts = !!(state.shifts && state.shifts.length);
+      if (!sleepSelDate) sleepSelDate = sleepToday();
+      if (cal) {
+        cal.hidden = !hasShifts;
+        cal.innerHTML = hasShifts ? sleepCalendarHtml() : "";
       }
-      if (list) {
-        const shifts = state.shifts || [];
-        list.innerHTML = shifts.length ? shifts.map(manageRowHtml).join("") : '<p class="history-note">No shifts yet. Add one, paste a list, or open your import link.</p>';
+      if (detail) {
+        detail.hidden = !hasShifts;
+        detail.innerHTML = hasShifts ? sleepDetailHtml(sleepSelDate) : "";
       }
-      if (clearBtn) clearBtn.hidden = !(state.shifts && state.shifts.length);
+      if (clearBtn) clearBtn.hidden = !hasShifts;
       renderSleepSettings();
     }
 
@@ -7813,13 +7927,26 @@
     document.getElementById("sleepPasteClose").addEventListener("click", closeSleepPaste);
     document.getElementById("sleepPasteBackdrop").addEventListener("click", closeSleepPaste);
     document.getElementById("sleepPasteApply").addEventListener("click", applySleepPaste);
-    document.getElementById("sleepDays").addEventListener("click", function (event) {
-      const btn = event.target.closest("[data-sleep-edit]");
-      if (btn) openSleepEditor(btn.getAttribute("data-sleep-edit"));
+    document.getElementById("sleepCal").addEventListener("click", function (event) {
+      const nav = event.target.closest("[data-sleep-month]");
+      if (nav && !nav.disabled) {
+        sleepCalMonth = shiftMonth(sleepCalMonth || sleepToday().slice(0, 7), Number(nav.getAttribute("data-sleep-month")));
+        renderSleep();
+        return;
+      }
+      const cell = event.target.closest("[data-sleep-day]");
+      if (cell) {
+        sleepSelDate = cell.getAttribute("data-sleep-day");
+        renderSleep();
+        const detail = document.getElementById("sleepDetail");
+        if (detail && detail.scrollIntoView) detail.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      }
     });
-    document.getElementById("sleepShiftList").addEventListener("click", function (event) {
-      const btn = event.target.closest("[data-sleep-edit]");
-      if (btn) openSleepEditor(btn.getAttribute("data-sleep-edit"));
+    document.getElementById("sleepDetail").addEventListener("click", function (event) {
+      const edit = event.target.closest("[data-sleep-edit]");
+      if (edit) { openSleepEditor(edit.getAttribute("data-sleep-edit")); return; }
+      const del = event.target.closest("[data-sleep-delete]");
+      if (del) deleteShiftOn(del.getAttribute("data-sleep-delete"));
     });
     document.body.appendChild(document.getElementById("sleepSettingsOverlay"));
     document.body.appendChild(document.getElementById("sleepEditorOverlay"));
