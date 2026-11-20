@@ -788,7 +788,9 @@
     .home-header .home-settings { position: absolute; top: 0; right: 0; }
     .home-header .app-title { padding-right: 52px; }
     .week-status[data-movable] { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
-    .week-status.drag-source { opacity: 0.35; }
+    .week-status.drag-source, .month-cell.drag-source { opacity: 0.35; }
+    .month-cell[data-movable] { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+    .month-cell.drop-target { outline: 3px dashed var(--acc); outline-offset: 1px; }
     .week-status.drop-target { outline: 3px dashed var(--acc); outline-offset: 2px; }
     .week-drag-ghost { position: fixed; z-index: 60; pointer-events: none; margin: 0; transform: scale(1.04) rotate(-1deg); box-shadow: 0 12px 28px rgba(0,0,0,0.45); transition: transform 0.12s; }
     .week-reset { display: block; margin: 8px 0 0; padding: 6px 10px; min-height: 0; background: transparent; color: var(--mute); border: 1px solid var(--line); border-radius: 999px; font-size: 13px; }
@@ -1037,6 +1039,18 @@
     .sleep-cal .month-cell.s-work .month-kind, .sleep-cal .month-cell.s-night .month-kind { font-size: 9.5px; line-height: 1.15; letter-spacing: -0.02em; overflow-wrap: normal; white-space: nowrap; }
     .sleep-cal .month-cell { min-height: 58px; padding: 3px 1px 4px; }
     .sleep-detail { margin-top: 8px; }
+    .hd-sec { margin: 0 0 18px; }
+    .hd-sec h3 { margin: 0 0 8px; font-size: 13px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; opacity: .7; }
+    .hd-line { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin: 0 0 8px; font-size: 16px; }
+    .hd-line span { opacity: .75; font-size: 14px; font-weight: 700; }
+    .hd-ex { margin: 0 0 12px; padding: 0; list-style: none; display: grid; gap: 4px; }
+    .hd-ex li { display: flex; justify-content: space-between; gap: 10px; font-size: 14px; font-weight: 600; }
+    .hd-ex small { opacity: .65; font-size: 12px; white-space: nowrap; }
+    .hd-note { margin: 0; font-size: 13px; opacity: .7; }
+    .hd-primary { width: 100%; }
+    .hd-sleep { margin: 0 0 10px; }
+    .hd-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .month-cell.rest { cursor: pointer; }
     .sleep-rel { margin-left: auto; font-size: 11px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: var(--acc); }
     .sleep-cal .month-cell.s-none { color: var(--mute); }
     .sleep-cal .month-cell.s-work { background: #7cc4ff; color: #0c1a26; }
@@ -1585,6 +1599,16 @@
           </div>
         </div>
       </div>
+    </div>
+  </div>
+  <div id="homeDayOverlay" class="settings-overlay" hidden>
+    <button type="button" class="settings-backdrop" id="homeDayBackdrop" aria-label="Close day"></button>
+    <div class="settings-panel" role="dialog" aria-labelledby="homeDayTitle">
+      <div class="settings-head">
+        <h2 id="homeDayTitle">Day</h2>
+        <button type="button" class="settings-close" id="homeDayClose" aria-label="Close day">×</button>
+      </div>
+      <div id="homeDayBody"></div>
     </div>
   </div>
   <div id="sleepEditorOverlay" class="settings-overlay" hidden>
@@ -4161,6 +4185,7 @@
       const monthLabel = month.first.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
       const shorts = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
       const headers = shorts.map(label => '<div class="month-dow">' + label + "</div>").join("");
+      homeSlotByStamp = {};
       const cells = month.slots.map(slot => {
         const trained = slot.trained;
         const today = slot.stamp === month.today;
@@ -4172,10 +4197,9 @@
         const classes = "month-cell" + (trained ? " trained" : "") + (today ? " today" : "") + (slot.dayKey ? " workout" : " rest") + (outside ? " outside" : "");
         const moved = !trained && slot.movedFrom ? ' <span class="month-moved" aria-label="moved for work">↷</span>' : "";
         const inner = '<span class="month-num">' + dayNum + '</span><span class="month-kind">' + escapeHtml(slot.dayKey ? slot.name : (slot.workBlocked ? "Work" : "Rest")) + (mark ? ' <span class="month-mark">' + mark + "</span>" : "") + moved + "</span>";
-        if (slot.dayKey) {
-          return '<button type="button" class="' + classes + '" data-open-day="' + slot.dayKey + '" aria-label="Open ' + slot.name + " on " + displaySessionDate(slot.stamp, false) + (trained ? ", done" : "") + '"' + colorStyle + ">" + inner + "</button>";
-        }
-        return '<div class="' + classes + '" aria-label="' + displaySessionDate(slot.stamp, false) + ' · Rest"' + colorStyle + ">" + inner + "</div>";
+        homeSlotByStamp[slot.stamp] = Object.assign({}, slot, { status: trained ? "Done" : (partly ? "Not finished" : (slot.missed ? "Missed" : (slot.dayKey ? (slot.movedFrom ? "Moved for work" : "Not yet") : (slot.workBlocked ? "Work day" : "Rest day")))) });
+        const movable = !trained && slot.stamp >= month.today;
+        return '<button type="button" class="' + classes + '" data-home-day="' + slot.stamp + '" data-stamp="' + slot.stamp + '"' + (movable ? ' data-movable="1"' : '') + ' aria-label="' + (slot.dayKey ? slot.name : (slot.workBlocked ? "Work" : "Rest")) + " on " + displaySessionDate(slot.stamp, false) + (trained ? ", done" : "") + ', tap to see and edit"' + colorStyle + ">" + inner + "</button>";
       }).join("");
       const streak = dayStreak();
       const streakLabel = streak === 1 ? "1 day" : streak + " days";
@@ -4191,7 +4215,48 @@
       const view = document.getElementById("weeklyView");
       view.setAttribute("aria-label", "This month");
       view.innerHTML = '<p class="streak-banner">Streak: <span>' + streakLabel + '</span></p><h2>This month</h2><p class="week-dates">' + monthLabel + "</p>" +
-        '<p class="next-up">' + (resumeTarget(nextDayKey) ? "Resume" : "Next up") + ": " + nextName + '</p><div class="month-grid">' + headers + cells + '</div><p class="program-hint" id="programHint">' + escapeHtml(PROGRAMS[state.program].name) + ' · change in Settings</p>' + summary + '<p class="week-note">A check means that day’s workout is done. The outline marks today. Tap a workout to open it. Your streak counts training days in a row. Rest days do not break it.</p>' + (weekLayoutCustomized() ? '<button type="button" class="week-reset" data-action="reset-week-layout">Reset week layout</button>' : "");
+        '<p class="next-up">' + (resumeTarget(nextDayKey) ? "Resume" : "Next up") + ": " + nextName + '</p><div class="month-grid">' + headers + cells + '</div><p class="program-hint" id="programHint">' + escapeHtml(PROGRAMS[state.program].name) + ' · change in Settings</p>' + summary + '<p class="week-note">A check means that day’s workout is done. The outline marks today. Tap a day to see and edit its workout, work and sleep. Press and hold a workout or rest day, then drag it to another date to move it. Work shifts stay on their dates. Your streak counts training days in a row. Rest days do not break it.</p>' + (weekLayoutCustomized() ? '<button type="button" class="week-reset" data-action="reset-week-layout">Reset week layout</button>' : "");
+    }
+
+    let homeSlotByStamp = {};
+    let homeDayStamp = null;
+    let homeDayReturn = null;
+
+    function homeDayHtml(stamp) {
+      const slot = homeSlotByStamp[stamp] || null;
+      let html = '<section class="hd-sec"><h3>Workout</h3>';
+      if (slot && slot.dayKey) {
+        const list = dayExercises(slot.dayKey);
+        html += '<p class="hd-line"><strong>' + escapeHtml(slot.name) + "</strong><span>" + escapeHtml(slot.status || "") + "</span></p>";
+        if (list.length) html += '<ul class="hd-ex">' + list.map(function (ex) {
+          return "<li><span>" + escapeHtml(ex.name) + "</span><small>" + escapeHtml(ex.minReps + "–" + ex.maxReps + " reps") + "</small></li>";
+        }).join("") + "</ul>";
+        html += '<button type="button" class="data-btn hd-primary" data-hd-open="' + slot.dayKey + '">Open workout to log or edit exercises</button>';
+      } else {
+        html += '<p class="hd-line"><strong>' + escapeHtml(slot && slot.workBlocked ? "Work day" : "Rest day") + "</strong><span>No workout planned</span></p>";
+        html += '<p class="hd-note">To train on this day, press and hold a workout on the home calendar and drag it here, or drag this rest day onto a workout day.</p>';
+      }
+      html += "</section>";
+      html += '<section class="hd-sec"><h3>Work and sleep</h3><div class="sleep-detail hd-sleep">' + sleepDetailHtml(stamp) + "</div>";
+      html += '<div class="hd-actions"><button type="button" class="data-btn" data-hd-sleepset="1">Sleep settings</button><button type="button" class="data-btn" data-hd-sleeppage="1">Open Sleep page</button></div></section>';
+      return html;
+    }
+
+    function openHomeDay(stamp) {
+      if (!stamp) return;
+      homeDayStamp = stamp;
+      const title = document.getElementById("homeDayTitle");
+      const body = document.getElementById("homeDayBody");
+      if (title) title.textContent = formatSleepDate(stamp);
+      if (body) body.innerHTML = homeDayHtml(stamp);
+      const overlay = document.getElementById("homeDayOverlay");
+      if (overlay) overlay.hidden = false;
+    }
+
+    function closeHomeDay() {
+      homeDayStamp = null;
+      const overlay = document.getElementById("homeDayOverlay");
+      if (overlay) overlay.hidden = true;
     }
 
     function renderWeeklyView() {
@@ -4203,6 +4268,7 @@
       }
       if (viewEl) viewEl.setAttribute("aria-label", "Weekly progress");
       const nextSlot = calendarNextUp(week.slots, week.today);
+      homeSlotByStamp = {};
       const cards = week.slots.map((slot, slotIndex) => {
         const trained = slot.trained;
         const today = slot.stamp === week.today;
@@ -4210,11 +4276,12 @@
         const nextWord = isNext && resumeTarget(slot.dayKey) ? "Resume" : "Next up";
         const partly = !trained && slot.stamp <= week.today && partlyTrainedOnDate(slot.stamp);
         const status = trained ? "✓ Done" : (partly ? (today ? "In progress" : "Not finished") : (slot.missed ? "Missed" : (slot.dayKey ? (slot.movedFrom ? "Moved · work" : "Not yet") : (slot.workBlocked ? "Work" : "Rest day"))));
+        homeSlotByStamp[slot.stamp] = Object.assign({}, slot, { status: status.replace("✓ ", "") });
         const badge = isNext ? '<span class="next-up-badge">' + nextWord + '</span>' : "";
         const openLabel = slot.dayKey ? ' aria-label="Open ' + slot.name + ' for ' + slot.label + (isNext ? ', ' + nextWord.toLowerCase() : '') + '"' : "";
         const open = slot.dayKey
-          ? '<button type="button" class="week-open" data-open-day="' + slot.dayKey + '"' + openLabel + '><span class="week-dow">' + slot.short + '</span>' + (trained && slot.swappedFrom ? '<span class="week-name"><strong>' + slot.name + badge + '</strong><span class="swap-from">swapped from ' + slot.swappedFrom + '</span></span>' : '<strong>' + slot.name + badge + '</strong>') + '<span>' + status + '</span></button>'
-          : '<div class="week-open"><span class="week-dow">' + slot.short + '</span><strong>' + slot.name + '</strong><span>' + status + '</span></div>';
+          ? '<button type="button" class="week-open" data-open-day="' + slot.dayKey + '" data-home-day="' + slot.stamp + '"' + openLabel + '><span class="week-dow">' + slot.short + '</span>' + (trained && slot.swappedFrom ? '<span class="week-name"><strong>' + slot.name + badge + '</strong><span class="swap-from">swapped from ' + slot.swappedFrom + '</span></span>' : '<strong>' + slot.name + badge + '</strong>') + '<span>' + status + '</span></button>'
+          : '<button type="button" class="week-open" data-home-day="' + slot.stamp + '" aria-label="' + slot.name + ' on ' + slot.label + ', tap to see and edit"><span class="week-dow">' + slot.short + '</span><strong>' + slot.name + '</strong><span>' + status + '</span></button>';
         const colorStyle = slot.dayKey ? ' style="background:' + DAY_META[slot.dayKey].color + ';color:#101820"' : "";
         const movable = !trained && slot.stamp >= week.today;
         return '<div data-slot-index="' + slotIndex + '" data-stamp="' + slot.stamp + '"' + (movable ? ' data-movable="1"' : '') + ' class="week-status' + (trained ? " trained" : "") + (today ? " today" : "") + (isNext ? " next-up" : "") + (slot.dayKey ? " workout" : " rest") + '" title="' + (slot.dayKey ? slot.label + ' · tap to open ' + slot.name : slot.label) + '"' + colorStyle + '>' + open + '</div>';
@@ -4231,7 +4298,7 @@
       const nextName = nextSlot ? nextSlot.name : DAY_META[week.next].name;
       const nextDayKey = nextSlot ? nextSlot.dayKey : week.next;
       document.getElementById("weeklyView").innerHTML = '<p class="streak-banner">Streak: <span>' + streakLabel + '</span></p><h2>This week</h2><p class="week-dates">Mon–Sun · ' + displaySessionDate(fileStamp(week.monday), false) + ' – ' + displaySessionDate(fileStamp(week.sunday)) + '</p>' +
-        '<p class="next-up">' + (resumeTarget(nextDayKey) ? 'Resume' : 'Next up') + ': ' + nextName + '</p><div class="week-strip">' + cards + '</div><p class="program-hint" id="programHint">' + escapeHtml(PROGRAMS[state.program].name) + ' · change in Settings</p>' + summary + '<p class="week-note">Done means every exercise in the workout has all its sets logged. A workout left unfinished carries over to the next day. Train a different workout than planned and the rest of the week shifts to follow your program’s order from there. Tap a workout row to open it. Your streak counts training days in a row. Rest days do not break it. Press and hold a day, then drag it onto another day to swap them, including rest days.</p>' + (weekLayoutCustomized() ? '<button type="button" class="week-reset" data-action="reset-week-layout">Reset week layout</button>' : '');
+        '<p class="next-up">' + (resumeTarget(nextDayKey) ? 'Resume' : 'Next up') + ': ' + nextName + '</p><div class="week-strip">' + cards + '</div><p class="program-hint" id="programHint">' + escapeHtml(PROGRAMS[state.program].name) + ' · change in Settings</p>' + summary + '<p class="week-note">Done means every exercise in the workout has all its sets logged. A workout left unfinished carries over to the next day. Train a different workout than planned and the rest of the week shifts to follow your program’s order from there. Tap a day to see and edit its workout, work and sleep. Your streak counts training days in a row. Rest days do not break it. Press and hold a day, then drag it onto another day to swap them, including rest days.</p>' + (weekLayoutCustomized() ? '<button type="button" class="week-reset" data-action="reset-week-layout">Reset week layout</button>' : '');
     }
 
     function renderSessionHistory(exercise, day) {
@@ -7488,6 +7555,7 @@
     }
 
     function closeSleepEditor() {
+      if (homeDayReturn && view === "home") setTimeout(function () { homeDayReturn = null; }, 0);
       const overlay = document.getElementById("sleepEditorOverlay");
       if (overlay) overlay.hidden = true;
     }
@@ -7821,6 +7889,13 @@
     }
 
     function renderSleep() {
+      if (view === "home") {
+        renderWeeklyView();
+        const back = homeDayStamp || homeDayReturn;
+        homeDayReturn = null;
+        if (back) openHomeDay(back);
+        return;
+      }
       if (view !== "sleep") return;
       const empty = document.getElementById("sleepEmpty");
       const cal = document.getElementById("sleepCal");
@@ -8198,6 +8273,43 @@
       render();
     }
 
+    // v217: drag by date, from the week or month view. Same week as today keeps the old layout logic.
+    // Other weeks and moves across weeks only pin training/rest on those dates; shifts never move.
+    function moveDayStamps(fromStamp, toStamp) {
+      if (!fromStamp || !toStamp || fromStamp === toStamp) return false;
+      const week = weeklyProgress();
+      const fi = week.slots.findIndex(s => s.stamp === fromStamp), ti = week.slots.findIndex(s => s.stamp === toStamp);
+      if (fi >= 0 && ti >= 0) return moveWeekDay(fi, ti);
+      const slotOf = stamp => {
+        const w = weeklyProgress(new Date(stamp + "T12:00:00"));
+        return { w, slot: w.slots.find(s => s.stamp === stamp) };
+      };
+      const a = slotOf(fromStamp), b = slotOf(toStamp);
+      const from = a.slot, to = b.slot;
+      if (!from || !to || from.trained || to.trained || fromStamp < week.today || toStamp < week.today) return false;
+      if (!state.dayOverrides) state.dayOverrides = {};
+      if (!state.dayOverrides[state.program]) state.dayOverrides[state.program] = {};
+      const map = state.dayOverrides[state.program];
+      const sameWeek = fileStamp(a.w.monday) === fileStamp(b.w.monday);
+      if (from.dayKey && to.dayKey) {
+        if (!sameWeek) return false;
+        const srcFrom = from.srcStamp || from.stamp, srcTo = to.srcStamp || to.stamp;
+        map[from.stamp] = srcTo === from.stamp ? "train" : "from:" + srcTo;
+        map[to.stamp] = srcFrom === to.stamp ? "train" : "from:" + srcFrom;
+      } else if (from.dayKey || to.dayKey) {
+        [a.w, b.w].forEach(w => w.slots.forEach(slot => {
+          if (slot.stamp >= week.today && map[slot.stamp] && String(map[slot.stamp]).indexOf("from:") === 0) map[slot.stamp] = "train";
+        }));
+        map[from.stamp] = to.dayKey ? "train" : "rest";
+        map[to.stamp] = from.dayKey ? "train" : "rest";
+      } else {
+        return false;
+      }
+      saveState();
+      render();
+      return true;
+    }
+
     function moveWeekDay(fromIndex, toIndex) {
       if (fromIndex === toIndex) return false;
       const week = weeklyProgress();
@@ -8434,7 +8546,7 @@
       function point(e) { const t = e.touches ? (e.touches[0] || e.changedTouches[0]) : e; return { x: t.clientX, y: t.clientY }; }
       function cardAt(x, y) {
         const el = document.elementFromPoint(x, y);
-        const card = el && el.closest ? el.closest('#weeklyView .week-status[data-movable]') : null;
+        const card = el && el.closest ? el.closest('#weeklyView .week-status[data-movable], #weeklyView .month-cell[data-movable]') : null;
         return card;
       }
       function clearTarget() { if (drag && drag.target) { drag.target.classList.remove("drop-target"); drag.target = null; } }
@@ -8449,7 +8561,7 @@
         document.body.appendChild(ghost);
         card.classList.add("drag-source");
         document.body.classList.add("week-dragging");
-        drag = { card, ghost, dx: p.x - r.left, dy: p.y - r.top, from: Number(card.dataset.slotIndex), target: null };
+        drag = { card, ghost, dx: p.x - r.left, dy: p.y - r.top, from: card.dataset.stamp, target: null };
         if (navigator.vibrate) { try { navigator.vibrate(15); } catch (err) {} }
       }
       function move(p) {
@@ -8463,7 +8575,7 @@
       }
       function finish(commit) {
         if (!drag) return;
-        const to = drag.target ? Number(drag.target.dataset.slotIndex) : null;
+        const to = drag.target ? drag.target.dataset.stamp : null;
         drag.ghost.remove();
         drag.card.classList.remove("drag-source");
         clearTarget();
@@ -8472,12 +8584,12 @@
         drag = null;
         suppressClick = true;
         setTimeout(() => { suppressClick = false; }, 700);
-        if (commit && to !== null) moveWeekDay(from, to);
+        if (commit && to !== null) moveDayStamps(from, to);
       }
       function cancelPending() { if (pending) { clearTimeout(pending.timer); pending = null; } }
       function down(e) {
         if (e.type === "mousedown" && e.button !== 0) return;
-        const card = e.target.closest && e.target.closest('.week-status[data-movable]');
+        const card = e.target.closest && e.target.closest('.week-status[data-movable], .month-cell[data-movable]');
         suppressClick = false;
         if (!card || drag) return;
         const p = point(e);
@@ -8503,7 +8615,7 @@
       view.addEventListener("mousedown", down);
       document.addEventListener("mousemove", moved);
       document.addEventListener("mouseup", up);
-      view.addEventListener("contextmenu", e => { if (e.target.closest && e.target.closest('.week-status[data-movable]')) e.preventDefault(); });
+      view.addEventListener("contextmenu", e => { if (e.target.closest && e.target.closest('.week-status[data-movable], .month-cell[data-movable]')) e.preventDefault(); });
       view.addEventListener("click", e => {
         if (suppressClick) { e.preventDefault(); e.stopImmediatePropagation(); return; }
         const reset = e.target.closest && e.target.closest('[data-action="reset-week-layout"]');
@@ -8512,9 +8624,29 @@
       window.__weekDrag = { start, move, finish, down, moved, up };
     })();
     document.getElementById("weeklyView").addEventListener("click", event => {
+      const day = event.target.closest("[data-home-day]");
+      if (day) { openHomeDay(day.getAttribute("data-home-day")); return; }
       const open = event.target.closest("[data-open-day]");
       if (open) enterDay(open.dataset.openDay);
     });
+    document.getElementById("homeDayBody").addEventListener("click", event => {
+      const open = event.target.closest("[data-hd-open]");
+      if (open) { closeHomeDay(); enterDay(open.getAttribute("data-hd-open")); return; }
+      const edit = event.target.closest("[data-sleep-edit]");
+      if (edit) { const d = homeDayStamp; closeHomeDay(); homeDayReturn = d; openSleepEditor(edit.getAttribute("data-sleep-edit")); return; }
+      if (event.target.closest("[data-hd-sleepset]")) { closeHomeDay(); openSleepSettings(); return; }
+      if (event.target.closest("[data-hd-sleeppage]")) {
+        const d = homeDayStamp;
+        closeHomeDay();
+        goSleep();
+        sleepSelDate = d;
+        sleepCalMonth = d ? d.slice(0, 7) : null;
+        renderSleep();
+      }
+    });
+    document.getElementById("homeDayClose").addEventListener("click", closeHomeDay);
+    document.getElementById("homeDayBackdrop").addEventListener("click", closeHomeDay);
+    document.body.appendChild(document.getElementById("homeDayOverlay"));
     document.getElementById("restSkip").addEventListener("click", skipRestTimer);
     document.getElementById("restRestart").addEventListener("click", startRestTimer);
     document.getElementById("restTimer").addEventListener("click", event => {
