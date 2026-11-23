@@ -7132,6 +7132,7 @@
       view = "breathing";
       render();
       window.scrollTo(0, 0);
+      if (breathSoundOn()) ensureBreathAudio();
     }
 
     const BREATH_PHASES = [
@@ -7148,6 +7149,15 @@
     let breathLastPhase = -1;
     let breathFinished = false;
     let breathAudio = null;
+    let breathSampleBufs = { in: null, hold: null, out: null };
+    let breathSamplesPromise = null;
+    let breathSamplesReady = false;
+    const BREATH_SAMPLE_URLS = {
+      in: "sounds/violin-d4.mp3",
+      hold: "sounds/violin-fs4.mp3",
+      out: "sounds/violin-a4.mp3"
+    };
+
 
     function normalizeBreathMinutes(value) {
       const n = Math.round(Number(value));
@@ -7228,6 +7238,7 @@
         const resume = breathAudio.resume();
         if (resume && resume.catch) resume.catch(function () {});
       }
+      loadBreathSamples();
       return breathAudio;
     }
 
@@ -7260,49 +7271,82 @@
       });
     }
 
-    // v237: soft violin-like box-breathing tones (saw + body through a low-pass, slow bow, gentle vibrato).
-    function breathViolin(ctx, startAt, freq, dur, gainVal) {
-      const attack = 0.32;
-      const release = Math.max(1.0, dur);
-      const end = startAt + attack + release;
+    // v238: real recorded violin notes for box breathing (see sounds/CREDITS.txt).
+    function decodeBreathSample(ctx, data) {
+      return new Promise(function (resolve, reject) {
+        const copy = data.slice(0);
+        let done = false;
+        function ok(buf) { if (!done) { done = true; resolve(buf); } }
+        function bad(err) { if (!done) { done = true; reject(err || new Error("decode failed")); } }
+        try {
+          const result = ctx.decodeAudioData(copy, ok, bad);
+          if (result && typeof result.then === "function") result.then(ok, bad);
+        } catch (error) {
+          bad(error);
+        }
+      });
+    }
+
+    function loadBreathSamples() {
+      if (breathSamplesPromise) return breathSamplesPromise;
+      const ctx = breathAudio;
+      if (!ctx) return Promise.resolve(false);
+      breathSamplesPromise = Promise.all(["in", "hold", "out"].map(function (kind) {
+        return fetch(BREATH_SAMPLE_URLS[kind]).then(function (res) {
+          if (!res.ok) throw new Error("sample " + kind + " " + res.status);
+          return res.arrayBuffer();
+        }).then(function (data) {
+          return decodeBreathSample(ctx, data);
+        });
+      })).then(function (bufs) {
+        breathSampleBufs.in = bufs[0];
+        breathSampleBufs.hold = bufs[1];
+        breathSampleBufs.out = bufs[2];
+        breathSamplesReady = true;
+        return true;
+      }).catch(function () {
+        breathSamplesReady = false;
+        breathSampleBufs.in = breathSampleBufs.hold = breathSampleBufs.out = null;
+        return false;
+      });
+      return breathSamplesPromise;
+    }
+
+    function playBreathSample(ctx, startAt, buffer, gainVal) {
+      if (!buffer) return;
+      const src = ctx.createBufferSource();
       const out = ctx.createGain();
-      const filter = ctx.createBiquadFilter();
-      filter.type = "lowpass";
-      filter.frequency.setValueAtTime(800, startAt);
-      filter.frequency.linearRampToValueAtTime(1600, startAt + attack + 0.25);
-      filter.Q.setValueAtTime(0.7, startAt);
+      src.buffer = buffer;
+      const dur = Math.max(0.2, buffer.duration);
+      const attack = 0.15;
+      const fade = 0.6;
       out.gain.setValueAtTime(0.0001, startAt);
       out.gain.exponentialRampToValueAtTime(Math.max(0.0002, gainVal), startAt + attack);
-      const holdAt = startAt + Math.max(attack + 0.2, Math.min(dur * 0.5, release * 0.45));
-      out.gain.setValueAtTime(Math.max(0.0002, gainVal), holdAt);
-      out.gain.exponentialRampToValueAtTime(0.0001, end);
-      filter.connect(out);
+      const fadeAt = startAt + Math.max(attack, dur - fade);
+      out.gain.setValueAtTime(Math.max(0.0002, gainVal), fadeAt);
+      out.gain.exponentialRampToValueAtTime(0.0001, startAt + dur);
+      src.connect(out);
       out.connect(ctx.destination);
-      const lfo = ctx.createOscillator();
-      const lfoGain = ctx.createGain();
-      lfo.type = "sine";
-      lfo.frequency.setValueAtTime(5, startAt);
-      lfoGain.gain.setValueAtTime(0, startAt);
-      lfoGain.gain.linearRampToValueAtTime(6, startAt + attack);
-      lfo.connect(lfoGain);
-      [
-        { type: "sawtooth", level: 0.55, ratio: 1 },
-        { type: "triangle", level: 0.4, ratio: 1 },
-        { type: "sine", level: 0.12, ratio: 2 }
-      ].forEach(function (layer) {
-        const osc = ctx.createOscillator();
-        const g = ctx.createGain();
-        osc.type = layer.type;
-        osc.frequency.setValueAtTime(freq * layer.ratio, startAt);
-        lfoGain.connect(osc.detune);
-        g.gain.setValueAtTime(layer.level, startAt);
-        osc.connect(g);
-        g.connect(filter);
-        osc.start(startAt);
-        osc.stop(end + 0.06);
-      });
-      lfo.start(startAt);
-      lfo.stop(end + 0.06);
+      src.start(startAt);
+      src.stop(startAt + dur + 0.05);
+    }
+
+    function playBreathBeepFallback(ctx, startAt, kind, vol) {
+      const cap = Math.max(1.2, breathSideSeconds() - 0.3);
+      if (kind === "in") breathBeep(ctx, startAt, 349.23, 440, Math.min(2.4, cap), vol);
+      else if (kind === "out") breathBeep(ctx, startAt, 440, 329.63, Math.min(2.6, cap), vol);
+      else if (kind === "hold") breathBeep(ctx, startAt, 392, 392, Math.min(1.8, cap), vol * 0.8);
+      else if (kind === "end") {
+        breathBeep(ctx, startAt, 392, 392, 2.0, vol);
+        breathBeep(ctx, startAt + 0.5, 493.88, 493.88, 2.0, vol * 0.9);
+        breathBeep(ctx, startAt + 1.0, 587.33, 587.33, 3.0, vol * 0.85);
+      }
+    }
+
+    function playBreathTone(ctx, startAt, noteKind, gainVal) {
+      const buf = breathSamplesReady ? breathSampleBufs[noteKind] : null;
+      if (buf) playBreathSample(ctx, startAt, buf, gainVal);
+      else playBreathBeepFallback(ctx, startAt, noteKind, 0.055);
     }
 
     function playBreathCue(kind) {
@@ -7313,15 +7357,14 @@
       const ctx = breathAudio || ensureBreathAudio();
       if (ctx) {
         const t0 = ctx.currentTime + 0.02;
-        const vol = 0.032;
-        const cap = Math.max(1.2, breathSideSeconds() - 0.3);
-        if (kind === "in") breathViolin(ctx, t0, 293.66, Math.min(2.4, cap), vol);
-        else if (kind === "out") breathViolin(ctx, t0, 440, Math.min(2.6, cap), vol);
-        else if (kind === "hold") breathViolin(ctx, t0, 369.99, Math.min(1.8, cap), vol * 0.85);
+        const vol = 0.2;
+        if (kind === "in") playBreathTone(ctx, t0, "in", vol);
+        else if (kind === "out") playBreathTone(ctx, t0, "out", vol);
+        else if (kind === "hold") playBreathTone(ctx, t0, "hold", vol * 0.85);
         else if (kind === "end") {
-          breathViolin(ctx, t0, 293.66, 2.0, vol);
-          breathViolin(ctx, t0 + 0.45, 369.99, 2.0, vol * 0.9);
-          breathViolin(ctx, t0 + 0.9, 440, 2.6, vol * 0.85);
+          playBreathTone(ctx, t0, "in", vol);
+          playBreathTone(ctx, t0 + 0.45, "hold", vol * 0.9);
+          playBreathTone(ctx, t0 + 0.9, "out", vol * 0.85);
         }
       }
       if (navigator.vibrate) {

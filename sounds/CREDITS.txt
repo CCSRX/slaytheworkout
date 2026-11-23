@@ -1,0 +1,25 @@
+Box breathing violin notes
+==========================
+
+Source: University of Iowa Musical Instrument Samples (MIS), 2012 violin recordings.
+  https://theremin.music.uiowa.edu/MIS.html
+  https://theremin.music.uiowa.edu/MISviolin2012.html
+
+Instrument: Violin (Nicolai Tambovsky, 1998), performed by Leonid Iogansen,
+recorded 11 December 2011 in the anechoic chamber at the University of Iowa
+(Earthworks QTC40, 16-bit 44.1 kHz mono).
+
+Original files:
+  Violin.arco.pp.sulD.D4B4.mono.aif  (D4 and F#4)
+  Violin.arco.pp.sulA.A4B5.mono.aif  (A4)
+
+These are piano (pp), arco (bowed) notes. Derived files were trimmed to a
+single note, peak-normalized, faded, and encoded as mono MP3 at 64 kbps:
+
+  violin-d4.mp3   — D4, inhale cue
+  violin-fs4.mp3  — F#4, hold cue
+  violin-a4.mp3   — A4, exhale cue
+
+License: The University of Iowa states that these recordings “may be
+downloaded and used for any projects, without restrictions.”
+  https://theremin.music.uiowa.edu/MIS.html
