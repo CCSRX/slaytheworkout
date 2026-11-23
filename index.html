@@ -7149,21 +7149,14 @@
     let breathLastPhase = -1;
     let breathFinished = false;
     let breathAudio = null;
-    let breathSampleBufs = {};
-    let breathSampleRaw = {};
-    let breathSampleLoops = {};
+    let breathSampleBufs = { in: null, hold: null, out: null };
     let breathSamplesPromise = null;
     let breathSamplesReady = false;
     let breathSamplesFailed = false;
-    let breathPad = null;
-    const BREATH_SAMPLE_SPECS = {
-      g3: { url: "sounds/violin-g3.mp3", loopStart: 0.450, loopEnd: 1.890 },
-      b3: { url: "sounds/violin-b3.mp3", loopStart: 0.380, loopEnd: 2.530 },
-      d4: { url: "sounds/violin-d4.mp3", loopStart: 0.420, loopEnd: 2.730 },
-      e4: { url: "sounds/violin-e4.mp3", loopStart: 0.430, loopEnd: 1.930 },
-      fs4: { url: "sounds/violin-fs4.mp3", loopStart: 0.330, loopEnd: 2.390 },
-      a4: { url: "sounds/violin-a4.mp3", loopStart: 0.620, loopEnd: 2.240 },
-      pizz: { url: "sounds/violin-pizz-fs4.mp3" }
+    const BREATH_SAMPLE_URLS = {
+      in: "sounds/violin-pizz-a4.mp3",
+      hold: "sounds/violin-pizz-fs4.mp3",
+      out: "sounds/violin-pizz-d4.mp3"
     };
 
 
@@ -7279,7 +7272,7 @@
       });
     }
 
-    // v240: a calm bowed-violin soundscape that follows the breath (see sounds/CREDITS.txt).
+    // v241: one soft pizzicato pluck at the start of each box-breathing phase (see sounds/CREDITS.txt).
     function decodeBreathSample(ctx, data) {
       return new Promise(function (resolve, reject) {
         const copy = data.slice(0);
@@ -7299,311 +7292,65 @@
       if (breathSamplesPromise) return breathSamplesPromise;
       const ctx = breathAudio;
       if (!ctx) return Promise.resolve(false);
-      const names = Object.keys(BREATH_SAMPLE_SPECS);
-      breathSamplesPromise = Promise.all(names.map(function (name) {
-        return fetch(BREATH_SAMPLE_SPECS[name].url).then(function (res) {
-          if (!res.ok) throw new Error("sample " + name + " " + res.status);
+      const kinds = ["in", "hold", "out"];
+      breathSamplesPromise = Promise.all(kinds.map(function (kind) {
+        return fetch(BREATH_SAMPLE_URLS[kind]).then(function (res) {
+          if (!res.ok) throw new Error("sample " + kind + " " + res.status);
           return res.arrayBuffer();
         }).then(function (data) {
-          return decodeBreathSample(ctx, data).then(function (buf) {
-            return { name: name, buf: buf };
-          });
+          return decodeBreathSample(ctx, data);
         });
-      })).then(function (rows) {
-        const raw = {};
-        rows.forEach(function (row) { raw[row.name] = row.buf; });
-        breathSampleRaw = raw;
-        breathSampleBufs = {};
-        breathSampleLoops = {};
-        names.forEach(function (name) {
-          const spec = BREATH_SAMPLE_SPECS[name];
-          if (spec.loopStart != null) {
-            const ext = extendBreathLoop(ctx, raw[name], spec.loopStart, spec.loopEnd, 14);
-            breathSampleBufs[name] = ext;
-            breathSampleLoops[name] = ext._loopStart;
-          } else {
-            breathSampleBufs[name] = raw[name];
-          }
-        });
+      })).then(function (bufs) {
+        breathSampleBufs.in = bufs[0];
+        breathSampleBufs.hold = bufs[1];
+        breathSampleBufs.out = bufs[2];
         breathSamplesReady = true;
         breathSamplesFailed = false;
         return true;
       }).catch(function () {
         breathSamplesReady = false;
         breathSamplesFailed = true;
-        breathSampleBufs = {};
-        breathSampleRaw = {};
+        breathSampleBufs.in = breathSampleBufs.hold = breathSampleBufs.out = null;
         return false;
       });
       return breathSamplesPromise;
     }
 
-    function extendBreathLoop(ctx, srcBuf, loopStart, loopEnd, seconds) {
-      const rate = srcBuf.sampleRate;
-      const src = srcBuf.getChannelData(0);
-      let offset = 0;
-      const thresh = 0.00035;
-      while (offset < src.length && Math.abs(src[offset]) < thresh) offset += 1;
-      const ls = Math.max(0, Math.min(src.length - 4, Math.round(loopStart * rate) + offset));
-      const le = Math.max(ls + 4, Math.min(src.length, Math.round(loopEnd * rate) + offset));
-      const bodyLen = le - ls;
-      const xfade = Math.max(32, Math.min(Math.floor(0.2 * rate), Math.floor(bodyLen / 3)));
-      const chunks = [];
-      const first = new Float32Array(le);
-      first.set(src.subarray(0, le));
-      chunks.push(first);
-      let total = le;
-      const target = Math.floor(seconds * rate);
-      while (total < target) {
-        const next = new Float32Array(bodyLen - xfade);
-        next.set(src.subarray(ls + xfade, le));
-        chunks.push({ overlap: true, data: src.subarray(ls, le), xfade: xfade, bodyLen: bodyLen });
-        total += bodyLen - xfade;
-      }
-      const outLen = total;
-      const outBuf = ctx.createBuffer(1, outLen, rate);
-      const out = outBuf.getChannelData(0);
-      out.set(first, 0);
-      let pos = le;
-      while (pos < outLen) {
-        const writeAt = pos - xfade;
-        for (let i = 0; i < bodyLen && writeAt + i < outLen; i++) {
-          const dest = writeAt + i;
-          if (dest < 0) continue;
-          const s = src[ls + i];
-          if (i < xfade) {
-            const t = xfade === 1 ? 1 : i / (xfade - 1);
-            out[dest] = out[dest] * Math.cos(t * Math.PI / 2) + s * Math.sin(t * Math.PI / 2);
-          } else {
-            out[dest] = s;
-          }
-        }
-        pos = writeAt + bodyLen;
-      }
-      outBuf._loopStart = ls / rate;
-      return outBuf;
-    }
-
-    function createBreathIR(ctx, seconds) {
-      const rate = ctx.sampleRate;
-      const n = Math.floor(rate * (seconds || 1.35));
-      const buf = ctx.createBuffer(1, n, rate);
-      let peak = 0;
-      for (let ch = 0; ch < 1; ch++) {
-        const d = buf.getChannelData(ch);
-        let prev = 0;
-        for (let i = 0; i < n; i++) {
-          const t = i / rate;
-          const env = Math.exp(-t * 2.7) * (1 - Math.exp(-t * 16));
-          const noise = Math.random() * 2 - 1;
-          prev = prev * 0.88 + noise * 0.12;
-          const early = (i === Math.floor(0.019 * rate) || i === Math.floor(0.037 * rate) || i === Math.floor(0.058 * rate)) ? (noise * 0.25 * env) : 0;
-          d[i] = prev * env + early;
-          const a = Math.abs(d[i]);
-          if (a > peak) peak = a;
-        }
-      }
-      if (peak > 0) {
-        const g = 0.85 / peak;
-        for (let ch = 0; ch < 1; ch++) {
-          const d = buf.getChannelData(ch);
-          for (let i = 0; i < n; i++) d[i] *= g;
-        }
-      }
-      return buf;
-    }
-
-    const BREATH_MASTER = 0.9;
-    const BREATH_MAKEUP = 5.0;
-    const BREATH_DRONE = { d4: 0.045, a4: 0.035 };
-    const BREATH_PHASE_MIX = [
-      { start: { g3: 0, b3: 0, d4: 0.03, e4: 0.0, fs4: 0.015, a4: 0.02 }, end: { g3: 0, b3: 0, d4: 0.20, e4: 0.14, fs4: 0.15, a4: 0.17 } },
-      { start: { g3: 0, b3: 0, d4: 0.09, e4: 0.13, fs4: 0.07, a4: 0.12 }, end: { g3: 0, b3: 0, d4: 0.07, e4: 0.11, fs4: 0.05, a4: 0.10 } },
-      { start: { g3: 0.11, b3: 0.09, d4: 0.08, e4: 0.03, fs4: 0.08, a4: 0.04 }, end: { g3: 0.06, b3: 0.04, d4: 0.035, e4: 0, fs4: 0.03, a4: 0 } },
-      { start: { g3: 0.04, b3: 0.02, d4: 0.025, e4: 0, fs4: 0, a4: 0 }, end: { g3: 0.03, b3: 0.012, d4: 0.02, e4: 0, fs4: 0, a4: 0 } }
-    ];
-    const BREATH_END_MIX = { g3: 0.16, b3: 0.12, d4: 0.13, e4: 0, fs4: 0.09, a4: 0.05 };
-    const BREATH_VOICE_NAMES = ["g3", "b3", "d4", "e4", "fs4", "a4"];
-
-    function stopBreathGraph(graph, when, fade) {
-      if (!graph) return;
-      const t0 = when;
-      const fadeFor = Math.max(0.08, fade || 0.4);
-      try {
-        graph.master.gain.cancelScheduledValues(t0);
-        graph.master.gain.setValueAtTime(Math.max(0.0001, graph.master.gain.value || 0.4), t0);
-        graph.master.gain.linearRampToValueAtTime(0.0001, t0 + fadeFor);
-      } catch (error) {}
-      const stopAt = t0 + fadeFor + 0.05;
-      Object.keys(graph.voices).forEach(function (name) {
-        const voice = graph.voices[name];
-        try { voice.src.stop(stopAt); } catch (error) {}
-      });
-      graph.stopped = true;
-    }
-
-    function buildBreathGraph(ctx, t0) {
-      const master = ctx.createGain();
-      master.gain.setValueAtTime(0.0001, t0);
-      master.gain.linearRampToValueAtTime(BREATH_MASTER, t0 + 0.18);
-      const dry = ctx.createGain();
-      const wet = ctx.createGain();
-      dry.gain.setValueAtTime(0.78, t0);
-      wet.gain.setValueAtTime(0.32, t0);
-      const conv = ctx.createConvolver();
-      conv.buffer = createBreathIR(ctx, 1.35);
-      const sum = ctx.createGain();
-      sum.gain.setValueAtTime(BREATH_MAKEUP, t0);
-      sum.connect(dry);
-      sum.connect(conv);
-      conv.connect(wet);
-      dry.connect(master);
-      wet.connect(master);
-      master.connect(ctx.destination);
-      const voices = {};
-      BREATH_VOICE_NAMES.forEach(function (name) {
-        const buf = breathSampleBufs[name];
-        if (!buf) return;
-        const src = ctx.createBufferSource();
-        src.buffer = buf;
-        src.loop = true;
-        const spec = BREATH_SAMPLE_SPECS[name];
-        src.loopStart = breathSampleLoops[name] != null ? breathSampleLoops[name] : spec.loopStart;
-        src.loopEnd = buf.duration;
-        const chord = ctx.createGain();
-        chord.gain.setValueAtTime(0.0001, t0);
-        const drone = ctx.createGain();
-        drone.gain.setValueAtTime(0.0001, t0);
-        const droneLevel = BREATH_DRONE[name];
-        if (droneLevel) drone.gain.linearRampToValueAtTime(droneLevel, t0 + 1.0);
-        src.connect(chord);
-        src.connect(drone);
-        chord.connect(sum);
-        drone.connect(sum);
-        src.start(t0);
-        voices[name] = { src: src, chord: chord, drone: drone };
-      });
-      return { ctx: ctx, master: master, dry: dry, wet: wet, conv: conv, sum: sum, voices: voices, stopped: false };
-    }
-
-    function startBreathSoundscape() {
-      if (!breathSoundOn() || !breathSamplesReady) return false;
-      const ctx = breathAudio || ensureBreathAudio();
-      if (!ctx) return false;
-      if (breathPad && breathPad.graph && !breathPad.graph.stopped && breathPad.ctx === ctx) return true;
-      if (breathPad && breathPad.graph && !breathPad.graph.stopped) stopBreathGraph(breathPad.graph, ctx.currentTime, 0.2);
-      const t0 = ctx.currentTime + 0.03;
-      breathPad = { ctx: ctx, graph: buildBreathGraph(ctx, t0) };
-      return true;
-    }
-
-    function enterBreathPhase(phaseIndex, duration) {
-      if (!startBreathSoundscape()) return false;
-      const graph = breathPad.graph;
-      const ctx = graph.ctx;
-      const t0 = ctx.currentTime + 0.02;
-      const dur = Math.max(0.12, duration || breathSideSeconds());
-      const mix = BREATH_PHASE_MIX[phaseIndex] || BREATH_PHASE_MIX[0];
-      BREATH_VOICE_NAMES.forEach(function (name) {
-        const voice = graph.voices[name];
-        if (!voice) return;
-        const start = Math.max(0.0001, mix.start[name] || 0);
-        const end = Math.max(0.0001, mix.end[name] || 0);
-        voice.chord.gain.cancelScheduledValues(t0);
-        voice.chord.gain.setValueAtTime(start, t0);
-        voice.chord.gain.linearRampToValueAtTime(end, t0 + dur);
-      });
-      if (phaseIndex === 3 && breathSampleBufs.pizz) {
-        try {
-          const src = ctx.createBufferSource();
-          const g = ctx.createGain();
-          src.buffer = breathSampleBufs.pizz;
-          g.gain.setValueAtTime(0.0001, t0);
-          g.gain.linearRampToValueAtTime(0.07, t0 + 0.01);
-          g.gain.setValueAtTime(0.07, t0 + Math.max(0.05, src.buffer.duration - 0.04));
-          g.gain.exponentialRampToValueAtTime(0.0001, t0 + src.buffer.duration);
-          src.connect(g);
-          g.connect(graph.sum);
-          src.start(t0);
-        } catch (error) {}
-      }
-      return true;
-    }
-
-    function endBreathSoundscape() {
-      if (!breathPad || !breathPad.graph || breathPad.graph.stopped) {
-        if (breathSamplesReady) {
-          startBreathSoundscape();
-        } else {
-          return false;
-        }
-      }
-      if (!breathPad || !breathPad.graph) return false;
-      const graph = breathPad.graph;
-      const ctx = graph.ctx;
-      const t0 = ctx.currentTime + 0.02;
-      BREATH_VOICE_NAMES.forEach(function (name) {
-        const voice = graph.voices[name];
-        if (!voice) return;
-        const level = Math.max(0.0001, BREATH_END_MIX[name] || 0);
-        voice.chord.gain.cancelScheduledValues(t0);
-        voice.chord.gain.setValueAtTime(Math.max(0.0001, voice.chord.gain.value || level), t0);
-        voice.chord.gain.linearRampToValueAtTime(level, t0 + 0.45);
-        voice.chord.gain.linearRampToValueAtTime(0.0001, t0 + 4.0);
-        if (voice.drone) {
-          voice.drone.gain.cancelScheduledValues(t0);
-          voice.drone.gain.setValueAtTime(Math.max(0.0001, voice.drone.gain.value || 0.0001), t0);
-          voice.drone.gain.linearRampToValueAtTime(0.0001, t0 + 4.0);
-        }
-      });
-      try {
-        graph.master.gain.cancelScheduledValues(t0);
-        graph.master.gain.setValueAtTime(Math.max(0.0001, graph.master.gain.value || BREATH_MASTER), t0);
-        graph.master.gain.setValueAtTime(BREATH_MASTER, t0 + 0.45);
-        graph.master.gain.linearRampToValueAtTime(0.0001, t0 + 4.0);
-      } catch (error) {}
-      Object.keys(graph.voices).forEach(function (name) {
-        try { graph.voices[name].src.stop(t0 + 4.15); } catch (error) {}
-      });
-      graph.stopped = true;
-      return true;
-    }
-
-    function stopBreathSoundscape(fade) {
-      const ctx = (breathPad && breathPad.ctx) || breathAudio;
-      if (!ctx || !breathPad || !breathPad.graph || breathPad.graph.stopped) return;
-      stopBreathGraph(breathPad.graph, ctx.currentTime + 0.01, fade);
-    }
-
-    function syncBreathSoundscape() {
-      if (!breathRunning || !breathSoundOn() || !breathSamplesReady) return;
-      if (!startBreathSoundscape()) return;
-      if (breathLastPhase < 0) return;
-      const phaseMs = breathSideSeconds() * 1000;
-      const elapsed = Math.max(0, performance.now() - breathStartedAt);
-      const tCycle = elapsed % (phaseMs * BREATH_PHASES.length);
-      const remain = Math.max(0.12, (phaseMs - (tCycle % phaseMs)) / 1000);
-      enterBreathPhase(breathLastPhase, remain);
-    }
-
-    function breathPhaseRemainSeconds() {
-      if (!breathRunning || breathStartedAt <= 0) return breathSideSeconds();
-      const phaseMs = breathSideSeconds() * 1000;
-      const elapsed = Math.max(0, performance.now() - breathStartedAt);
-      const tCycle = elapsed % (phaseMs * BREATH_PHASES.length);
-      return Math.max(0.12, (phaseMs - (tCycle % phaseMs)) / 1000);
+    function playBreathPluck(ctx, startAt, buffer, gainVal) {
+      if (!buffer) return;
+      const src = ctx.createBufferSource();
+      const out = ctx.createGain();
+      src.buffer = buffer;
+      const dur = Math.max(0.15, buffer.duration);
+      const level = Math.max(0.0002, gainVal);
+      // Keep the pluck attack and natural decay; only a tiny edge fade to avoid clicks.
+      out.gain.setValueAtTime(0.0001, startAt);
+      out.gain.linearRampToValueAtTime(level, startAt + 0.008);
+      const fadeAt = startAt + Math.max(0.02, dur - 0.03);
+      out.gain.setValueAtTime(level, fadeAt);
+      out.gain.exponentialRampToValueAtTime(0.0001, startAt + dur);
+      src.connect(out);
+      out.connect(ctx.destination);
+      src.start(startAt);
+      src.stop(startAt + dur + 0.05);
     }
 
     function playBreathBeepFallback(ctx, startAt, kind, vol) {
       const cap = Math.max(1.2, breathSideSeconds() - 0.3);
-      if (kind === "in") breathBeep(ctx, startAt, 349.23, 440, Math.min(2.4, cap), vol);
-      else if (kind === "out") breathBeep(ctx, startAt, 440, 329.63, Math.min(2.6, cap), vol);
+      if (kind === "in") breathBeep(ctx, startAt, 440, 440, 0.45, vol);
+      else if (kind === "out") breathBeep(ctx, startAt, 293.66, 293.66, 0.45, vol);
       else if (kind === "hold") breathBeep(ctx, startAt, 369.99, 369.99, 0.45, vol * 0.8);
       else if (kind === "end") {
-        breathBeep(ctx, startAt, 392, 392, 2.0, vol);
-        breathBeep(ctx, startAt + 0.5, 493.88, 493.88, 2.0, vol * 0.9);
-        breathBeep(ctx, startAt + 1.0, 587.33, 587.33, 3.0, vol * 0.85);
+        breathBeep(ctx, startAt, 293.66, 293.66, 0.45, vol);
+        breathBeep(ctx, startAt + 0.45, 369.99, 369.99, 0.45, vol * 0.9);
+        breathBeep(ctx, startAt + 0.9, 440, 440, 0.5, vol * 0.85);
       }
+    }
+
+    function playBreathTone(ctx, startAt, noteKind, gainVal) {
+      const buf = breathSamplesReady ? breathSampleBufs[noteKind] : null;
+      if (buf) playBreathPluck(ctx, startAt, buf, gainVal);
+      else playBreathBeepFallback(ctx, startAt, noteKind, 0.055);
     }
 
     function playBreathCue(kind, phaseIndex) {
@@ -7614,11 +7361,18 @@
       const ctx = breathAudio || ensureBreathAudio();
       if (!ctx) return;
       if (breathSamplesReady) {
-        if (kind === "end") endBreathSoundscape();
-        else enterBreathPhase(typeof phaseIndex === "number" ? phaseIndex : breathLastPhase < 0 ? 0 : breathLastPhase, breathPhaseRemainSeconds());
-      } else if (breathSamplesFailed) {
         const t0 = ctx.currentTime + 0.02;
-        playBreathBeepFallback(ctx, t0, kind, 0.055);
+        const vol = 0.22;
+        if (kind === "in") playBreathTone(ctx, t0, "in", vol);
+        else if (kind === "out") playBreathTone(ctx, t0, "out", vol);
+        else if (kind === "hold") playBreathTone(ctx, t0, "hold", vol);
+        else if (kind === "end") {
+          playBreathTone(ctx, t0, "out", vol);
+          playBreathTone(ctx, t0 + 0.45, "hold", vol * 0.95);
+          playBreathTone(ctx, t0 + 0.9, "in", vol * 0.9);
+        }
+      } else if (breathSamplesFailed) {
+        playBreathBeepFallback(ctx, ctx.currentTime + 0.02, kind, 0.055);
       }
       if (navigator.vibrate) {
         try {
@@ -7627,76 +7381,31 @@
       }
     }
 
-    async function renderBreathSoundscapeOffline(sideSec, totalSec) {
+    async function renderBreathPluckPreview(sideSec, totalSec) {
       const side = sideSec || 4;
-      const total = totalSec || 20;
+      const total = totalSec || 17;
       const rate = 44100;
       const ctx = new OfflineAudioContext(1, Math.ceil(total * rate), rate);
-      const names = Object.keys(BREATH_SAMPLE_SPECS);
-      const raw = {};
-      for (let i = 0; i < names.length; i++) {
-        const name = names[i];
-        const res = await fetch(BREATH_SAMPLE_SPECS[name].url);
-        if (!res.ok) throw new Error("preview sample " + name);
-        const buf = await decodeBreathSample(ctx, await res.arrayBuffer());
-        raw[name] = buf;
+      const kinds = ["in", "hold", "out"];
+      const bufs = {};
+      for (let i = 0; i < kinds.length; i++) {
+        const res = await fetch(BREATH_SAMPLE_URLS[kinds[i]]);
+        if (!res.ok) throw new Error("preview sample " + kinds[i]);
+        bufs[kinds[i]] = await decodeBreathSample(ctx, await res.arrayBuffer());
       }
-      const savedBufs = breathSampleBufs;
-      const savedPad = breathPad;
       const savedReady = breathSamplesReady;
-      const savedLoops = breathSampleLoops;
+      const savedBufs = breathSampleBufs;
       try {
-        breathSampleBufs = {};
-        breathSampleLoops = {};
-        names.forEach(function (name) {
-          const spec = BREATH_SAMPLE_SPECS[name];
-          if (spec.loopStart != null) {
-            const ext = extendBreathLoop(ctx, raw[name], spec.loopStart, spec.loopEnd, 14);
-            breathSampleBufs[name] = ext;
-            breathSampleLoops[name] = ext._loopStart;
-          } else {
-            breathSampleBufs[name] = raw[name];
-          }
-        });
+        breathSampleBufs = bufs;
         breathSamplesReady = true;
-        const t0 = 0.05;
-        const graph = buildBreathGraph(ctx, t0);
-        breathPad = { ctx: ctx, graph: graph };
-        let t = t0;
-        let phase = 0;
-        while (t < total - 0.01) {
-          const dur = Math.min(side, total - t);
-          const mix = BREATH_PHASE_MIX[phase];
-          BREATH_VOICE_NAMES.forEach(function (name) {
-            const voice = graph.voices[name];
-            if (!voice) return;
-            const start = Math.max(0.0001, mix.start[name] || 0);
-            const end = Math.max(0.0001, mix.end[name] || 0);
-            voice.chord.gain.setValueAtTime(start, t);
-            voice.chord.gain.linearRampToValueAtTime(end, t + dur);
-          });
-          if (phase === 3 && breathSampleBufs.pizz) {
-            const src = ctx.createBufferSource();
-            const g = ctx.createGain();
-            src.buffer = breathSampleBufs.pizz;
-            g.gain.setValueAtTime(0.0001, t);
-            g.gain.linearRampToValueAtTime(0.07, t + 0.01);
-            g.gain.setValueAtTime(0.07, t + Math.max(0.05, src.buffer.duration - 0.04));
-            g.gain.exponentialRampToValueAtTime(0.0001, t + src.buffer.duration);
-            src.connect(g);
-            g.connect(graph.sum);
-            src.start(t);
-          }
-          t += dur;
-          phase = (phase + 1) % 4;
+        const order = ["in", "hold", "out", "hold"];
+        for (let p = 0; p < 4; p++) {
+          playBreathPluck(ctx, 0.05 + p * side, bufs[order[p]], 0.22);
         }
-        const rendered = await ctx.startRendering();
-        return rendered;
+        return await ctx.startRendering();
       } finally {
         breathSampleBufs = savedBufs;
-        breathPad = savedPad;
         breathSamplesReady = savedReady;
-        breathSampleLoops = savedLoops;
       }
     }
     function breathPoint(phaseIndex, t, size) {
@@ -7787,16 +7496,7 @@
 
     function toggleBreathSound() {
       state.breathSound = !breathSoundOn();
-      if (state.breathSound) {
-        ensureBreathAudio();
-        if (breathRunning) {
-          loadBreathSamples().then(function (ok) {
-            if (ok && breathRunning && breathSoundOn()) syncBreathSoundscape();
-          });
-        }
-      } else {
-        stopBreathSoundscape(0.4);
-      }
+      if (state.breathSound) ensureBreathAudio();
       saveState();
       renderBreathSettings();
     }
@@ -7816,7 +7516,6 @@
       updateBreathRemain(0, false, breathFinished);
       renderBreathSettings();
       if (breathFinished) playBreathCue("end");
-      else stopBreathSoundscape(0.5);
     }
 
     function tickBreathing(now) {
@@ -7845,12 +7544,7 @@
 
     function startBreathing() {
       if (breathRunning) return;
-      if (breathSoundOn()) {
-        ensureBreathAudio();
-        loadBreathSamples().then(function (ok) {
-          if (ok && breathRunning && breathSoundOn()) syncBreathSoundscape();
-        });
-      }
+      if (breathSoundOn()) ensureBreathAudio();
       breathRunning = true;
       breathFinished = false;
       breathStartedAt = performance.now();

@@ -1,5 +1,5 @@
-Box breathing soundscape
-========================
+Box breathing pizzicato cues
+============================
 
 Source: University of Iowa Musical Instrument Samples (MIS), 2012 violin recordings.
   https://theremin.music.uiowa.edu/MIS.html
@@ -9,23 +9,15 @@ Instrument: Violin (Nicolai Tambovsky, 1998), performed by Leonid Iogansen,
 recorded 11 December 2011 in the anechoic chamber at the University of Iowa
 (Earthworks QTC40, 16-bit 44.1 kHz mono).
 
-Original files:
-  Violin.arco.pp.sulG.G3B3.mono.aif   (G3, B3)
-  Violin.arco.pp.sulD.D4B4.mono.aif   (D4, F#4)
-  Violin.arco.pp.sulG.C4B4.mono.aif   (E4)
-  Violin.arco.pp.sulA.A4B5.mono.aif   (A4)
-  Violin.pizz.pp.sulG.C4A4.mono.aif   (F#4 pizzicato)
+Original file:
+  Violin.pizz.pp.sulG.C4A4.mono.aif
 
-These are piano (pp) notes, arco unless noted. Derived files were trimmed to a
-single note, high-pass filtered, level-matched, and encoded as mono MP3 at 64 kbps:
+These are piano (pp) pizzicato (plucked) notes. Derived files were trimmed to a
+single pluck, peak-normalized, faded, and encoded as mono MP3 at 64 kbps:
 
-  violin-g3.mp3        — G3 arco (exhale / final chord root, low warmth)
-  violin-b3.mp3        — B3 arco (Gmaj7 third)
-  violin-d4.mp3        — D4 arco (drone and both chords)
-  violin-e4.mp3        — E4 arco (Dadd9 ninth / inhale shimmer)
-  violin-fs4.mp3       — F#4 arco (both chords)
-  violin-a4.mp3        — A4 arco (drone and Dadd9)
-  violin-pizz-fs4.mp3  — F#4 pizzicato (very soft tap at the start of each new cycle)
+  violin-pizz-a4.mp3   — A4, inhale cue (higher)
+  violin-pizz-fs4.mp3  — F#4, hold cue (middle)
+  violin-pizz-d4.mp3   — D4, exhale cue (lower)
 
 License: The University of Iowa states that these recordings “may be
 downloaded and used for any projects, without restrictions.”
