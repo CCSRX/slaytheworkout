@@ -7260,6 +7260,51 @@
       });
     }
 
+    // v237: soft violin-like box-breathing tones (saw + body through a low-pass, slow bow, gentle vibrato).
+    function breathViolin(ctx, startAt, freq, dur, gainVal) {
+      const attack = 0.32;
+      const release = Math.max(1.0, dur);
+      const end = startAt + attack + release;
+      const out = ctx.createGain();
+      const filter = ctx.createBiquadFilter();
+      filter.type = "lowpass";
+      filter.frequency.setValueAtTime(800, startAt);
+      filter.frequency.linearRampToValueAtTime(1600, startAt + attack + 0.25);
+      filter.Q.setValueAtTime(0.7, startAt);
+      out.gain.setValueAtTime(0.0001, startAt);
+      out.gain.exponentialRampToValueAtTime(Math.max(0.0002, gainVal), startAt + attack);
+      const holdAt = startAt + Math.max(attack + 0.2, Math.min(dur * 0.5, release * 0.45));
+      out.gain.setValueAtTime(Math.max(0.0002, gainVal), holdAt);
+      out.gain.exponentialRampToValueAtTime(0.0001, end);
+      filter.connect(out);
+      out.connect(ctx.destination);
+      const lfo = ctx.createOscillator();
+      const lfoGain = ctx.createGain();
+      lfo.type = "sine";
+      lfo.frequency.setValueAtTime(5, startAt);
+      lfoGain.gain.setValueAtTime(0, startAt);
+      lfoGain.gain.linearRampToValueAtTime(6, startAt + attack);
+      lfo.connect(lfoGain);
+      [
+        { type: "sawtooth", level: 0.55, ratio: 1 },
+        { type: "triangle", level: 0.4, ratio: 1 },
+        { type: "sine", level: 0.12, ratio: 2 }
+      ].forEach(function (layer) {
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        osc.type = layer.type;
+        osc.frequency.setValueAtTime(freq * layer.ratio, startAt);
+        lfoGain.connect(osc.detune);
+        g.gain.setValueAtTime(layer.level, startAt);
+        osc.connect(g);
+        g.connect(filter);
+        osc.start(startAt);
+        osc.stop(end + 0.06);
+      });
+      lfo.start(startAt);
+      lfo.stop(end + 0.06);
+    }
+
     function playBreathCue(kind) {
       if (typeof window.__onBreathCue === "function") {
         try { window.__onBreathCue(kind); } catch (error) {}
@@ -7268,15 +7313,15 @@
       const ctx = breathAudio || ensureBreathAudio();
       if (ctx) {
         const t0 = ctx.currentTime + 0.02;
-        const vol = 0.055;
+        const vol = 0.032;
         const cap = Math.max(1.2, breathSideSeconds() - 0.3);
-        if (kind === "in") breathBeep(ctx, t0, 349.23, 440, Math.min(2.4, cap), vol);
-        else if (kind === "out") breathBeep(ctx, t0, 440, 329.63, Math.min(2.6, cap), vol);
-        else if (kind === "hold") breathBeep(ctx, t0, 392, 392, Math.min(1.8, cap), vol * 0.8);
+        if (kind === "in") breathViolin(ctx, t0, 293.66, Math.min(2.4, cap), vol);
+        else if (kind === "out") breathViolin(ctx, t0, 440, Math.min(2.6, cap), vol);
+        else if (kind === "hold") breathViolin(ctx, t0, 369.99, Math.min(1.8, cap), vol * 0.85);
         else if (kind === "end") {
-          breathBeep(ctx, t0, 392, 392, 2.0, vol);
-          breathBeep(ctx, t0 + 0.5, 493.88, 493.88, 2.0, vol * 0.9);
-          breathBeep(ctx, t0 + 1.0, 587.33, 587.33, 3.0, vol * 0.85);
+          breathViolin(ctx, t0, 293.66, 2.0, vol);
+          breathViolin(ctx, t0 + 0.45, 369.99, 2.0, vol * 0.9);
+          breathViolin(ctx, t0 + 0.9, 440, 2.6, vol * 0.85);
         }
       }
       if (navigator.vibrate) {
