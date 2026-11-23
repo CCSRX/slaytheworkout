@@ -1289,6 +1289,11 @@
     .breath-stepper output { min-width: 64px; text-align: center; font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; }
     .breath-sound { width: 100%; min-height: 48px; border-radius: 14px; background: var(--card-2); border: 1px solid var(--line); color: var(--text); font-size: 16px; font-weight: 800; touch-action: manipulation; }
     .breath-sound[aria-pressed="true"] { background: var(--acc); color: var(--acc-ink); border-color: var(--acc); }
+    .breath-sound-row { display: flex; align-items: center; gap: 10px; width: 100%; min-width: 0; }
+    .breath-sound-row .breath-sound { width: auto; flex: 0 0 auto; min-width: 0; padding: 0 14px; }
+    .breath-volume { flex: 1; display: flex; align-items: center; gap: 8px; min-width: 0; }
+    .breath-volume input[type="range"] { flex: 1; min-width: 0; width: 100%; height: 44px; accent-color: var(--acc); }
+    .breath-volume output { flex: 0 0 3.2em; min-width: 3.2em; text-align: right; font-size: 13px; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--mute); }
     .breathing-screen header { margin-bottom: 8px; }
     .breath-mode { display: flex; gap: 8px; margin: 10px 0 0; }
     .breath-mode button { flex: 1; min-height: 42px; padding: 0 10px; border-radius: 999px; border: 2px solid var(--line); background: var(--card-2); color: var(--mute); font-weight: 800; font-size: 14px; line-height: 1.15; touch-action: manipulation; }
@@ -1611,7 +1616,13 @@
             <button type="button" id="breathSidePlus" aria-label="Longer sides">+</button>
           </div>
         </div>
-        <button type="button" class="breath-sound" id="breathSoundBtn" aria-pressed="true">Sound on</button>
+        <div class="breath-sound-row">
+          <button type="button" class="breath-sound" id="breathSoundBtn" aria-pressed="true">Sound on</button>
+          <div class="breath-volume">
+            <input type="range" id="breathVolume" min="0" max="100" value="60" step="1" aria-valuemin="0" aria-valuemax="100" aria-valuenow="60" aria-label="Breathing sound volume">
+            <output id="breathVolumeValue" for="breathVolume">60%</output>
+          </div>
+        </div>
       </div>
       <div class="breath-settings" id="slayerSettingsPanel" hidden>
         <div class="breath-setting">
@@ -1638,7 +1649,13 @@
             <button type="button" id="slayerRecoveryPlus" aria-label="Longer recovery">+</button>
           </div>
         </div>
-        <button type="button" class="breath-sound" id="slayerSoundBtn" aria-pressed="true">Sound on</button>
+        <div class="breath-sound-row">
+          <button type="button" class="breath-sound" id="slayerSoundBtn" aria-pressed="true">Sound on</button>
+          <div class="breath-volume">
+            <input type="range" id="slayerVolume" min="0" max="100" value="60" step="1" aria-valuemin="0" aria-valuemax="100" aria-valuenow="60" aria-label="Inner Slayer sound volume">
+            <output id="slayerVolumeValue" for="slayerVolume">60%</output>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -2393,6 +2410,7 @@
         breathMinutes: 2,
         breathSideSeconds: 4,
         breathSound: true,
+        breathVolume: 60,
         breathMode: "box",
         slayerBreaths: 30,
         slayerRounds: 3,
@@ -2503,6 +2521,7 @@
           breathMinutes: normalizeBreathMinutes(parsed.breathMinutes),
           breathSideSeconds: normalizeBreathSideSeconds(parsed.breathSideSeconds),
           breathSound: normalizeBreathSound(parsed.breathSound),
+          breathVolume: normalizeBreathVolume(parsed.breathVolume),
           breathMode: normalizeBreathMode(parsed.breathMode),
           slayerBreaths: normalizeSlayerBreaths(parsed.slayerBreaths),
           slayerRounds: normalizeSlayerRounds(parsed.slayerRounds),
@@ -2620,6 +2639,7 @@
         breathMinutes: normalizeBreathMinutes(state.breathMinutes),
         breathSideSeconds: normalizeBreathSideSeconds(state.breathSideSeconds),
         breathSound: normalizeBreathSound(state.breathSound),
+        breathVolume: normalizeBreathVolume(state.breathVolume),
         breathMode: normalizeBreathMode(state.breathMode),
         slayerBreaths: normalizeSlayerBreaths(state.slayerBreaths),
         slayerRounds: normalizeSlayerRounds(state.slayerRounds),
@@ -2734,6 +2754,7 @@
       state.breathMinutes = normalizeBreathMinutes(payload.breathMinutes);
       state.breathSideSeconds = normalizeBreathSideSeconds(payload.breathSideSeconds);
       state.breathSound = normalizeBreathSound(payload.breathSound);
+      state.breathVolume = normalizeBreathVolume(payload.breathVolume);
       state.breathMode = normalizeBreathMode(payload.breathMode);
       state.slayerBreaths = normalizeSlayerBreaths(payload.slayerBreaths);
       state.slayerRounds = normalizeSlayerRounds(payload.slayerRounds);
@@ -7154,9 +7175,9 @@
     let breathSamplesReady = false;
     let breathSamplesFailed = false;
     const BREATH_SAMPLE_URLS = {
-      in: "sounds/violin-pizz-a4.mp3",
-      hold: "sounds/violin-pizz-fs4.mp3",
-      out: "sounds/violin-pizz-d4.mp3"
+      in: "sounds/marimba-a3.mp3",
+      hold: "sounds/marimba-fs3.mp3",
+      out: "sounds/marimba-d3.mp3"
     };
 
 
@@ -7177,6 +7198,12 @@
       return true;
     }
 
+    function normalizeBreathVolume(value) {
+      const n = Math.round(Number(value));
+      if (!Number.isFinite(n)) return 60;
+      return Math.min(100, Math.max(0, n));
+    }
+
     function breathSideSeconds() {
       return normalizeBreathSideSeconds(state && state.breathSideSeconds);
     }
@@ -7192,6 +7219,57 @@
 
     function breathSoundOn() {
       return normalizeBreathSound(state && state.breathSound);
+    }
+
+    function breathVolume() {
+      return normalizeBreathVolume(state && state.breathVolume);
+    }
+
+    function breathVolumeGain() {
+      return breathVolume() / 100;
+    }
+
+    function renderBreathVolumeControls() {
+      const vol = breathVolume();
+      ["breathVolume", "slayerVolume"].forEach(function (id) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (String(el.value) !== String(vol)) el.value = String(vol);
+        el.setAttribute("aria-valuenow", String(vol));
+      });
+      ["breathVolumeValue", "slayerVolumeValue"].forEach(function (id) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = vol + "%";
+      });
+    }
+
+    let breathVolumePreviewAt = 0;
+    function previewBreathVolume() {
+      if (!breathSoundOn()) return;
+      const now = (typeof performance !== "undefined" && performance.now) ? performance.now() : Date.now();
+      if (now - breathVolumePreviewAt < 110) return;
+      breathVolumePreviewAt = now;
+      const ctx = breathAudio || ensureBreathAudio();
+      if (!ctx) return;
+      const play = function () {
+        if (breathVolumeGain() <= 0) return;
+        const t0 = ctx.currentTime + 0.02;
+        const vol = 0.28 * breathVolumeGain();
+        if (breathSamplesReady) playBreathTone(ctx, t0, "hold", vol);
+        else if (breathSamplesFailed) playBreathBeepFallback(ctx, t0, "hold", 0.055 * (breathVolumeGain() / 0.6));
+      };
+      if (breathSamplesReady || breathSamplesFailed) play();
+      else loadBreathSamples().then(play);
+    }
+
+    function setBreathVolume(value, preview) {
+      const next = normalizeBreathVolume(value);
+      if (next !== breathVolume()) {
+        state.breathVolume = next;
+        saveState();
+      }
+      renderBreathVolumeControls();
+      if (preview) previewBreathVolume();
     }
 
     function breathReducedMotion() {
@@ -7317,19 +7395,24 @@
     }
 
     function playBreathPluck(ctx, startAt, buffer, gainVal) {
-      if (!buffer) return;
+      if (!buffer || !(gainVal > 0)) return;
       const src = ctx.createBufferSource();
+      const filter = ctx.createBiquadFilter();
       const out = ctx.createGain();
       src.buffer = buffer;
+      filter.type = "lowpass";
+      filter.frequency.value = 2500;
+      filter.Q.value = 0.7;
       const dur = Math.max(0.15, buffer.duration);
       const level = Math.max(0.0002, gainVal);
-      // Keep the pluck attack and natural decay; only a tiny edge fade to avoid clicks.
+      // Soft mallet: 12 ms fade-in, gentle lowpass, natural decay.
       out.gain.setValueAtTime(0.0001, startAt);
-      out.gain.linearRampToValueAtTime(level, startAt + 0.008);
-      const fadeAt = startAt + Math.max(0.02, dur - 0.03);
+      out.gain.linearRampToValueAtTime(level, startAt + 0.012);
+      const fadeAt = startAt + Math.max(0.04, dur - 0.06);
       out.gain.setValueAtTime(level, fadeAt);
       out.gain.exponentialRampToValueAtTime(0.0001, startAt + dur);
-      src.connect(out);
+      src.connect(filter);
+      filter.connect(out);
       out.connect(ctx.destination);
       src.start(startAt);
       src.stop(startAt + dur + 0.05);
@@ -7350,7 +7433,7 @@
     function playBreathTone(ctx, startAt, noteKind, gainVal) {
       const buf = breathSamplesReady ? breathSampleBufs[noteKind] : null;
       if (buf) playBreathPluck(ctx, startAt, buf, gainVal);
-      else playBreathBeepFallback(ctx, startAt, noteKind, 0.055);
+      else playBreathBeepFallback(ctx, startAt, noteKind, 0.055 * (breathVolumeGain() / 0.6));
     }
 
     function playBreathCue(kind, phaseIndex) {
@@ -7362,7 +7445,7 @@
       if (!ctx) return;
       if (breathSamplesReady) {
         const t0 = ctx.currentTime + 0.02;
-        const vol = 0.22;
+        const vol = 0.28 * breathVolumeGain();
         if (kind === "in") playBreathTone(ctx, t0, "in", vol);
         else if (kind === "out") playBreathTone(ctx, t0, "out", vol);
         else if (kind === "hold") playBreathTone(ctx, t0, "hold", vol);
@@ -7372,7 +7455,7 @@
           playBreathTone(ctx, t0 + 0.9, "in", vol * 0.9);
         }
       } else if (breathSamplesFailed) {
-        playBreathBeepFallback(ctx, ctx.currentTime + 0.02, kind, 0.055);
+        playBreathBeepFallback(ctx, ctx.currentTime + 0.02, kind, 0.055 * (breathVolumeGain() / 0.6));
       }
       if (navigator.vibrate) {
         try {
@@ -7400,7 +7483,7 @@
         breathSamplesReady = true;
         const order = ["in", "hold", "out", "hold"];
         for (let p = 0; p < 4; p++) {
-          playBreathPluck(ctx, 0.05 + p * side, bufs[order[p]], 0.22);
+          playBreathPluck(ctx, 0.05 + p * side, bufs[order[p]], 0.28 * 0.6);
         }
         return await ctx.startRendering();
       } finally {
@@ -7468,6 +7551,7 @@
         soundBtn.textContent = on ? "Sound on" : "Sound off";
         soundBtn.setAttribute("aria-pressed", on ? "true" : "false");
       }
+      renderBreathVolumeControls();
       if (!running) {
         setBreathChrome(breathFinished ? "Done" : "Ready", side, false);
         updateBreathRemain(breathMinutes() * 60 * 1000, false, breathFinished);
@@ -7676,8 +7760,10 @@
       const ctx = breathAudio || ensureBreathAudio();
       if (ctx) {
         const t0 = ctx.currentTime + 0.02;
-        const vol = 0.055;
-        if (kind === "in") breathBeep(ctx, t0, 349.23, 440, 0.5, vol * 0.35);
+        const vol = 0.055 * (breathVolumeGain() / 0.6);
+        if (vol <= 0) {
+          // Volume at 0 stays silent; vibration still runs below.
+        } else if (kind === "in") breathBeep(ctx, t0, 349.23, 440, 0.5, vol * 0.35);
         else if (kind === "out") breathBeep(ctx, t0, 440, 329.63, 0.5, vol * 0.3);
         else if (kind === "hold") breathBeep(ctx, t0, 262, 330, 2.0, vol);
         else if (kind === "recover") breathBeep(ctx, t0, 392, 523.25, 2.2, vol);
@@ -7908,6 +7994,7 @@
         soundBtn.textContent = on ? "Sound on" : "Sound off";
         soundBtn.setAttribute("aria-pressed", on ? "true" : "false");
       }
+      renderBreathVolumeControls();
       if (!slayerRunning && slayerPhase !== "done") renderSlayerChrome();
       else if (slayerPhase === "done") renderSlayerChrome();
     }
@@ -10668,6 +10755,8 @@
     document.getElementById("breathSideMinus").addEventListener("click", function () { changeBreathSideSeconds(-1); });
     document.getElementById("breathSidePlus").addEventListener("click", function () { changeBreathSideSeconds(1); });
     document.getElementById("breathSoundBtn").addEventListener("click", toggleBreathSound);
+    document.getElementById("breathVolume").addEventListener("input", function () { setBreathVolume(this.value, true); });
+    document.getElementById("breathVolume").addEventListener("change", function () { setBreathVolume(this.value, false); });
     document.getElementById("breathModeBox").addEventListener("click", function () { setBreathMode("box"); });
     document.getElementById("breathModeSlayer").addEventListener("click", function () { setBreathMode("slayer"); });
     document.getElementById("slayerToggle").addEventListener("click", toggleSlayer);
@@ -10679,6 +10768,8 @@
     document.getElementById("slayerRecoveryMinus").addEventListener("click", function () { changeSlayerRecovery(-1); });
     document.getElementById("slayerRecoveryPlus").addEventListener("click", function () { changeSlayerRecovery(1); });
     document.getElementById("slayerSoundBtn").addEventListener("click", toggleSlayerSound);
+    document.getElementById("slayerVolume").addEventListener("input", function () { setBreathVolume(this.value, true); });
+    document.getElementById("slayerVolume").addEventListener("change", function () { setBreathVolume(this.value, false); });
     document.getElementById("exercises").addEventListener("touchstart", function (event) {
       const setDot = event.target.closest("[data-action='select-set']");
       if (!setDot) {

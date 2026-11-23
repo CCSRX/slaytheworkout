@@ -1,23 +1,25 @@
-Box breathing pizzicato cues
-============================
+Box breathing marimba cues
+==========================
 
-Source: University of Iowa Musical Instrument Samples (MIS), 2012 violin recordings.
+Source: University of Iowa Musical Instrument Samples (MIS).
   https://theremin.music.uiowa.edu/MIS.html
-  https://theremin.music.uiowa.edu/MISviolin2012.html
+  https://theremin.music.uiowa.edu/Mismarimba.html
 
-Instrument: Violin (Nicolai Tambovsky, 1998), performed by Leonid Iogansen,
-recorded 11 December 2011 in the anechoic chamber at the University of Iowa
-(Earthworks QTC40, 16-bit 44.1 kHz mono).
+Instrument: Marimba, yarn mallets, pianissimo (pp), performed by
+Andrew Thierauf, recorded 20 March 2013 in the anechoic chamber at
+the University of Iowa.
 
 Original file:
-  Violin.pizz.pp.sulG.C4A4.mono.aif
+  Marimba.yarn.pp.C3B3.aif
+  https://theremin.music.uiowa.edu/sound%20files/MIS/Percussion/Marimba/
 
-These are piano (pp) pizzicato (plucked) notes. Derived files were trimmed to a
-single pluck, peak-normalized, faded, and encoded as mono MP3 at 64 kbps:
+These are soft yarn-mallet notes in a low, warm register. Derived files
+were trimmed to a single note, gently low-passed around 2.5 kHz,
+peak-normalized, faded, and encoded as mono MP3 at 64 kbps:
 
-  violin-pizz-a4.mp3   — A4, inhale cue (higher)
-  violin-pizz-fs4.mp3  — F#4, hold cue (middle)
-  violin-pizz-d4.mp3   — D4, exhale cue (lower)
+  marimba-a3.mp3    — A3, inhale cue (higher)
+  marimba-fs3.mp3   — F#3, hold cue (middle)
+  marimba-d3.mp3    — D3, exhale cue (lower)
 
 License: The University of Iowa states that these recordings “may be
 downloaded and used for any projects, without restrictions.”
