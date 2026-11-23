@@ -7154,7 +7154,7 @@
     let breathSamplesReady = false;
     const BREATH_SAMPLE_URLS = {
       in: "sounds/violin-d4.mp3",
-      hold: "sounds/violin-fs4.mp3",
+      hold: "sounds/violin-pizz-fs4.mp3",
       out: "sounds/violin-a4.mp3"
     };
 
@@ -7271,7 +7271,7 @@
       });
     }
 
-    // v238: real recorded violin notes for box breathing (see sounds/CREDITS.txt).
+    // v238/v239: real recorded violin notes for box breathing (see sounds/CREDITS.txt). Hold is pizzicato.
     function decodeBreathSample(ctx, data) {
       return new Promise(function (resolve, reject) {
         const copy = data.slice(0);
@@ -7312,19 +7312,29 @@
       return breathSamplesPromise;
     }
 
-    function playBreathSample(ctx, startAt, buffer, gainVal) {
+    function playBreathSample(ctx, startAt, buffer, gainVal, style) {
       if (!buffer) return;
       const src = ctx.createBufferSource();
       const out = ctx.createGain();
       src.buffer = buffer;
       const dur = Math.max(0.2, buffer.duration);
-      const attack = 0.15;
-      const fade = 0.6;
-      out.gain.setValueAtTime(0.0001, startAt);
-      out.gain.exponentialRampToValueAtTime(Math.max(0.0002, gainVal), startAt + attack);
-      const fadeAt = startAt + Math.max(attack, dur - fade);
-      out.gain.setValueAtTime(Math.max(0.0002, gainVal), fadeAt);
-      out.gain.exponentialRampToValueAtTime(0.0001, startAt + dur);
+      const level = Math.max(0.0002, gainVal);
+      if (style === "pizz") {
+        // Keep the pluck attack and natural decay; only a tiny edge fade to avoid clicks.
+        out.gain.setValueAtTime(0.0001, startAt);
+        out.gain.linearRampToValueAtTime(level, startAt + 0.008);
+        const fadeAt = startAt + Math.max(0.02, dur - 0.03);
+        out.gain.setValueAtTime(level, fadeAt);
+        out.gain.exponentialRampToValueAtTime(0.0001, startAt + dur);
+      } else {
+        const attack = 0.15;
+        const fade = 0.6;
+        out.gain.setValueAtTime(0.0001, startAt);
+        out.gain.exponentialRampToValueAtTime(level, startAt + attack);
+        const fadeAt = startAt + Math.max(attack, dur - fade);
+        out.gain.setValueAtTime(level, fadeAt);
+        out.gain.exponentialRampToValueAtTime(0.0001, startAt + dur);
+      }
       src.connect(out);
       out.connect(ctx.destination);
       src.start(startAt);
@@ -7335,7 +7345,7 @@
       const cap = Math.max(1.2, breathSideSeconds() - 0.3);
       if (kind === "in") breathBeep(ctx, startAt, 349.23, 440, Math.min(2.4, cap), vol);
       else if (kind === "out") breathBeep(ctx, startAt, 440, 329.63, Math.min(2.6, cap), vol);
-      else if (kind === "hold") breathBeep(ctx, startAt, 392, 392, Math.min(1.8, cap), vol * 0.8);
+      else if (kind === "hold") breathBeep(ctx, startAt, 369.99, 369.99, 0.45, vol * 0.8);
       else if (kind === "end") {
         breathBeep(ctx, startAt, 392, 392, 2.0, vol);
         breathBeep(ctx, startAt + 0.5, 493.88, 493.88, 2.0, vol * 0.9);
@@ -7345,7 +7355,7 @@
 
     function playBreathTone(ctx, startAt, noteKind, gainVal) {
       const buf = breathSamplesReady ? breathSampleBufs[noteKind] : null;
-      if (buf) playBreathSample(ctx, startAt, buf, gainVal);
+      if (buf) playBreathSample(ctx, startAt, buf, gainVal, noteKind === "hold" ? "pizz" : "bow");
       else playBreathBeepFallback(ctx, startAt, noteKind, 0.055);
     }
 
