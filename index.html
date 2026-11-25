@@ -1030,14 +1030,27 @@
     .exercise-card .exercise-btn:active { background: transparent; }
     .exercise-card .exercise-btn h2 { margin: 0; padding: 0; font-size: 19px; font-weight: 800; line-height: 1.2; overflow-wrap: anywhere; }
     .exercise-card .exercise-btn .scheme { margin: 3px 0 8px; font-size: 13px; font-weight: 600; line-height: 1.3; color: var(--mute); }
-    .ex-title-row { display: flex; align-items: center; gap: 9px; min-width: 0; }
-    .ex-title-text { flex: 1; min-width: 0; }
-    .ex-title-text .scheme { margin-bottom: 8px; }
-    .ex-muscle { flex: 0 0 32px; width: 32px; height: 32px; color: var(--mute); }
-    .ex-muscle svg { width: 32px; height: 32px; display: block; overflow: visible; }
-    .ex-muscle .ex-muscle-line { fill: none; stroke: currentColor; stroke-width: 1.45; stroke-linecap: round; stroke-linejoin: round; }
-    .ex-muscle .ex-muscle-hit { fill: var(--acc); fill-opacity: 0.32; stroke: none; }
-    .exercise-row.is-done .ex-muscle { opacity: 0.75; }
+    .ex-card-body { display: flex; align-items: center; gap: 8px; min-width: 0; }
+    .ex-card-copy { flex: 1; min-width: 0; }
+    .ex-muscle { flex: 0 0 48px; width: 48px; height: 84px; color: var(--mute); pointer-events: none; align-self: center; }
+    .ex-muscle svg { width: 48px; height: 84px; display: block; overflow: visible; }
+    .ex-muscle-body { fill: rgba(154, 163, 178, 0.07); stroke: currentColor; stroke-width: 1.55; stroke-linejoin: round; stroke-linecap: round; }
+    .ex-muscle-spine { fill: none; stroke: currentColor; stroke-width: 1; stroke-linecap: round; opacity: 0.32; }
+    .ex-muscle-hit.secondary { fill: var(--acc); fill-opacity: 0.22; stroke: none; }
+    .ex-muscle-glow { fill: var(--acc); fill-opacity: 0.45; filter: blur(1.8px); stroke: none; }
+    .ex-muscle-hit.primary { fill: var(--acc); fill-opacity: 0.92; stroke: none; filter: drop-shadow(0 0 2.5px var(--acc)); }
+    .exercise-row.is-next .ex-muscle-hit.primary { animation: ex-muscle-pulse 2.6s ease-in-out infinite; }
+    .exercise-row.is-next .ex-muscle-glow { animation: ex-muscle-pulse-glow 2.6s ease-in-out infinite; }
+    @keyframes ex-muscle-pulse { 0%, 100% { fill-opacity: 0.82; } 50% { fill-opacity: 1; } }
+    @keyframes ex-muscle-pulse-glow { 0%, 100% { fill-opacity: 0.32; } 50% { fill-opacity: 0.62; } }
+    @media (prefers-reduced-motion: reduce) {
+      .exercise-row.is-next .ex-muscle-hit.primary,
+      .exercise-row.is-next .ex-muscle-glow { animation: none; }
+    }
+    .exercise-row.is-done .ex-muscle { opacity: 0.4; }
+    .exercise-row.is-done .ex-muscle-hit.primary,
+    .exercise-row.is-done .ex-muscle-glow { filter: none; animation: none; }
+    .exercise-row.is-done .ex-muscle-glow { fill-opacity: 0.16; }
     .ex-last { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 8px; margin: 0 0 7px; min-width: 0; }
     .ex-last-chip {
       display: inline-block;
@@ -5083,30 +5096,82 @@
       return (exercise && EXERCISE_MUSCLE[exercise.id]) || "";
     }
 
-    function muscleIconHtml(muscleId) {
-      if (!muscleId) return "";
-      const icons = {
-        chest: { line: "M14 5V3h4v2c3 0 6 2 7 5l1 3c-.5 2-2 3-3 4l-1 10c0 2-2 2.5-6 2.5s-6-.5-6-2.5l-1-10c-1-1-2.5-2-3-4l1-3c1-3 4-5 7-5z", hit: "M9.2 11.2c2.3-1.4 5.3-.4 6.5 2.8v3c-2.2 1.8-5.2 1.2-6.5-.8zM22.8 11.2c-2.3-1.4-5.3-.4-6.5 2.8v3c2.2 1.8 5.2 1.2 6.5-.8z" },
-        shoulders: { line: "M14 5V3h4v2c3 0 6 2 7 5l1 3c-.5 2-2 3-3 4l-1 10c0 2-2 2.5-6 2.5s-6-.5-6-2.5l-1-10c-1-1-2.5-2-3-4l1-3c1-3 4-5 7-5z", hit: "M6.4 8.2c-.4 2 .8 4.8 3.6 6l2.2-3.2C11 9 8.8 7.6 6.4 8.2zM25.6 8.2c.4 2-.8 4.8-3.6 6l-2.2-3.2C21 9 23.2 7.6 25.6 8.2z" },
-        abs: { line: "M14 5V3h4v2c3 0 6 2 7 5l1 3c-.5 2-2 3-3 4l-1 10c0 2-2 2.5-6 2.5s-6-.5-6-2.5l-1-10c-1-1-2.5-2-3-4l1-3c1-3 4-5 7-5z", hit: "M13 18.2h6v8.2c0 .7-1.2 1.2-3 1.2s-3-.5-3-1.2z" },
-        lats: { line: "M14 5V3h4v2c3 0 6 2 7 5l2 4c-1 4-2 9-4 14-1 1.5-3 1.5-7 1.5s-6 0-7-1.5c-2-5-3-10-4-14l2-4c1-3 4-5 7-5z", hit: "M7 14c-1 4 0 10 3 14l3-3c-2-4-2-8-1-11zM25 14c1 4 0 10-3 14l-3-3c2-4 2-8 1-11z", extra: '<path class="ex-muscle-line" d="M16 9v18"/>' },
-        upperBack: { line: "M14 5V3h4v2c3 0 6 2 7 5l2 4c-1 4-2 9-4 14-1 1.5-3 1.5-7 1.5s-6 0-7-1.5c-2-5-3-10-4-14l2-4c1-3 4-5 7-5z", hit: "M11 10c3-1.5 7-1.5 10 0l.5 7c-2.5 2-8.5 2-11 0z", extra: '<path class="ex-muscle-line" d="M16 9v18"/>' },
-        traps: { line: "M14 5V3h4v2c3 0 6 2 7 5l2 4c-1 4-2 9-4 14-1 1.5-3 1.5-7 1.5s-6 0-7-1.5c-2-5-3-10-4-14l2-4c1-3 4-5 7-5z", hit: "M16 5.5 22 12l-6 2.5L10 12z", extra: '<path class="ex-muscle-line" d="M16 9v18"/>' },
-        rearDelts: { line: "M14 5V3h4v2c3 0 6 2 7 5l2 4c-1 4-2 9-4 14-1 1.5-3 1.5-7 1.5s-6 0-7-1.5c-2-5-3-10-4-14l2-4c1-3 4-5 7-5z", hit: "M6.2 8.6c-.3 2.2 1.2 5.2 4.2 6.2l1.8-3.6C10.6 9.2 8 7.8 6.2 8.6zM25.8 8.6c.3 2.2-1.2 5.2-4.2 6.2l-1.8-3.6C21.4 9.2 24 7.8 25.8 8.6z", extra: '<path class="ex-muscle-line" d="M16 9v18"/>' },
-        biceps: { line: "M13 4.5c2.5-1.5 6-1 7 2l1.5 7.5c1 3 .5 6-1.5 8l-.5 6.5h-7l-.5-6.5c-2-2-2.5-5-1.5-8L12 6.5c.2-1.3.5-2 1-2z", hit: "M11 9c-2.5 3-2.5 8 1 11l1.5-6z" },
-        triceps: { line: "M13 4.5c2.5-1.5 6-1 7 2l1.5 7.5c1 3 .5 6-1.5 8l-.5 6.5h-7l-.5-6.5c-2-2-2.5-5-1.5-8L12 6.5c.2-1.3.5-2 1-2z", hit: "M21 10c3 3 3 8-.5 11L20 14z" },
-        quads: { line: "M12 3.5h8l2.5 4.5 2 10.5-1 10.5h-5V19l-2-10h-1l-2 10v10.5h-5L7.5 18.5 9.5 8z", hit: "M10 8 8.2 17l5 1 1.8-9zM22 8l1.8 9-5 1-1.8-9z" },
-        hamstrings: { line: "M12 3.5h8l2.5 4.5 2 10.5-1 10.5h-5V19l-2-10h-1l-2 10v10.5h-5L7.5 18.5 9.5 8z", hit: "M10 13 8.3 20.2l5.1 1.1 1.4-7.2zM22 13l1.7 7.2-5.1 1.1-1.4-7.2z" },
-        glutes: { line: "M12 3.5h8l2.5 4.5 2 10.5-1 10.5h-5V19l-2-10h-1l-2 10v10.5h-5L7.5 18.5 9.5 8z", hit: "M11 3.5h10l1.5 7.5c-2 3-11 3-13 0z" },
-        calves: { line: "M11.5 3 10 7l1 9-2 7 2 3-3 3h7l-1.5-3 1.5-3 1-7 1-9-2.5-4zM22.5 3 21 7l1 9-2 7 2 3-3 3h7l-1.5-3 1.5-3 1-7 1-9-2.5-4z", hit: "M9.8 14c-1.4 4-1 8 2 10l2.2-7zM20.8 14c-1.4 4-1 8 2 10l2.2-7z" },
-        neck: { line: "M16 2.8c4.3 0 7.2 3.3 7.2 7.4 0 3.3-2 6-5 7.1-1.4.6-2.2.7-2.2.7s-.8-.1-2.2-.7c-3-1.1-5-3.8-5-7.1 0-4.1 2.9-7.4 7.2-7.4z", hit: "M13.6 16.8h4.8V23.6h-4.8z", extra: '<path class="ex-muscle-line" d="M13.4 16.8V23.6L8 28.4h16l-5.4-4.8V16.8"/>' },
-      };
-      const icon = icons[muscleId];
-      if (!icon) return "";
-      return '<span class="ex-muscle" data-muscle="' + muscleId + '" aria-hidden="true"><svg viewBox="0 0 32 32" focusable="false">' +
-        (icon.hit ? '<path class="ex-muscle-hit" d="' + icon.hit + '"/>' : "") +
-        '<path class="ex-muscle-line" d="' + icon.line + '"/>' +
-        (icon.extra || "") +
+    const MUSCLE_BACK_VIEW = { lats: 1, upperBack: 1, traps: 1, rearDelts: 1, hamstrings: 1, calves: 1, glutes: 1 };
+    const MUSCLE_BODY_PATH = "M 32 2.00 C 38.20 2.00 43.20 6.60 43.20 13.20 C 43.20 17.60 40.60 21.20 36.40 22.60 C 46.20 24.00 53.20 27.60 55.20 34.80 C 56.80 41.20 55.60 49.00 53.00 56.20 C 51.00 62.00 50.60 67.20 52.00 72.20 C 52.80 74.60 51.00 76.20 48.80 75.20 C 47.60 70.00 48.60 64.00 49.60 58.00 C 50.40 52.20 49.80 46.40 47.40 41.40 C 47.00 47.20 47.60 54.00 48.80 60.40 C 50.20 66.40 51.20 73.40 51.60 80.40 C 52.20 88.00 52.60 96.00 51.00 102.20 C 50.20 105.20 51.80 108.00 54.20 109.60 C 51.40 111.40 46.80 111.20 45.40 108.60 C 44.40 106.60 45.20 104.00 45.60 101.00 C 46.80 93.20 45.60 85.20 43.80 78.20 C 42.00 71.20 40.00 67.00 37.40 65.20 L 32.00 64.80 L 26.60 65.20 C 24.00 67.00 22.00 71.20 20.20 78.20 C 18.40 85.20 17.20 93.20 18.40 101.00 C 18.80 104.00 19.60 106.60 18.60 108.60 C 17.20 111.20 12.60 111.40 9.80 109.60 C 12.20 108.00 13.80 105.20 13.00 102.20 C 11.40 96.00 11.80 88.00 12.40 80.40 C 12.80 73.40 13.80 66.40 15.20 60.40 C 16.40 54.00 17.00 47.20 16.60 41.40 C 14.20 46.40 13.60 52.20 14.40 58.00 C 15.40 64.00 16.40 70.00 15.20 75.20 C 13.00 76.20 11.20 74.60 12.00 72.20 C 13.40 67.20 13.00 62.00 11.00 56.20 C 8.40 49.00 7.20 41.20 8.80 34.80 C 10.80 27.60 17.80 24.00 27.60 22.60 C 23.40 21.20 20.80 17.60 20.80 13.20 C 20.80 6.60 25.80 2.00 32 2.00 Z";
+    const MUSCLE_REGIONS = {
+      front: {
+        neck: "M28.8 20.8h6.4v6.6c0 1.1-1.4 1.7-3.2 1.7s-3.2-.6-3.2-1.7z",
+        shoulders: "M12.2 25.4c-1.6 2.6-.2 8 4.8 10.2l4.4-6.2c-1.8-2.8-5.6-4.4-9.2-4zM51.8 25.4c1.6 2.6.2 8-4.8 10.2l-4.4-6.2c1.8-2.8 5.6-4.4 9.2-4z",
+        chest: "M21.4 29.6c3.4-2 8-1 10.4 3.2v6.6c-3.2 2.6-7.8 1.8-10.2-1.4zM42.6 29.6c-3.4-2-8-1-10.4 3.2v6.6c3.2 2.6 7.8 1.8 10.2-1.4z",
+        biceps: "M16.2 36.4c-2.8 3.8-2.8 10.2.8 13.8l3-7zM47.8 36.4c2.8 3.8 2.8 10.2-.8 13.8l-3-7z",
+        triceps: "M11 34.8c-2.6 4.4-2.2 12.2 1.4 16.2l3-9zM53 34.8c2.6 4.4 2.2 12.2-1.4 16.2l-3-9z",
+        abs: "M26.6 45h10.8v15.8c0 1.5-2.2 2.4-5.4 2.4s-5.4-.9-5.4-2.4z",
+        quads: "M22 66c-2.2 4.2-4 12-4 19.2l8.6 1.6c1.2-7.6 1.4-14.8.2-20.8zM42 66c2.2 4.2 4 12 4 19.2l-8.6 1.6c-1.2-7.6-1.4-14.8-.2-20.8z",
+        calves: "M18.8 88 17.2 103.2l7.4 2 1.6-16zM45.2 88l1.6 15.2-7.4 2-1.6-16z"
+      },
+      back: {
+        neck: "M28.8 20.8h6.4v6.4c0 1-1.2 1.6-3.2 1.6s-3.2-.6-3.2-1.6z",
+        traps: "M32 22.6 43.6 33.2 32 36.8 20.4 33.2z",
+        rearDelts: "M12.6 26c-1.4 2.8.6 7.6 5 9.2l3.8-6.2c-1.6-2.4-5.2-3.8-8.8-3zM51.4 26c1.4 2.8-.6 7.6-5 9.2l-3.8-6.2c1.6-2.4 5.2-3.8 8.8-3z",
+        upperBack: "M22.8 31.4c4.8-2.2 13.6-2.2 18.4 0l.6 10.8c-4.2 3-15.4 3-19.6 0z",
+        lats: "M18.6 37.4c-3.2 6.6-2.8 15.6 2.8 22.8l5-6.2c-2.6-4.8-2.8-10.6-1.4-16.6zM45.4 37.4c3.2 6.6 2.8 15.6-2.8 22.8l-5-6.2c2.6-4.8 2.8-10.6 1.4-16.6z",
+        triceps: "M11 34.8c-2.6 4.4-2.2 12.2 1.4 16.2l3-9zM53 34.8c2.6 4.4 2.2 12.2-1.4 16.2l-3-9z",
+        glutes: "M22.4 62c3.4-2.4 15.8-2.4 19.2 0l1.8 10c-4.4 3.8-18.4 3.8-22.8 0z",
+        hamstrings: "M21.4 73c-2 5-3.6 12.6-3.6 18.8l8.6 1.6c1-6.8 1.2-13.4.2-20.4zM42.6 73c2 5 3.6 12.6 3.6 18.8l-8.6 1.6c-1-6.8-1.2-13.4-.2-20.4z",
+        calves: "M18.6 93.2c-2 5.6-1.8 11.6 1.8 15.4l5.6-14.2zM45.4 93.2c2 5.6 1.8 11.6-1.8 15.4l-5.6-14.2z"
+      }
+    };
+
+    function cardMuscleView(muscleId) {
+      return MUSCLE_BACK_VIEW[muscleId] ? "back" : "front";
+    }
+
+    function cardMuscleCredit(exercise) {
+      const id = exercise && exercise.id;
+      const primary = (exercise && EXERCISE_MUSCLE[id]) || "";
+      const credit = {};
+      if (primary) credit[primary] = 1;
+      const base = MUSCLE_CREDIT[id];
+      if (base) {
+        Object.keys(base).forEach(function (key) { credit[key] = base[key]; });
+        if (primary) credit[primary] = 1;
+      }
+      const variantId = exercise && exercise.variantId;
+      if (variantId && variantId !== id && VARIANT_CREDIT[variantId]) {
+        const ov = VARIANT_CREDIT[variantId];
+        Object.keys(ov).forEach(function (key) {
+          if (key === primary) return;
+          if (ov[key] === 0) delete credit[key];
+          else credit[key] = ov[key];
+        });
+      }
+      return { primary: primary, credit: credit };
+    }
+
+    function muscleFigureHtml(exercise) {
+      const info = cardMuscleCredit(exercise);
+      if (!info.primary) return "";
+      const view = cardMuscleView(info.primary);
+      const regions = MUSCLE_REGIONS[view];
+      let secondary = "";
+      let glow = "";
+      let primary = "";
+      Object.keys(info.credit).forEach(function (id) {
+        const weight = info.credit[id];
+        const d = regions[id];
+        if (!(weight > 0) || !d) return;
+        if (id === info.primary || weight >= 1) {
+          glow += '<path class="ex-muscle-glow" d="' + d + '"/>';
+          primary += '<path class="ex-muscle-hit primary" d="' + d + '"/>';
+        } else {
+          secondary += '<path class="ex-muscle-hit secondary" d="' + d + '"/>';
+        }
+      });
+      const spine = view === "back" ? '<path class="ex-muscle-spine" d="M32 28v34"/>' : "";
+      return '<span class="ex-muscle" data-muscle="' + info.primary + '" data-view="' + view + '" aria-hidden="true"><svg viewBox="0 0 64 112" focusable="false">' +
+        secondary + glow + primary +
+        '<path class="ex-muscle-body" d="' + MUSCLE_BODY_PATH + '"/>' +
+        spine +
         "</svg></span>";
     }
 
@@ -5146,12 +5211,10 @@
         parts.push('<button type="button" class="remove-ex-btn" data-action="remove-exercise" data-remove="' + exercises[e].id + '" aria-label="Remove ' + escapeHtml(exercise.name) + '">×</button>');
         parts.push("</div></div>");
         parts.push('<button type="button" class="exercise-btn" data-action="open-exercise" data-ex="' + exercise.id + '">');
-        parts.push('<div class="ex-title-row">');
-        parts.push(muscleIconHtml(cardMuscleId(exercise)));
-        parts.push('<div class="ex-title-text">');
+        parts.push('<div class="ex-card-body">');
+        parts.push('<div class="ex-card-copy">');
         parts.push("<h2>" + escapeHtml(exercise.name) + "</h2>");
         parts.push('<p class="scheme">' + shown + " sets × " + exercise.minReps + "–" + exercise.maxReps + " reps</p>");
-        parts.push("</div></div>");
         if (!equipmentAvailable(exercises[e])) parts.push('<p class="needs-equip">Needs ' + escapeHtml(equipmentName(equipmentFor(exercises[e]))) + ' · kept because you logged it today</p>');
         if (last.empty) {
           parts.push('<p class="ex-last-empty">No previous session</p>');
@@ -5160,7 +5223,9 @@
         }
         parts.push('<div class="ex-today">' + todaysSetsDots(exercise, todayRows) + '<span class="ex-today-text">' + escapeHtml(progressSummary(todayRows)) + "</span></div>");
         parts.push('<p class="ex-hint next-session">' + escapeHtml(hint) + "</p>");
-        parts.push("</button></div></div>");
+        parts.push("</div>");
+        parts.push(muscleFigureHtml(exercise));
+        parts.push("</div></button></div></div>");
         if (removeConfirmId === exercises[e].id) {
           parts.push('<div class="remove-confirm"><p>Remove ' + escapeHtml(exercise.name) + " from " + escapeHtml(DAY_META[state.currentDay].name) + '? Your logged history stays.</p><div class="row-actions"><button type="button" data-action="remove-cancel">Cancel</button><button type="button" class="danger-btn" data-action="remove-confirm" data-remove="' + exercises[e].id + '">Remove</button></div></div>');
         }
