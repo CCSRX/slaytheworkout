@@ -1030,6 +1030,14 @@
     .exercise-card .exercise-btn:active { background: transparent; }
     .exercise-card .exercise-btn h2 { margin: 0; padding: 0; font-size: 19px; font-weight: 800; line-height: 1.2; overflow-wrap: anywhere; }
     .exercise-card .exercise-btn .scheme { margin: 3px 0 8px; font-size: 13px; font-weight: 600; line-height: 1.3; color: var(--mute); }
+    .ex-title-row { display: flex; align-items: center; gap: 9px; min-width: 0; }
+    .ex-title-text { flex: 1; min-width: 0; }
+    .ex-title-text .scheme { margin-bottom: 8px; }
+    .ex-muscle { flex: 0 0 32px; width: 32px; height: 32px; color: var(--mute); }
+    .ex-muscle svg { width: 32px; height: 32px; display: block; overflow: visible; }
+    .ex-muscle .ex-muscle-line { fill: none; stroke: currentColor; stroke-width: 1.45; stroke-linecap: round; stroke-linejoin: round; }
+    .ex-muscle .ex-muscle-hit { fill: var(--acc); fill-opacity: 0.32; stroke: none; }
+    .exercise-row.is-done .ex-muscle { opacity: 0.75; }
     .ex-last { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 8px; margin: 0 0 7px; min-width: 0; }
     .ex-last-chip {
       display: inline-block;
@@ -5071,6 +5079,37 @@
       return text.charAt(0).toUpperCase() + text.slice(1);
     }
 
+    function cardMuscleId(exercise) {
+      return (exercise && EXERCISE_MUSCLE[exercise.id]) || "";
+    }
+
+    function muscleIconHtml(muscleId) {
+      if (!muscleId) return "";
+      const icons = {
+        chest: { line: "M14 5V3h4v2c3 0 6 2 7 5l1 3c-.5 2-2 3-3 4l-1 10c0 2-2 2.5-6 2.5s-6-.5-6-2.5l-1-10c-1-1-2.5-2-3-4l1-3c1-3 4-5 7-5z", hit: "M9.2 11.2c2.3-1.4 5.3-.4 6.5 2.8v3c-2.2 1.8-5.2 1.2-6.5-.8zM22.8 11.2c-2.3-1.4-5.3-.4-6.5 2.8v3c2.2 1.8 5.2 1.2 6.5-.8z" },
+        shoulders: { line: "M14 5V3h4v2c3 0 6 2 7 5l1 3c-.5 2-2 3-3 4l-1 10c0 2-2 2.5-6 2.5s-6-.5-6-2.5l-1-10c-1-1-2.5-2-3-4l1-3c1-3 4-5 7-5z", hit: "M6.4 8.2c-.4 2 .8 4.8 3.6 6l2.2-3.2C11 9 8.8 7.6 6.4 8.2zM25.6 8.2c.4 2-.8 4.8-3.6 6l-2.2-3.2C21 9 23.2 7.6 25.6 8.2z" },
+        abs: { line: "M14 5V3h4v2c3 0 6 2 7 5l1 3c-.5 2-2 3-3 4l-1 10c0 2-2 2.5-6 2.5s-6-.5-6-2.5l-1-10c-1-1-2.5-2-3-4l1-3c1-3 4-5 7-5z", hit: "M13 18.2h6v8.2c0 .7-1.2 1.2-3 1.2s-3-.5-3-1.2z" },
+        lats: { line: "M14 5V3h4v2c3 0 6 2 7 5l2 4c-1 4-2 9-4 14-1 1.5-3 1.5-7 1.5s-6 0-7-1.5c-2-5-3-10-4-14l2-4c1-3 4-5 7-5z", hit: "M7 14c-1 4 0 10 3 14l3-3c-2-4-2-8-1-11zM25 14c1 4 0 10-3 14l-3-3c2-4 2-8 1-11z", extra: '<path class="ex-muscle-line" d="M16 9v18"/>' },
+        upperBack: { line: "M14 5V3h4v2c3 0 6 2 7 5l2 4c-1 4-2 9-4 14-1 1.5-3 1.5-7 1.5s-6 0-7-1.5c-2-5-3-10-4-14l2-4c1-3 4-5 7-5z", hit: "M11 10c3-1.5 7-1.5 10 0l.5 7c-2.5 2-8.5 2-11 0z", extra: '<path class="ex-muscle-line" d="M16 9v18"/>' },
+        traps: { line: "M14 5V3h4v2c3 0 6 2 7 5l2 4c-1 4-2 9-4 14-1 1.5-3 1.5-7 1.5s-6 0-7-1.5c-2-5-3-10-4-14l2-4c1-3 4-5 7-5z", hit: "M16 5.5 22 12l-6 2.5L10 12z", extra: '<path class="ex-muscle-line" d="M16 9v18"/>' },
+        rearDelts: { line: "M14 5V3h4v2c3 0 6 2 7 5l2 4c-1 4-2 9-4 14-1 1.5-3 1.5-7 1.5s-6 0-7-1.5c-2-5-3-10-4-14l2-4c1-3 4-5 7-5z", hit: "M6.2 8.6c-.3 2.2 1.2 5.2 4.2 6.2l1.8-3.6C10.6 9.2 8 7.8 6.2 8.6zM25.8 8.6c.3 2.2-1.2 5.2-4.2 6.2l-1.8-3.6C21.4 9.2 24 7.8 25.8 8.6z", extra: '<path class="ex-muscle-line" d="M16 9v18"/>' },
+        biceps: { line: "M13 4.5c2.5-1.5 6-1 7 2l1.5 7.5c1 3 .5 6-1.5 8l-.5 6.5h-7l-.5-6.5c-2-2-2.5-5-1.5-8L12 6.5c.2-1.3.5-2 1-2z", hit: "M11 9c-2.5 3-2.5 8 1 11l1.5-6z" },
+        triceps: { line: "M13 4.5c2.5-1.5 6-1 7 2l1.5 7.5c1 3 .5 6-1.5 8l-.5 6.5h-7l-.5-6.5c-2-2-2.5-5-1.5-8L12 6.5c.2-1.3.5-2 1-2z", hit: "M21 10c3 3 3 8-.5 11L20 14z" },
+        quads: { line: "M12 3.5h8l2.5 4.5 2 10.5-1 10.5h-5V19l-2-10h-1l-2 10v10.5h-5L7.5 18.5 9.5 8z", hit: "M10 8 8.2 17l5 1 1.8-9zM22 8l1.8 9-5 1-1.8-9z" },
+        hamstrings: { line: "M12 3.5h8l2.5 4.5 2 10.5-1 10.5h-5V19l-2-10h-1l-2 10v10.5h-5L7.5 18.5 9.5 8z", hit: "M10 13 8.3 20.2l5.1 1.1 1.4-7.2zM22 13l1.7 7.2-5.1 1.1-1.4-7.2z" },
+        glutes: { line: "M12 3.5h8l2.5 4.5 2 10.5-1 10.5h-5V19l-2-10h-1l-2 10v10.5h-5L7.5 18.5 9.5 8z", hit: "M11 3.5h10l1.5 7.5c-2 3-11 3-13 0z" },
+        calves: { line: "M11.5 3 10 7l1 9-2 7 2 3-3 3h7l-1.5-3 1.5-3 1-7 1-9-2.5-4zM22.5 3 21 7l1 9-2 7 2 3-3 3h7l-1.5-3 1.5-3 1-7 1-9-2.5-4z", hit: "M9.8 14c-1.4 4-1 8 2 10l2.2-7zM20.8 14c-1.4 4-1 8 2 10l2.2-7z" },
+        neck: { line: "M16 2.8c4.3 0 7.2 3.3 7.2 7.4 0 3.3-2 6-5 7.1-1.4.6-2.2.7-2.2.7s-.8-.1-2.2-.7c-3-1.1-5-3.8-5-7.1 0-4.1 2.9-7.4 7.2-7.4z", hit: "M13.6 16.8h4.8V23.6h-4.8z", extra: '<path class="ex-muscle-line" d="M13.4 16.8V23.6L8 28.4h16l-5.4-4.8V16.8"/>' },
+      };
+      const icon = icons[muscleId];
+      if (!icon) return "";
+      return '<span class="ex-muscle" data-muscle="' + muscleId + '" aria-hidden="true"><svg viewBox="0 0 32 32" focusable="false">' +
+        (icon.hit ? '<path class="ex-muscle-hit" d="' + icon.hit + '"/>' : "") +
+        '<path class="ex-muscle-line" d="' + icon.line + '"/>' +
+        (icon.extra || "") +
+        "</svg></span>";
+    }
+
     function renderExerciseList(exercises) {
       const day = state.currentDay;
       let nextId = null;
@@ -5107,8 +5146,12 @@
         parts.push('<button type="button" class="remove-ex-btn" data-action="remove-exercise" data-remove="' + exercises[e].id + '" aria-label="Remove ' + escapeHtml(exercise.name) + '">×</button>');
         parts.push("</div></div>");
         parts.push('<button type="button" class="exercise-btn" data-action="open-exercise" data-ex="' + exercise.id + '">');
+        parts.push('<div class="ex-title-row">');
+        parts.push(muscleIconHtml(cardMuscleId(exercise)));
+        parts.push('<div class="ex-title-text">');
         parts.push("<h2>" + escapeHtml(exercise.name) + "</h2>");
         parts.push('<p class="scheme">' + shown + " sets × " + exercise.minReps + "–" + exercise.maxReps + " reps</p>");
+        parts.push("</div></div>");
         if (!equipmentAvailable(exercises[e])) parts.push('<p class="needs-equip">Needs ' + escapeHtml(equipmentName(equipmentFor(exercises[e]))) + ' · kept because you logged it today</p>');
         if (last.empty) {
           parts.push('<p class="ex-last-empty">No previous session</p>');
