@@ -811,7 +811,8 @@
     .exercise-row .remove-ex-btn:active { background: var(--card-2); color: var(--text); }
     .exercise-row[data-ex-row] { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
     .exercise-row.drag-source { opacity: 0.35; }
-    .exercise-row.drop-target .exercise-btn { outline: 3px dashed var(--acc); outline-offset: 2px; }
+    .exercise-row.drop-target .exercise-btn,
+    .exercise-row.drop-target .exercise-card { outline: 3px dashed var(--acc); outline-offset: 2px; }
     .ex-drag-ghost { position: fixed; z-index: 60; pointer-events: none; margin: 0; transform: scale(1.03); box-shadow: 0 12px 28px rgba(0,0,0,0.45); border-radius: 16px; }
     body.ex-dragging { touch-action: none; }
     .remove-confirm { margin: -3px 0 10px; padding: 10px 12px; background: var(--card-2); border: 1px solid var(--line); border-radius: 14px; font-size: 14px; }
@@ -948,6 +949,123 @@
     /* v160: brief highlight on the exercise row you came back to. */
     .exercise-row.return-flash { animation: return-flash 1.2s ease-out; border-radius: 16px; }
     @keyframes return-flash { from { box-shadow: 0 0 0 2px var(--acc); } to { box-shadow: 0 0 0 2px transparent; } }
+    /* v243: full-width exercise cards, actions inside, next-up and last-time hierarchy. */
+    .exercise-row[data-ex-row] { display: block; margin-bottom: 10px; }
+    .exercise-card {
+      position: relative;
+      min-width: 0;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 10px 12px 12px;
+    }
+    .exercise-row.is-next .exercise-card {
+      border-color: var(--acc);
+      box-shadow: 0 0 0 1px var(--acc);
+    }
+    .exercise-row.is-done .exercise-card { background: var(--card); }
+    .exercise-row.is-done .exercise-btn h2 { color: var(--mute); }
+    .ex-card-top {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 40px;
+      margin: 0 0 6px;
+    }
+    .ex-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      height: 22px;
+      padding: 0 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .ex-badge svg { width: 12px; height: 12px; display: block; }
+    .ex-badge.next { background: var(--acc); color: var(--acc-ink); }
+    .ex-badge.done { background: var(--card-2); color: var(--mute); border: 1px solid var(--line); }
+    .ex-badge-spacer { flex: 1; min-width: 0; }
+    .ex-card-actions { display: flex; align-items: center; gap: 4px; margin-left: auto; flex: 0 0 auto; }
+    .exercise-card .swap-btn,
+    .exercise-card .preview-btn,
+    .exercise-card .remove-ex-btn {
+      position: static;
+      top: auto;
+      right: auto;
+      flex: 0 0 40px;
+      width: 40px;
+      height: 40px;
+      min-height: 40px;
+      align-self: auto;
+      padding: 0;
+      border-radius: 12px;
+      background: var(--card-2);
+      border: 1px solid var(--line);
+      color: var(--mute);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .exercise-card .swap-btn svg,
+    .exercise-card .preview-btn svg { width: 16px; height: 16px; display: block; }
+    .exercise-card .remove-ex-btn { font-size: 18px; line-height: 1; }
+    .exercise-card .swap-btn:active,
+    .exercise-card .preview-btn:active,
+    .exercise-card .remove-ex-btn:active { background: var(--line); color: var(--text); }
+    .exercise-card .exercise-btn {
+      display: block;
+      width: 100%;
+      flex: none;
+      text-align: left;
+      background: transparent;
+      border: 0;
+      border-radius: 0;
+      padding: 0;
+      min-height: 0;
+    }
+    .exercise-card .exercise-btn:active { background: transparent; }
+    .exercise-card .exercise-btn h2 { margin: 0; padding: 0; font-size: 19px; font-weight: 800; line-height: 1.2; overflow-wrap: anywhere; }
+    .exercise-card .exercise-btn .scheme { margin: 3px 0 8px; font-size: 13px; font-weight: 600; line-height: 1.3; color: var(--mute); }
+    .ex-last { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 8px; margin: 0 0 7px; min-width: 0; }
+    .ex-last-chip {
+      display: inline-block;
+      padding: 3px 9px;
+      border-radius: 999px;
+      background: var(--card-2);
+      border: 1px solid var(--line);
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      overflow-wrap: anywhere;
+    }
+    .ex-last-date { font-size: 12px; font-weight: 600; color: var(--mute); white-space: nowrap; }
+    .ex-last-empty { margin: 0 0 7px; font-size: 12px; font-weight: 600; color: var(--mute); }
+    .ex-today { display: flex; align-items: center; gap: 8px; margin: 0 0 7px; min-width: 0; }
+    .ex-set-dots { display: inline-flex; align-items: center; gap: 5px; flex: 0 0 auto; }
+    .ex-set-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: transparent;
+      border: 1.5px solid var(--line);
+      display: block;
+    }
+    .ex-set-dot.filled { background: var(--acc); border-color: var(--acc); }
+    .ex-today-text { font-size: 12px; font-weight: 600; color: var(--mute); line-height: 1.3; overflow-wrap: anywhere; min-width: 0; }
+    .exercise-card .ex-hint.next-session {
+      margin: 0;
+      font-size: 13px;
+      font-weight: 700;
+      line-height: 1.35;
+      color: var(--acc);
+      overflow-wrap: anywhere;
+    }
+    .exercise-row.is-done .exercise-card .ex-hint.next-session { color: var(--mute); font-weight: 600; }
       /* v162: Resume label on today's card stays on one line. */
     .today-shortcut-label.resume { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     /* v166: "Slay" title: carved-wood SLEIGH with a spiked blackened-chrome AY (ember glow, lava cracks, rivets) over EIGH. */
@@ -3053,13 +3171,23 @@
       return n >= 1 && n <= 400 ? storedWeight(text) : "";
     }
 
-    function lastPerformanceText(day, exercise) {
+    function lastPerformanceInfo(day, exercise) {
       const today = fileStamp(new Date());
       const previous = exerciseSessions(day, exercise.id).find(session => session.date !== today);
-      if (!previous || !previous.exercises[exercise.id]) return "Last time: none yet";
+      if (!previous || !previous.exercises[exercise.id]) return { empty: true };
       const rows = previous.exercises[exercise.id].sets;
-      if (!rows || !rows.some(setHasReps)) return "Last time: none yet";
-      return "Last time: " + setsLoadText(rows, "bodyweight") + " (" + displaySessionDate(previous.date, false) + ")";
+      if (!rows || !rows.some(setHasReps)) return { empty: true };
+      return {
+        empty: false,
+        load: setsLoadText(rows, "bodyweight"),
+        date: displaySessionDate(previous.date, false)
+      };
+    }
+
+    function lastPerformanceText(day, exercise) {
+      const info = lastPerformanceInfo(day, exercise);
+      if (info.empty) return "Last time: none yet";
+      return "Last time: " + info.load + " (" + info.date + ")";
     }
 
     function progressSummary(rows) {
@@ -4921,28 +5049,71 @@
       return parts.join("");
     }
 
+    function todaysSetsDots(exercise, rows) {
+      const count = visibleSets(exercise);
+      const logged = rows || [];
+      let html = '<span class="ex-set-dots" aria-hidden="true">';
+      for (let i = 0; i < count; i += 1) {
+        html += '<i class="ex-set-dot' + (setHasReps(logged[i]) ? " filled" : "") + '"></i>';
+      }
+      return html + "</span>";
+    }
+
+    function nextSessionHintText(exercise, currentRows) {
+      const raw = nextSessionSuggestion(exercise, currentRows);
+      const text = raw.replace(/^Next:\s*/, "");
+      if (!text) return "";
+      return text.charAt(0).toUpperCase() + text.slice(1);
+    }
+
     function renderExerciseList(exercises) {
+      const day = state.currentDay;
+      let nextId = null;
+      for (let e = 0; e < exercises.length; e += 1) {
+        if (!doneToday(day, exercises[e])) {
+          nextId = exercises[e].id;
+          break;
+        }
+      }
       const parts = [];
+      const swapSvg = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 3v5h5"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M16 16h5v5"/></svg>';
+      const checkSvg = '<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M6.3 11.1 3.2 8l1.1-1.1 2 2 5.4-5.4L12.8 4.6z"/></svg>';
       for (let e = 0; e < exercises.length; e += 1) {
         const exercise = displayExercise(exercises[e]);
         const shown = visibleSets(exercise);
-        parts.push('<div class="exercise-row" data-ex-row="' + exercises[e].id + '">');
-        parts.push('<div class="ex-main">');
+        const rows = state.logs[day][exercise.id];
+        const done = doneToday(day, exercises[e]);
+        const isNext = exercises[e].id === nextId;
+        const last = lastPerformanceInfo(day, exercise);
+        const hint = nextSessionHintText(exercise, rows);
+        let rowClass = "exercise-row";
+        if (isNext) rowClass += " is-next";
+        if (done) rowClass += " is-done";
+        parts.push('<div class="' + rowClass + '" data-ex-row="' + exercises[e].id + '">');
+        parts.push('<div class="exercise-card">');
+        parts.push('<div class="ex-card-top">');
+        if (isNext) parts.push('<span class="ex-badge next">Next up</span>');
+        else if (done) parts.push('<span class="ex-badge done">' + checkSvg + "Done</span>");
+        else parts.push('<span class="ex-badge-spacer"></span>');
+        parts.push('<div class="ex-card-actions">');
+        parts.push('<button type="button" class="swap-btn" data-action="swap-exercise" data-slot="' + exercise.id + '" aria-label="Swap ' + escapeHtml(exercise.name) + '">' + swapSvg + "</button>");
+        parts.push(previewButton(exercise));
+        parts.push('<button type="button" class="remove-ex-btn" data-action="remove-exercise" data-remove="' + exercises[e].id + '" aria-label="Remove ' + escapeHtml(exercise.name) + '">×</button>');
+        parts.push("</div></div>");
         parts.push('<button type="button" class="exercise-btn" data-action="open-exercise" data-ex="' + exercise.id + '">');
         parts.push("<h2>" + escapeHtml(exercise.name) + "</h2>");
         parts.push('<p class="scheme">' + shown + " sets × " + exercise.minReps + "–" + exercise.maxReps + " reps</p>");
         if (!equipmentAvailable(exercises[e])) parts.push('<p class="needs-equip">Needs ' + escapeHtml(equipmentName(equipmentFor(exercises[e]))) + ' · kept because you logged it today</p>');
-        parts.push('<p class="last-performance">' + escapeHtml(lastPerformanceText(state.currentDay, exercise)) + '</p>');
-        parts.push('<p class="progress-summary">' + escapeHtml(progressSummary(state.logs[state.currentDay][exercise.id])) + '</p>');
-        parts.push('<p class="next-session">' + escapeHtml(nextSessionSuggestion(exercise, state.logs[state.currentDay][exercise.id])) + '</p>');
-        parts.push("</button>");
-        parts.push('<button type="button" class="remove-ex-btn" data-action="remove-exercise" data-remove="' + exercises[e].id + '" aria-label="Remove ' + escapeHtml(exercise.name) + '">×</button>');
-        parts.push("</div>");
-        parts.push('<button type="button" class="swap-btn" data-action="swap-exercise" data-slot="' + exercise.id + '" aria-label="Swap ' + escapeHtml(exercise.name) + '"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 3v5h5"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M16 16h5v5"/></svg></button>');
-        parts.push(previewButton(exercise));
-        parts.push("</div>");
+        if (last.empty) {
+          parts.push('<p class="ex-last-empty">No previous session</p>');
+        } else {
+          parts.push('<div class="ex-last"><span class="ex-last-chip">' + escapeHtml(last.load) + '</span><span class="ex-last-date">' + escapeHtml(last.date) + "</span></div>");
+        }
+        parts.push('<div class="ex-today">' + todaysSetsDots(exercise, rows) + '<span class="ex-today-text">' + escapeHtml(progressSummary(rows)) + "</span></div>");
+        parts.push('<p class="ex-hint next-session">' + escapeHtml(hint) + "</p>");
+        parts.push("</button></div></div>");
         if (removeConfirmId === exercises[e].id) {
-          parts.push('<div class="remove-confirm"><p>Remove ' + escapeHtml(exercise.name) + ' from ' + escapeHtml(DAY_META[state.currentDay].name) + '? Your logged history stays.</p><div class="row-actions"><button type="button" data-action="remove-cancel">Cancel</button><button type="button" class="danger-btn" data-action="remove-confirm" data-remove="' + exercises[e].id + '">Remove</button></div></div>');
+          parts.push('<div class="remove-confirm"><p>Remove ' + escapeHtml(exercise.name) + " from " + escapeHtml(DAY_META[state.currentDay].name) + '? Your logged history stays.</p><div class="row-actions"><button type="button" data-action="remove-cancel">Cancel</button><button type="button" class="danger-btn" data-action="remove-confirm" data-remove="' + exercises[e].id + '">Remove</button></div></div>');
         }
       }
       return parts.join("");
