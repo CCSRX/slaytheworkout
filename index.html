@@ -5049,6 +5049,11 @@
       return parts.join("");
     }
 
+    function todaysLogRows(dayKey, exerciseId) {
+      if (!loggedToday(dayKey, exerciseId)) return [];
+      return (state.logs[dayKey] && state.logs[dayKey][exerciseId]) || [];
+    }
+
     function todaysSetsDots(exercise, rows) {
       const count = visibleSets(exercise);
       const logged = rows || [];
@@ -5082,6 +5087,7 @@
         const exercise = displayExercise(exercises[e]);
         const shown = visibleSets(exercise);
         const rows = state.logs[day][exercise.id];
+        const todayRows = todaysLogRows(day, exercise.id);
         const done = doneToday(day, exercises[e]);
         const isNext = exercises[e].id === nextId;
         const last = lastPerformanceInfo(day, exercise);
@@ -5109,7 +5115,7 @@
         } else {
           parts.push('<div class="ex-last"><span class="ex-last-chip">' + escapeHtml(last.load) + '</span><span class="ex-last-date">' + escapeHtml(last.date) + "</span></div>");
         }
-        parts.push('<div class="ex-today">' + todaysSetsDots(exercise, rows) + '<span class="ex-today-text">' + escapeHtml(progressSummary(rows)) + "</span></div>");
+        parts.push('<div class="ex-today">' + todaysSetsDots(exercise, todayRows) + '<span class="ex-today-text">' + escapeHtml(progressSummary(todayRows)) + "</span></div>");
         parts.push('<p class="ex-hint next-session">' + escapeHtml(hint) + "</p>");
         parts.push("</button></div></div>");
         if (removeConfirmId === exercises[e].id) {
