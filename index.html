@@ -1898,16 +1898,16 @@
           </div>
         </div>
         <div class="breath-setting">
-          <span id="sleepOffWakeLabel">Wake on days off</span>
+          <span id="sleepOffWakeLabel">Usual wake-up</span>
           <div class="breath-stepper">
-            <button type="button" id="sleepOffWakeMinus" aria-label="Earlier day-off wake">−</button>
+            <button type="button" id="sleepOffWakeMinus" aria-label="Earlier usual wake-up">−</button>
             <output id="sleepOffWakeValue" for="sleepOffWakeMinus sleepOffWakePlus">07:00</output>
-            <button type="button" id="sleepOffWakePlus" aria-label="Later day-off wake">+</button>
+            <button type="button" id="sleepOffWakePlus" aria-label="Later usual wake-up">+</button>
           </div>
         </div>
         <div class="sleep-setting-stack">
           <button type="button" class="breath-sound" id="sleepGentleBtn" aria-pressed="true">Gentle changes on</button>
-          <p class="sleep-gentle-note" id="sleepGentleNote">When it's on, bedtime and wake-up move by at most a set number of minutes a day, so your body can adjust. Days before an early start get gradually earlier, and after late or night shifts you ease back toward your day-off wake-up. Days off can use a bigger step so you get back to your day-off wake-up sooner. Your shift start always comes first.</p>
+          <p class="sleep-gentle-note" id="sleepGentleNote">When it's on, bedtime and wake-up move by at most a set number of minutes a day, so your body can adjust. Days before an early start get gradually earlier, and after late or night shifts you ease back toward your usual wake-up. Days off can use a bigger step so you get back to your usual wake-up sooner. You only get up earlier than that when a shift starts early.</p>
           <div id="sleepGentleMaxRow">
             <span id="sleepGentleMaxLabel" class="sleep-time-label">Max change per day</span>
             <div class="sleep-max-switch unit-switch" role="group" aria-label="Max change per day">
@@ -4635,7 +4635,7 @@
       const plan = dayPlan(date);
       const sh = shiftByDate(date);
       if (plan.recovery) return { bed: formatClock(plan.sleepStart), wake: formatClock(plan.recoveryEnd), wakeLabel: "Wake" };
-      if (plan.bedtime && (plan.alarm || plan.wake)) return { bed: plan.bedtime, wake: plan.alarm || plan.wake, wakeLabel: sh && sh.type === "work" && !plan.night ? "Alarm" : "Wake" };
+      if (plan.bedtime && (plan.alarm || plan.wake)) return { bed: plan.bedtime, wake: plan.alarm || plan.wake, wakeLabel: sleepWakeLabel(plan, sh) };
       return null;
     }
 
@@ -9174,6 +9174,61 @@
       return normalizeSleepOffWake(state && state.sleepOffWake);
     }
 
+    function sleepAnchorClock() {
+      return sleepOffWakeClock();
+    }
+
+    function sleepMinInBedMinutes() {
+      return 4 * 60;
+    }
+
+    function sleepRhythmNote() {
+      return "Keeping your " + formatClock(sleepAnchorClock()) + " rhythm";
+    }
+
+    function sleepEasingNote() {
+      return "easing back toward your " + formatClock(sleepAnchorClock()) + " rhythm";
+    }
+
+    function wakeAbsIsAnchor(row) {
+      if (!row || row.wakeAbs == null || !row.date) return false;
+      return Math.abs(row.wakeAbs - absMin(row.date, sleepAnchorClock())) <= 2;
+    }
+
+    function sleepWakeLabel(plan, sh) {
+      if (plan && plan.recovery) return "Wake";
+      if (sh && sh.type === "work" && plan && !plan.night && !wakeAbsIsAnchor(plan)) return "Alarm";
+      return "Wake";
+    }
+
+    function applyLateHomeWake(row, bed, need, offWake) {
+      const INF = 1e12;
+      const minInBed = sleepMinInBedMinutes();
+      const anchor = absMin(row.date, offWake);
+      const hardCap = row.hasHardWake && row.latestWake < INF / 2 ? row.latestWake : INF;
+      let wake;
+      if (anchor - bed >= minInBed) {
+        wake = anchor;
+      } else {
+        wake = bed + minInBed;
+        row.lateHomeRecovery = true;
+      }
+      if (wake > hardCap) wake = Math.max(bed, hardCap);
+      if (wake < bed) wake = bed;
+      const available = wake - bed - sleepLatencyMinutes();
+      row.maxHours = Math.max(0, Math.round((available / 60) * 10) / 10);
+      if (available < sleepGoalHours() * 60 - 1) {
+        if (row.hasHardWake && hardCap < INF / 2 && wake >= hardCap - 1 && hardCap < anchor - 1) {
+          row.warn = "Full sleep isn't possible after the previous shift. Longest you can get is " + formatSleepHours(row.maxHours) + ".";
+        } else if (row.lateHomeRecovery) {
+          row.note = "recovery after a late finish";
+        } else {
+          row.note = "shorter sleep, to keep your " + formatClock(offWake) + " rhythm";
+        }
+      }
+      return wake;
+    }
+
     function sleepGentleOn() {
       return normalizeSleepGentle(state && state.sleepGentle);
     }
@@ -9226,7 +9281,7 @@
         return { start: start, end: start + sleepGoalHours() * 60, full: true, date: endDate };
       }
       const nextWork = nextWorkAfter(nightShift.date);
-      const earlyNext = nextWork && !isNightShift(nextWork) && clockToMin(nextWork.start) < 12 * 60;
+      const earlyNext = nextWork && !isNightShift(nextWork) && clockToMin(nextWork.start) - sleepPrepMinutes() < clockToMin(sleepAnchorClock());
       let end;
       if (earlyNext) {
         // Keep the short recovery so easing toward an early start can begin.
@@ -9251,12 +9306,21 @@
     }
 
     function isMorningWorkAlarm(row) {
-      if (!row || row.kind !== "work" || !row.hasHardWake || row.recovery) return false;
+      if (!row || row.kind !== "work" || row.recovery) return false;
+      const anchorMin = clockToMin(sleepAnchorClock());
+      if (row.targetWake != null && row.targetWake < 1e12 / 2) {
+        const clock = ((row.targetWake % 1440) + 1440) % 1440;
+        return clock < anchorMin - 1;
+      }
+      if (row.hasHardWake && row.latestWake < 1e12 / 2) {
+        const clock = ((row.latestWake % 1440) + 1440) % 1440;
+        return clock < anchorMin - 1;
+      }
       const sh = row.shift;
-      if (sh && sh.type === "work" && clockToMin(sh.start) < 12 * 60) return true;
-      if (!(row.latestWake < 1e12 / 2)) return false;
-      const clock = ((row.latestWake % 1440) + 1440) % 1440;
-      return clock < 10 * 60;
+      if (sh && sh.type === "work") {
+        return clockToMin(sh.start) < anchorMin + sleepPrepMinutes();
+      }
+      return false;
     }
 
     function enumeratePlanDates() {
@@ -9292,7 +9356,11 @@
       const fullSleepFloor = function (r) {
         if (!(r.earliestBed > -INF / 2)) return -INF;
         const floor = r.earliestBed + need;
-        return r.hasHardWake ? Math.min(floor, r.latestWake) : floor;
+        const anchor = absMin(r.date, offWake);
+        const minFloor = r.earliestBed + sleepMinInBedMinutes();
+        // Don't force a sleep-in past the circadian anchor just to fill the goal.
+        const desired = Math.min(floor, Math.max(anchor, minFloor));
+        return r.hasHardWake ? Math.min(desired, r.latestWake) : desired;
       };
       const offWake = sleepOffWakeClock();
       const byDate = {};
@@ -9337,9 +9405,10 @@
           row.earliestBed = rec.start;
         } else if (kind === "work") {
           const alarmAbs = shiftStartAbs(sh) - sleepPrepMinutes();
+          const anchorAbs = absMin(date, offWake);
           row.hasHardWake = true;
           row.latestWake = alarmAbs;
-          row.targetWake = alarmAbs;
+          row.targetWake = alarmAbs < anchorAbs ? alarmAbs : anchorAbs;
           const prevEnd = previousWorkEndAbs(alarmAbs);
           row.earliestBed = prevEnd != null ? prevEnd + sleepCommuteMinutes() : -INF;
         } else if (kind === "off" || kind === "vacation" || kind === "night" || kind === "none") {
@@ -9358,16 +9427,7 @@
         let bed = wake - need;
         if (bed < row.earliestBed) {
           bed = row.earliestBed;
-          if (row.hasHardWake) {
-            if (wake < bed) wake = bed;
-            const available = wake - bed - sleepLatencyMinutes();
-            row.maxHours = Math.max(0, Math.round((available / 60) * 10) / 10);
-            if (available < sleepGoalHours() * 60 - 1) {
-              row.warn = "Full sleep isn't possible after the previous shift. Longest you can get is " + formatSleepHours(row.maxHours) + ".";
-            }
-          } else {
-            wake = bed + need;
-          }
+          wake = applyLateHomeWake(row, bed, need, offWake);
         }
         if (row.hasHardWake && wake > row.latestWake) wake = row.latestWake;
         row.wakeAbs = wake;
@@ -9423,12 +9483,17 @@
           const latestGentle = prev.wakeAbs + 1440 + lim;
           let wake = row.wakeAbs;
           if (row.kind === "work" && row.hasHardWake) {
-            // The shift alarm is a deadline, not a destination: hold yesterday's
-            // wake, keep an earlier early-start pull, and only go earlier when
-            // the shift requires it. Never sleep in just because the shift allows it.
-            const hold = prev.wakeAbs + 1440;
-            wake = Math.min(row.latestWake, hold);
-            if (row.wakeAbs < wake) wake = row.wakeAbs;
+            // The shift alarm is only a deadline. The destination is the
+            // circadian anchor, or an earlier start if the shift requires it.
+            // Ease toward that target; never sleep in just because the shift is late.
+            wake = row.wakeAbs;
+            if (wake < earliestGentle) {
+              wake = earliestGentle;
+              if (wake > row.latestWake) wake = row.latestWake;
+            } else if (wake > latestGentle) {
+              wake = latestGentle;
+              if (wake > row.latestWake) wake = row.latestWake;
+            }
             if (wake > row.latestWake) wake = row.latestWake;
           } else if (wake < earliestGentle) {
             if (row.hasHardWake && row.latestWake <= earliestGentle) {
@@ -9437,15 +9502,15 @@
             } else {
               wake = earliestGentle;
               if (row.hasHardWake && wake > row.latestWake) wake = row.latestWake;
-              if (row.targetWake != null && wake > row.targetWake + 1) row.note = "easing back from late shifts";
+              if (row.targetWake != null && wake > row.targetWake + 1) row.note = sleepEasingNote();
               else if (row.targetWake != null && wake < row.targetWake - 1) row.note = "getting ready for early start";
-              else if (!row.note) row.note = "easing back from late shifts";
+              else if (!row.note) row.note = sleepEasingNote();
             }
           } else if (wake > latestGentle) {
             wake = latestGentle;
             if (row.hasHardWake && wake > row.latestWake) wake = row.latestWake;
             if (row.targetWake != null && wake < row.targetWake - 1) row.note = "getting ready for early start";
-            else if (!row.hasHardWake) row.note = row.note || "easing back from late shifts";
+            else if (!row.hasHardWake) row.note = row.note || sleepEasingNote();
           }
           const floorF = fullSleepFloor(row);
           if (wake < floorF) {
@@ -9457,44 +9522,40 @@
             row.bedAbs = wake - need;
             if (row.bedAbs < row.earliestBed) {
               row.bedAbs = row.earliestBed;
-              if (row.hasHardWake) {
-                if (row.wakeAbs < row.bedAbs) row.wakeAbs = row.hasHardWake ? Math.max(row.bedAbs, Math.min(row.latestWake, row.wakeAbs)) : row.bedAbs + need;
-                const available = row.wakeAbs - row.bedAbs - sleepLatencyMinutes();
-                row.maxHours = Math.max(0, Math.round((available / 60) * 10) / 10);
-                if (available < sleepGoalHours() * 60 - 1) {
-                  row.warn = "Full sleep isn't possible after the previous shift. Longest you can get is " + formatSleepHours(row.maxHours) + ".";
-                }
-              } else {
-                row.wakeAbs = row.bedAbs + need;
-              }
+              row.wakeAbs = applyLateHomeWake(row, row.bedAbs, need, offWake);
             }
           }
         }
       }
 
-      const earlyLimit = absMin(dates[0], "08:00") - stampIndex(dates[0]) * 1440;
       for (let i = 0; i < dates.length; i += 1) {
         const row = byDate[dates[i]];
         if (!row || row.wakeAbs == null || row.recovery) {
           if (row && row.recovery) row.note = null;
           continue;
         }
+        if (row.lateHomeRecovery) {
+          row.note = "recovery after a late finish";
+          continue;
+        }
         const offTarget = absMin(row.date, offWake);
         let earlyAhead = false;
         for (let j = i + 1; j < dates.length && j <= i + 6; j += 1) {
           const nxt = byDate[dates[j]];
-          if (nxt && nxt.hasHardWake && !nxt.recovery && nxt.latestWake < INF && (nxt.latestWake % 1440) < 8 * 60) {
+          if (nxt && isMorningWorkAlarm(nxt)) {
             earlyAhead = true;
             break;
           }
         }
+        const shorterAtAnchor = row.note && row.note.indexOf("shorter sleep, to keep your") === 0 && Math.abs(row.wakeAbs - offTarget) <= 15;
+        if (shorterAtAnchor) continue;
         if (kindIsOff(row.kind) || row.kind === "night") {
-          if (row.wakeAbs > offTarget + 15) row.note = "easing back from late shifts";
+          if (row.wakeAbs > offTarget + 15) row.note = sleepEasingNote();
           else if (row.wakeAbs < offTarget - 15 && earlyAhead) row.note = "getting ready for early start";
           else row.note = null;
         } else if (row.kind === "work") {
-          if (earlyAhead && row.wakeAbs < row.latestWake - 15 && row.latestWake < INF) row.note = "getting ready for early start";
-          else if (row.wakeAbs > offTarget + 15 && row.wakeAbs < row.latestWake - 15) row.note = "easing back from late shifts";
+          if (earlyAhead && row.wakeAbs < offTarget - 15) row.note = "getting ready for early start";
+          else if (row.wakeAbs > offTarget + 15) row.note = sleepEasingNote();
           else row.note = null;
         }
       }
@@ -9538,7 +9599,11 @@
         const row = byDate[dates[i]];
         if (!row || row.recovery || row.wakeAbs == null || row.bedAbs == null) continue;
         // Bedtime pinned by the previous shift (or the first 5-minute mark after getting home).
-        if (row.earliestBed > -INF / 2 && row.bedAbs <= roundUp5(row.earliestBed) + 1) row.note = null;
+        // Keep late-home notes that explain a shorter sleep at the circadian anchor.
+        if (row.earliestBed > -INF / 2 && row.bedAbs <= roundUp5(row.earliestBed) + 1) {
+          const keepLate = row.lateHomeRecovery || (row.note && row.note.indexOf("shorter sleep, to keep your") === 0);
+          if (!keepLate) row.note = null;
+        }
         // Warn only when the hard limits really prevent the full sleep goal.
         const slept = row.wakeAbs - row.bedAbs - sleepLatencyMinutes();
         const goalMin = sleepGoalHours() * 60;
@@ -9581,7 +9646,8 @@
           row.recoveryFull = row.recovery.full;
         }
         if (kindIsOff(row.kind) && row.note && row.targetWake != null && Math.abs(row.wakeAbs - row.targetWake) <= 1) {
-          row.note = null;
+          const keepLate = row.lateHomeRecovery || row.note.indexOf("shorter sleep, to keep your") === 0;
+          if (!keepLate) row.note = null;
         }
       }
       return { dates: dates, byDate: byDate };
@@ -10047,7 +10113,7 @@
       const when = sh ? escapeHtml(formatSleepDate(sh.date)) + " · " + escapeHtml(shiftRangeLabel(sh)) : escapeHtml(formatSleepDate(plan.date));
       if (plan.night) {
         const recNote = plan.recoveryFull === false
-          ? "Shorter rest, then ease back toward your day-off wake"
+          ? "Shorter rest, then ease back toward your usual wake-up"
           : (formatSleepHours(sleepGoalHours()) + " of sleep");
         const recEnd = plan.alarm || plan.recoveryEnd || plan.wake;
         return '<p class="sleep-kicker">Next shift · ' + escapeHtml(formatSleepDate(sh ? sh.date : plan.date)) + '</p>' +
@@ -10061,12 +10127,14 @@
           (plan.warn ? '<p class="sleep-warn">' + escapeHtml(plan.warn) + "</p>" : "");
       }
       const bedNote = plan.bedtimeDate && plan.shift && plan.bedtimeDate !== plan.shift.date ? "The evening before" : "Same day";
-      const alarmNote = plan.note ? plan.note.charAt(0).toUpperCase() + plan.note.slice(1) : (sleepPrepMinutes() + " min before start");
+      const atAnchor = wakeAbsIsAnchor(plan);
+      const alarmNote = plan.note ? plan.note.charAt(0).toUpperCase() + plan.note.slice(1) : (atAnchor ? sleepRhythmNote() : sleepPrepMinutes() + " min before start");
+      const workWakeLabel = sleepWakeLabel(plan, sh);
       return '<p class="sleep-kicker">Next shift · ' + escapeHtml(sh ? formatSleepDate(sh.date) : formatSleepDate(plan.date)) + '</p>' +
         (sh ? '<p class="sleep-shift-line"><span>Work</span>' + escapeHtml(shiftRangeLabel(sh)) + "</p>" : "") +
         '<div class="sleep-times">' +
           '<div class="sleep-time-block"><span class="sleep-time-label">Bedtime</span><span class="sleep-time-value">' + escapeHtml(plan.bedtime) + '</span><span class="sleep-time-note">' + bedNote + "</span></div>" +
-          '<div class="sleep-time-block"><span class="sleep-time-label">Alarm</span><span class="sleep-time-value">' + escapeHtml(plan.alarm || plan.wake) + '</span><span class="sleep-time-note">' + escapeHtml(alarmNote) + "</span></div>" +
+          '<div class="sleep-time-block"><span class="sleep-time-label">' + escapeHtml(workWakeLabel) + '</span><span class="sleep-time-value">' + escapeHtml(plan.alarm || plan.wake) + '</span><span class="sleep-time-note">' + escapeHtml(alarmNote) + "</span></div>" +
         "</div>" +
         (plan.warn ? '<p class="sleep-warn">' + escapeHtml(plan.warn) + "</p>" : "");
     }
@@ -10180,7 +10248,7 @@
       } else if (plan.bedtime) {
         bed = plan.bedtime;
         wake = plan.alarm || plan.wake;
-        if (sh && sh.type === "work" && !plan.night) wakeLabel = "Alarm";
+        if (sh && sh.type === "work" && !plan.night) wakeLabel = sleepWakeLabel(plan, sh);
         if (plan.wakeAbs != null && plan.bedAbs != null) sleepMin = plan.wakeAbs - plan.bedAbs - sleepLatencyMinutes();
       }
       if (bed && wake) {
