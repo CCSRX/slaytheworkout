@@ -1,8 +1,8 @@
 // Slay the workout: offline service worker (v182).
 // Cache-first for the app shell, so it opens with no signal. When online, each open also fetches
 // the newest index.html in the background, so the next open has updates. Bump VERSION to force a refresh.
-const VERSION = "slay-v249";
-const SHELL = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./icon-maskable-512.png", "./apple-touch-icon.png", "./sounds/marimba-a3.mp3", "./sounds/marimba-fs3.mp3", "./sounds/marimba-d3.mp3", "./figures/anatomy-front.webp", "./figures/anatomy-back.webp"];
+const VERSION = "slay-v250";
+const SHELL = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./icon-maskable-512.png", "./apple-touch-icon.png", "./sounds/marimba-a3.mp3", "./sounds/marimba-fs3.mp3", "./sounds/marimba-d3.mp3"];
 
 self.addEventListener("install", event => {
   event.waitUntil(caches.open(VERSION).then(cache => cache.addAll(SHELL.map(u => new Request(u, { cache: "reload" })))).then(() => self.skipWaiting()));
