@@ -668,6 +668,49 @@
       line-height: 1;
     }
     .settings-close:active { color: var(--text); background: var(--card-2); }
+    .settings-section {
+      margin: 0 0 4px;
+      padding: 14px 0 16px;
+      border-top: 1px solid var(--line);
+    }
+    .settings-section:first-of-type { padding-top: 2px; border-top: none; }
+    .settings-section h3 {
+      margin: 0 0 10px;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--mute);
+    }
+    .settings-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      min-height: 48px;
+    }
+    .settings-row + .settings-row { margin-top: 2px; }
+    .settings-row > span, .settings-row > label { font-weight: 700; min-width: 0; white-space: nowrap; }
+    .settings-row .data-btn { width: auto; padding: 0 16px; }
+    .settings-row .unit-switch { flex: 0 1 auto; margin-left: auto; flex-wrap: nowrap; }
+    .settings-label {
+      display: block;
+      margin: 12px 0 6px;
+      font-weight: 700;
+    }
+    .settings-help, .settings-section .equipment-note, .settings-section .weekdays-preview {
+      margin: 6px 0 0;
+      font-size: 13px;
+      line-height: 1.4;
+      color: var(--mute);
+    }
+    .settings-help:empty, .equipment-note:empty { display: none; }
+    .settings-section .weekdays-picker { margin-top: 8px; }
+    .settings-section .equipment-list { margin-top: 8px; }
+    .settings-data-actions { margin-top: 0; }
+    .settings-section #installBtn { width: 100%; margin-top: 10px; }
+    .settings-danger { margin: 8px 0 0; padding-top: 8px; }
+    .settings-danger .data-btn.danger { grid-column: auto; width: 100%; }
     /* v3: compact, theme-aware progress UI and finger-sized controls. */
     .rep-btn, .length-switch, .home-back { min-height: 48px; }
     .settings-btn, .settings-close { width: 48px; height: 48px; }
@@ -1530,56 +1573,60 @@
           <h2 id="settingsTitle">Settings</h2>
           <button type="button" class="settings-close" id="closeSettingsBtn" aria-label="Close settings">×</button>
         </div>
-        <div class="theme-row">
-          <span>Appearance</span>
-          <button type="button" class="data-btn" id="themeToggle" aria-pressed="false">Light theme</button>
-        </div>
-        <div class="theme-row">
-          <span>Weight units</span>
-          <div class="unit-switch" role="group" aria-label="Weight units">
-            <button type="button" class="data-btn" id="unitKgBtn" aria-pressed="true">kg</button>
-            <button type="button" class="data-btn" id="unitLbBtn" aria-pressed="false">lb</button>
-          </div>
-        </div>
-        <div class="theme-row home-range-row">
-          <span>Home view</span>
-          <div class="unit-switch home-range-switch" role="group" aria-label="Home view">
-            <button type="button" class="data-btn" id="homeWeekBtn" aria-pressed="true">This week</button>
-            <button type="button" class="data-btn" id="homeMonthBtn" aria-pressed="false">This month</button>
-          </div>
-        </div>
-        <div class="weekdays-section program-section">
+        <section class="settings-section" aria-labelledby="programTitle">
           <h3 id="programTitle">Program</h3>
-          <p class="equipment-note">Your training split. Sets which workout days and exercises you get.</p>
           <div id="programPicker" class="settings-program-picker" role="group" aria-labelledby="programTitle"></div>
-        </div>
-        <div class="weekdays-section">
-          <h3 id="weekDaysTitle">Training days per week</h3>
-          <p class="equipment-note" id="weekDaysNote"></p>
+          <span id="weekDaysTitle" class="settings-label">Training days</span>
+          <p class="settings-help" id="weekDaysNote"></p>
           <div class="weekdays-picker" id="weekDaysPicker" role="group" aria-labelledby="weekDaysTitle"></div>
-          <p class="weekdays-preview" id="weekDaysPreview"></p>
-        </div>
-        <div class="bodyweight-section">
-          <div class="bodyweight-row">
-            <label for="bodyWeightInput">Your body weight</label>
+          <p class="weekdays-preview settings-help" id="weekDaysPreview"></p>
+        </section>
+        <section class="settings-section" aria-labelledby="workoutTitle">
+          <h3 id="workoutTitle">Workout</h3>
+          <div class="settings-row">
+            <span>Weight units</span>
+            <div class="unit-switch" role="group" aria-label="Weight units">
+              <button type="button" class="data-btn" id="unitKgBtn" aria-pressed="true">kg</button>
+              <button type="button" class="data-btn" id="unitLbBtn" aria-pressed="false">lb</button>
+            </div>
+          </div>
+          <div class="settings-row bodyweight-row">
+            <label for="bodyWeightInput">Body weight</label>
             <span class="bodyweight-field"><input id="bodyWeightInput" type="text" inputmode="decimal" autocomplete="off" placeholder="—" aria-describedby="bodyWeightNote" aria-invalid="false"> <span id="bodyWeightUnit">kg</span></span>
           </div>
-          <p class="equipment-note" id="bodyWeightNote">Used to estimate kilos for pull-ups, chin-ups, leg raises, bodyweight skull crushers, dips and diamond push-ups in the exercise summary.</p>
-        </div>
-        <div class="equipment-section">
-          <h3>Equipment</h3>
-          <p class="equipment-note">Turn off what you don't have. Exercises that need it are hidden from your workouts. With only one type on, every lift switches to a version for that equipment.</p>
+          <p class="settings-help" id="bodyWeightNote">Used for bodyweight lifts in the summary.</p>
+          <span class="settings-label">Equipment</span>
+          <p class="settings-help">Off hides exercises that need it.</p>
           <div class="equipment-list" id="equipmentList"></div>
-        </div>
-        <div class="data-actions">
-          <button type="button" class="data-btn" id="exportBtn">Export Logs</button>
-          <button type="button" class="data-btn" id="importBtn">Import Logs</button>
-          <button type="button" class="data-btn danger" id="clearLogsBtn">Clear All Logs</button>
+        </section>
+        <section class="settings-section" aria-labelledby="dataTitle">
+          <h3 id="dataTitle">Data</h3>
+          <div class="data-actions settings-data-actions">
+            <button type="button" class="data-btn" id="exportBtn">Export logs</button>
+            <button type="button" class="data-btn" id="importBtn">Import logs</button>
+          </div>
+          <input type="file" id="importFile" accept="application/json,.json" hidden>
+          <p class="io-status" id="ioStatus" hidden></p>
+        </section>
+        <section class="settings-section" aria-labelledby="appTitle">
+          <h3 id="appTitle">App</h3>
+          <div class="settings-row">
+            <span>Appearance</span>
+            <button type="button" class="data-btn" id="themeToggle" aria-pressed="false">Light theme</button>
+          </div>
+          <div class="settings-row">
+            <span>Home view</span>
+            <div class="unit-switch home-range-switch" role="group" aria-label="Home view">
+              <button type="button" class="data-btn" id="homeWeekBtn" aria-pressed="true" aria-label="This week">Week</button>
+              <button type="button" class="data-btn" id="homeMonthBtn" aria-pressed="false" aria-label="This month">Month</button>
+            </div>
+          </div>
           <button type="button" class="data-btn" id="installBtn" hidden>Install app</button>
+          <p class="settings-help" id="installHint">On iPhone, tap Share, then Add to Home Screen.</p>
+        </section>
+        <div class="settings-danger">
+          <button type="button" class="data-btn danger" id="clearLogsBtn">Clear all logs</button>
         </div>
-        <p class="equipment-note" id="installHint">On iPhone (Safari), tap Share, then Add to Home Screen.</p>
-        <input type="file" id="importFile" accept="application/json,.json" hidden>
-        <p class="io-status" id="ioStatus" hidden></p>
       </div>
     </div>
   </div>
@@ -4714,7 +4761,7 @@
         html += '<li><time datetime="' + session.date + '">' + displaySessionDate(session.date) + '</time> · ' + escapeHtml(progressSummary(entry.sets)) +
           (topOfRange(exercise, entry.sets, entry.programmedSets) ? '<span class="history-top">✓ Top of range on all ' + entry.programmedSets + ' programmed sets · progress if form was good</span>' : '') + '</li>';
       });
-      return html + '</ul>' + (all.length > 10 ? '<p class="history-note">Older sessions are kept in Export Logs.</p>' : '') + '</section>';
+      return html + '</ul>' + (all.length > 10 ? '<p class="history-note">Older sessions are kept in Export logs.</p>' : '') + '</section>';
     }
 
     function sessionWorkingLoad(entry) {
@@ -5734,11 +5781,7 @@
       const suffix = document.getElementById("bodyWeightUnit");
       if (suffix) suffix.textContent = weightUnitLabel();
       const note = document.getElementById("bodyWeightNote");
-      if (note) {
-        note.textContent = usesLb()
-          ? "Used to estimate pounds for pull-ups, chin-ups, leg raises, bodyweight skull crushers, dips and diamond push-ups in the exercise summary."
-          : "Used to estimate kilos for pull-ups, chin-ups, leg raises, bodyweight skull crushers, dips and diamond push-ups in the exercise summary.";
-      }
+      if (note) note.textContent = "Used for bodyweight lifts in the summary.";
     }
 
     function setWeightUnit(unit) {
@@ -5788,7 +5831,7 @@
       const picker = document.getElementById("weekDaysPicker");
       if (!picker) return;
       const current = daysPerWeekFor(state.program);
-      document.getElementById("weekDaysNote").textContent = "For " + PROGRAMS[state.program].name + ". Sets which weekdays your plan uses.";
+      document.getElementById("weekDaysNote").textContent = "";
       picker.innerHTML = WEEK_DAY_OPTIONS[state.program].map(n =>
         '<button type="button" class="weekdays-option" data-week-days="' + n + '" aria-pressed="' + (n === current) + '" aria-label="' + n + ' training ' + (n === 1 ? "day" : "days") + ' per week">' + n + '</button>').join("");
       document.getElementById("weekDaysPreview").textContent = weekLayoutCustomized() ? "Your own week layout is in use. Picking a number here replaces it." : weekLayoutText(state.program, current);
