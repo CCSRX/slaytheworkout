@@ -10244,7 +10244,7 @@
       if (!rows || !rows.length) return false;
       mergeShifts(rows);
       saveState();
-      if (announce !== false) showStatus("Imported " + rows.length + " shifts.");
+      if (announce !== false) showStatus(typeof announce === "string" ? announce : ("Imported " + rows.length + " shifts."));
       if (view === "sleep") renderSleep();
       return true;
     }
