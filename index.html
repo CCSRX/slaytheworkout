@@ -2448,10 +2448,12 @@
     }
 
     const EQUIPMENT = [
-      { id: "machine", name: "Machine" },
-      { id: "dumbbells", name: "Dumbbells" },
-      { id: "barbell", name: "Barbells" },
-      { id: "bodyweight", name: "Body weight" }
+      { id: "barbell", name: "Barbell", kind: "type" },
+      { id: "dumbbells", name: "Dumbbells", kind: "type" },
+      { id: "bench", name: "Bench", kind: "extra" },
+      { id: "pullupBar", name: "Pull-up bar", kind: "extra" },
+      { id: "machine", name: "Machine", kind: "type" },
+      { id: "bodyweight", name: "Body weight", kind: "type" }
     ];
     const BASE_EQUIPMENT = {
       bench: "barbell", ohp: "barbell", cgBench: "barbell", rows: "barbell", shrugs: "barbell",
@@ -2501,7 +2503,7 @@
       try {
         const eq = state.equipment;
         if (!eq) return "";
-        const on = EQUIPMENT.filter(item => eq[item.id] !== false).map(item => item.id);
+        const on = EQUIPMENT.filter(item => item.kind === "type" && eq[item.id] !== false).map(item => item.id);
         return on.length === 1 ? on[0] : "";
       } catch (error) { return ""; }
     }
@@ -2509,6 +2511,17 @@
     function normalizeEquipment(raw) {
       const out = {};
       EQUIPMENT.forEach(item => { out[item.id] = !(raw && raw[item.id] === false); });
+      // Old saves only had the four type toggles. Missing extras default on when
+      // that would keep the current program visible: bench if barbell or dumbbells
+      // were on (or everything was on); pull-up bar if body weight was on.
+      if (raw && typeof raw === "object") {
+        if (!Object.prototype.hasOwnProperty.call(raw, "bench")) {
+          out.bench = raw.barbell !== false || raw.dumbbells !== false;
+        }
+        if (!Object.prototype.hasOwnProperty.call(raw, "pullupBar")) {
+          out.pullupBar = raw.bodyweight !== false;
+        }
+      }
       return out;
     }
 
@@ -2528,12 +2541,32 @@
       return "";
     }
 
+    function extraEquipmentFromName(name) {
+      const n = String(name || "").toLowerCase();
+      const extras = [];
+      if (/pull-?ups?\b|chin-?ups?\b|hanging leg raise|hanging knee/.test(n)) extras.push("pullupBar");
+      const machineish = /machine|cable|pec deck/.test(n);
+      if (!machineish && /bench press|\bpreacher\b|dumbbell rows?\b|skull crush|bench dips?|(incline|decline|close-grip) dumbbell press|dumbbell (close-grip|incline|decline) press|dumbbell bench/.test(n)) extras.push("bench");
+      return extras;
+    }
+
+    function extraEquipmentFor(exercise) {
+      let shown = exercise;
+      try { shown = displayExercise(exercise); } catch (error) {}
+      return extraEquipmentFromName(shown && shown.name);
+    }
+
+    function equipmentNeeds(exercise) {
+      const type = equipmentFor(exercise);
+      return (type ? [type] : []).concat(extraEquipmentFor(exercise));
+    }
+
     function equipmentAvailable(exercise) {
       const solo = soloEquipment();
       if (solo && Object.prototype.hasOwnProperty.call(SOLO_EQUIVALENTS[solo], exercise.id)) return SOLO_EQUIVALENTS[solo][exercise.id] !== null;
-      const need = equipmentFor(exercise);
-      if (!need) return true;
-      try { return !state.equipment || state.equipment[need] !== false; } catch (error) { return true; }
+      try {
+        return equipmentNeeds(exercise).every(id => !state.equipment || state.equipment[id] !== false);
+      } catch (error) { return true; }
     }
 
     // Sets logged today on this day's exercise; such lifts never get hidden by equipment toggles.
@@ -3113,7 +3146,10 @@
     const POOL_SPLITS = { push: ["chest", "shoulders", "triceps"], pull: ["back", "biceps", "neck"], legs: ["quads", "hamstrings", "calves", "core"] };
     const SLOT_GROUP = { bench: "chest", ohp: "shoulders", laterals: "shoulders", rearDelts: "shoulders", cgBench: "triceps", skulls: "triceps", pullupsWide: "back", pullupsShort: "back", pullupsSupinated: "back", rows: "back", shrugs: "back", ezCurls: "biceps", preacher: "biceps", neckFlex: "neck", neckExt: "neck", squat: "quads", squatFull: "quads", rdl: "hamstrings", calves: "calves", legRaises: "core" };
     function poolEquipmentOn(item) {
-      try { return !state.equipment || state.equipment[item.equipment] !== false; } catch (error) { return true; }
+      try {
+        if (item.equipment && state.equipment && state.equipment[item.equipment] === false) return false;
+        return extraEquipmentFromName(item.name).every(id => !state.equipment || state.equipment[id] !== false);
+      } catch (error) { return true; }
     }
     function poolOrderFor(slotId) {
       const group = SLOT_GROUP[slotId] || (/neck/i.test(slotId) ? "neck" : /pullup/i.test(slotId) ? "back" : null);
@@ -5476,7 +5512,7 @@
         parts.push('<div class="ex-card-copy">');
         parts.push("<h2>" + escapeHtml(exercise.name) + "</h2>");
         parts.push('<p class="scheme">' + shown + " sets × " + exercise.minReps + "–" + exercise.maxReps + " reps</p>");
-        if (!equipmentAvailable(exercises[e])) parts.push('<p class="needs-equip">Needs ' + escapeHtml(equipmentName(equipmentFor(exercises[e]))) + ' · kept because you logged it today</p>');
+        if (!equipmentAvailable(exercises[e])) parts.push('<p class="needs-equip">Needs ' + escapeHtml(equipmentNeeds(exercises[e]).map(equipmentName).join(" and ")) + ' · kept because you logged it today</p>');
         if (last.empty) {
           parts.push('<p class="ex-last-empty">No previous session</p>');
         } else {
@@ -5568,8 +5604,8 @@
       const parts = ['<section class="unavailable-section"><h3>Hidden: missing equipment</h3><p>Swap one to something you have, or turn the equipment back on in Settings.</p>'];
       missing.forEach(raw => {
         const exercise = displayExercise(raw);
-        const need = EQUIPMENT.find(item => item.id === equipmentFor(raw));
-        parts.push('<div class="exercise-row unavailable-row"><div class="unavailable-item"><strong>' + escapeHtml(exercise.name) + '</strong><span>Needs ' + escapeHtml(need ? need.name.toLowerCase() : "equipment") + "</span></div>");
+        const need = equipmentNeeds(raw).map(equipmentName).join(" and ") || "equipment";
+        parts.push('<div class="exercise-row unavailable-row"><div class="unavailable-item"><strong>' + escapeHtml(exercise.name) + '</strong><span>Needs ' + escapeHtml(need) + "</span></div>");
         parts.push('<button type="button" class="swap-btn" data-action="swap-exercise" data-slot="' + raw.id + '" aria-label="Swap ' + escapeHtml(exercise.name) + '"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 3v5h5"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M16 16h5v5"/></svg></button></div>');
       });
       parts.push("</section>");
@@ -5952,16 +5988,7 @@
 
     // ---------- First-run setup (v154) ----------
     // Shown only when nothing is saved yet (no "ppl-v1" in localStorage). Never after an import.
-    const ONBOARDING_EQUIPMENT = [
-      { id: "barbell", name: "Barbell", maps: "barbell" },
-      { id: "ezBar", name: "EZ bar", maps: "barbell" },
-      { id: "dumbbells", name: "Dumbbells", maps: "dumbbells" },
-      { id: "pullupBar", name: "Pull-up bar", maps: "bodyweight" },
-      { id: "dipBars", name: "Dip bars or bench", maps: "bodyweight" },
-      { id: "legPress", name: "Leg press machine", maps: "machine" },
-      { id: "cable", name: "Cable machine", maps: "machine" },
-      { id: "otherMachines", name: "Other machines", note: "Calf raise etc.", maps: "machine" }
-    ];
+    const ONBOARDING_EQUIPMENT = EQUIPMENT;
     const ONBOARDING_STEPS = 4;
     let obDraft = null;
 
@@ -5972,12 +5999,11 @@
       return { equipmentDetail: detail, completedAt: typeof raw.completedAt === "string" ? raw.completedAt.slice(0, 40) : "" };
     }
 
-    // Fine-grained choices -> the four Settings toggles. Body weight always stays on: floor work like leg raises needs nothing.
+    // Onboarding and Settings share EQUIPMENT. Nothing picked = skipped: keep everything on.
     function equipmentFromDetail(detail) {
-      // Nothing picked (v159) = skipped: keep the app default of everything on, rather than switching to bodyweight-only.
       if (!detail.length) return normalizeEquipment(null);
-      const on = { machine: false, dumbbells: false, barbell: false, bodyweight: true };
-      ONBOARDING_EQUIPMENT.forEach(item => { if (detail.includes(item.id)) on[item.maps] = true; });
+      const on = {};
+      EQUIPMENT.forEach(item => { on[item.id] = detail.includes(item.id); });
       return normalizeEquipment(on);
     }
 
@@ -6024,7 +6050,7 @@
         body.innerHTML = '<div class="ob-options two" role="group" aria-label="Equipment">' + ONBOARDING_EQUIPMENT.map(item => {
           const on = obDraft.equipment.includes(item.id);
           return '<button type="button" class="ob-option" data-ob-equipment="' + item.id + '" aria-pressed="' + on + '">' + escapeHtml(item.name) + (item.note ? '<small>' + escapeHtml(item.note) + '</small>' : '') + '</button>';
-        }).join("") + '</div><p class="ob-note">Bodyweight exercises like leg raises and push-ups are always included. Pick nothing to keep all equipment on. You can change this later in Settings.</p>';
+        }).join("") + '</div><p class="ob-note">Pick nothing to keep all equipment on. You can change this later in Settings.</p>';
       } else if (step === 3) {
         if (!Object.hasOwn(PROGRAMS, obDraft.program)) obDraft.program = "ppl";
         title.textContent = "Choose your split";
