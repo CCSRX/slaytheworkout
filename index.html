@@ -4753,6 +4753,18 @@
       if (overlay) overlay.hidden = false;
     }
 
+    // No sleep data: a workout day opens its exercise list. Rest days still use the sheet
+    // so the user can see how to drag a workout onto that day. Sleep users keep the sheet.
+    function openTappedHomeDay(stamp) {
+      const slot = homeSlotByStamp[stamp];
+      if (!usesSleepTracker() && slot && slot.dayKey) {
+        closeHomeDay();
+        openDay(slot.dayKey);
+        return;
+      }
+      openHomeDay(stamp);
+    }
+
     function closeHomeDay() {
       homeDayStamp = null;
       const overlay = document.getElementById("homeDayOverlay");
@@ -9274,6 +9286,11 @@
       return !!normalizeWeekSchedule(state && state.weekSchedule);
     }
 
+    // Sleep tracker is in use only when the user has saved shifts or regular hours on the Sleep page.
+    function usesSleepTracker() {
+      return !!(state.shifts && state.shifts.length) || weekScheduleOn();
+    }
+
     let effectiveShiftsMemo = null;
     function effectiveShifts() {
       const explicit = state.shifts || [];
@@ -11357,7 +11374,7 @@
       if (event.target.closest("[data-home-sleep]")) { goSleep(); return; }
       if (event.target.closest("[data-home-insight]")) { goExerciseSummary(); return; }
       const day = event.target.closest("[data-home-day]");
-      if (day) { openHomeDay(day.getAttribute("data-home-day")); return; }
+      if (day) { openTappedHomeDay(day.getAttribute("data-home-day")); return; }
       const open = event.target.closest("[data-open-day]");
       if (open) enterDay(open.dataset.openDay);
     });
