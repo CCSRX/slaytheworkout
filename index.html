@@ -838,9 +838,11 @@
     .home-header { position: relative; }
     .home-header .home-settings { position: absolute; top: 0; right: 0; }
     .home-header .app-title { padding-right: 52px; }
-    .week-status[data-movable] { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+    .week-status[data-movable],
+    .week-status[data-movable] .week-open,
+    .month-cell[data-movable] { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: none; }
     .week-status.drag-source, .month-cell.drag-source { opacity: 0.35; }
-    .month-cell[data-movable] { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+
     .month-cell.drop-target { outline: 3px dashed var(--acc); outline-offset: 1px; }
     .week-status.drop-target { outline: 3px dashed var(--acc); outline-offset: 2px; }
     .week-drag-ghost { position: fixed; z-index: 60; pointer-events: none; margin: 0; transform: scale(1.04) rotate(-1deg); box-shadow: 0 12px 28px rgba(0,0,0,0.45); transition: transform 0.12s; }
@@ -11057,7 +11059,7 @@
     })();
     (function setupExerciseEditing() {
       const list = document.getElementById("exercises");
-      const HOLD_MS = 420, SLOP = 10;
+      const HOLD_MS = 420, SLOP = 20;
       let pending = null, drag = null, suppressClick = false;
       function point(e) { const t = e.touches ? (e.touches[0] || e.changedTouches[0]) : e; return { x: t.clientX, y: t.clientY }; }
       function rowAt(x, y) {
@@ -11231,19 +11233,30 @@
         if (commit && to !== null) moveDayStamps(from, to);
       }
       function cancelPending() { if (pending) { clearTimeout(pending.timer); pending = null; } }
+      function isRepeatDown(e) {
+        if (e.type === "mousedown" && e.button !== 0) return true;
+        // A real touch also synthesizes mousedown (and sometimes pointerdown).
+        // Those must not reset the hold timer or the drag never starts.
+        if (pending || drag) return true;
+        if (e.type === "mousedown" && e.sourceCapabilities && e.sourceCapabilities.firesTouchEvents) return true;
+        return false;
+      }
       function down(e) {
-        if (e.type === "mousedown" && e.button !== 0) return;
+        if (isRepeatDown(e)) return;
         const card = e.target.closest && e.target.closest('.week-status[data-movable], .month-cell[data-movable]');
         suppressClick = false;
         if (!card || drag) return;
         const p = point(e);
-        cancelPending();
         pending = { card, x: p.x, y: p.y, timer: setTimeout(() => { const c = pending && pending.card; const q = pending; pending = null; if (c) start(c, { x: q.lx || q.x, y: q.ly || q.y }); }, HOLD_MS) };
+        if (e.pointerId != null && card.setPointerCapture) {
+          try { card.setPointerCapture(e.pointerId); } catch (err) {}
+        }
       }
       function moved(e) {
         const p = point(e);
         if (drag) { if (e.cancelable) e.preventDefault(); move(p); return; }
         if (pending) {
+          if (e.cancelable) e.preventDefault();
           pending.lx = p.x; pending.ly = p.y;
           if (Math.abs(p.x - pending.x) > SLOP || Math.abs(p.y - pending.y) > SLOP) cancelPending();
         }
@@ -11252,10 +11265,14 @@
         cancelPending();
         if (drag) { if (e.cancelable) e.preventDefault(); finish(true); }
       }
-      view.addEventListener("touchstart", down, { passive: true });
+      view.addEventListener("touchstart", down, { passive: false });
       document.addEventListener("touchmove", moved, { passive: false });
       document.addEventListener("touchend", up, { passive: false });
       document.addEventListener("touchcancel", () => { cancelPending(); finish(false); });
+      view.addEventListener("pointerdown", down);
+      document.addEventListener("pointermove", moved, { passive: false });
+      document.addEventListener("pointerup", up);
+      document.addEventListener("pointercancel", () => { cancelPending(); finish(false); });
       view.addEventListener("mousedown", down);
       document.addEventListener("mousemove", moved);
       document.addEventListener("mouseup", up);
