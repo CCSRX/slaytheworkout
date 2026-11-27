@@ -3293,9 +3293,9 @@
       const isToday = state.logDates[state.currentDay]?.[exercise.id] === fileStamp(new Date());
       if (isToday && rows.some(setHasReps)) return rows;
       const recent = exerciseSessions(state.currentDay, exercise.id)[0];
-      // Use the latest performance anywhere, not a stale log from this day variant.
-      // A newly typed weight is a target, not proof of progression at that load.
-      if (recent && (!isToday || heaviestWeight(rows) === "" || heaviestWeight(rows) === heaviestWeight(recent.exercises[exercise.id].sets))) return recent.exercises[exercise.id].sets;
+      // Today's typed or prefilled weight is a target, not proof of progression at that load.
+      // Keep the suggestion on the last completed session until today's sets are logged.
+      if (recent) return recent.exercises[exercise.id].sets;
       return rows;
     }
 
@@ -3396,6 +3396,31 @@
       const current = Number(formatWeight(weight));
       if (!Number.isFinite(current)) return "";
       return formatWeightNumber(current + weightIncrementDisplay(exercise), weightUnitLabel());
+    }
+
+    function nextStoredWeightFromRows(exercise, rows) {
+      const next = suggestedNextWeight(exercise, rows);
+      if (!next) return "";
+      if (usesLb()) {
+        const n = Number(next);
+        if (!Number.isFinite(n)) return "";
+        return storedKgFromNumber(n / KG_TO_LB);
+      }
+      return storedWeight(next);
+    }
+
+    function sessionSetsReadyToAddWeight(exercise, rows, count) {
+      if (!exercise || usesRepProgression(exercise) || !exercise.maxReps) return false;
+      return anySetAtTop(exercise, rows, count);
+    }
+
+    // Prefill for the next session: last load, or last + the usual increment if that session hit the top of the range.
+    function plannedStartingWeight(exercise, lastRows, lastCount) {
+      const last = heaviestWeight(lastRows);
+      if (last === "" || !exercise || usesRepProgression(exercise)) return last;
+      const count = lastCount || visibleSets(exercise);
+      if (!sessionSetsReadyToAddWeight(exercise, lastRows, count)) return last;
+      return nextStoredWeightFromRows(exercise, lastRows) || last;
     }
 
     function normalizeRestDuration(value) {
@@ -3869,15 +3894,24 @@
           old.exercises[exerciseId] = { programmedSets: visibleSets(findExercise(day, exerciseId)), sets: rows.map(row => ({ ...row })), variant: v.id, variantName: v.name };
         }
         const recent = exerciseSessions(day, exerciseId)[0];
-        const weight = recent ? heaviestWeight(recent.exercises[exerciseId].sets) : heaviestWeight(rows);
-        state.logs[day][exerciseId] = emptyExerciseLog(findExercise(day, exerciseId)).map(row => ({ weight: weight, reps: "" }));
+        const ex = findExercise(day, exerciseId);
+        let weight = recent ? heaviestWeight(recent.exercises[exerciseId].sets) : heaviestWeight(rows);
+        if (recent && recent.exercises[exerciseId]) {
+          const lastEntry = recent.exercises[exerciseId];
+          weight = plannedStartingWeight(ex, lastEntry.sets, lastEntry.programmedSets || visibleSets(ex));
+        }
+        state.logs[day][exerciseId] = emptyExerciseLog(ex).map(row => ({ weight: weight, reps: "" }));
         editingSetIndex = null;
         selectedReps = "";
         currentSetIndex = 0;
       }
       if (!state.logs[day][exerciseId].some(setHasReps) && firstWeight(state.logs[day][exerciseId]) === "") {
         const recent = exerciseSessions(day, exerciseId)[0];
-        if (recent) applyExerciseWeight(day, exerciseId, heaviestWeight(recent.exercises[exerciseId].sets));
+        const ex = findExercise(day, exerciseId);
+        if (recent && recent.exercises[exerciseId]) {
+          const lastEntry = recent.exercises[exerciseId];
+          applyExerciseWeight(day, exerciseId, plannedStartingWeight(ex, lastEntry.sets, lastEntry.programmedSets || visibleSets(ex)));
+        }
       }
       state.logDates[day][exerciseId] = today;
     }
@@ -6304,6 +6338,48 @@
       return topOfRange(ex, entry.sets, entrySetCount(entry));
     }
 
+    function sessionReadyToAddWeight(session, id) {
+      const entry = session.exercises && session.exercises[id];
+      const ex = resolveExercise(session, id);
+      if (!entry || !ex) return false;
+      return sessionSetsReadyToAddWeight(ex, entry.sets, entrySetCount(entry));
+    }
+
+    function entryTotalReps(entry) {
+      return loggedSets(entry).reduce(function (n, row) { return n + (Number(row.reps) || 0); }, 0);
+    }
+
+    // Weight up, or more reps at the same or heavier load, or a better top set, counts as forward movement.
+    function sessionMovedForward(prevSess, lastSess, id) {
+      if (!prevSess || !lastSess || !prevSess.exercises || !lastSess.exercises) return null;
+      const lastEntry = lastSess.exercises[id];
+      const prevEntry = prevSess.exercises[id];
+      if (!lastEntry || !prevEntry) return null;
+      const lastEx = resolveExercise(lastSess, id);
+      const prevEx = resolveExercise(prevSess, id);
+      const lastKg = heaviestKgOf(lastEntry, lastEx);
+      const prevKg = heaviestKgOf(prevEntry, prevEx);
+      if (lastKg > prevKg + 0.049) return { kind: "weight", delta: lastKg - prevKg };
+      const lastBest = bestSetOf(lastEntry, lastEx);
+      const prevBest = bestSetOf(prevEntry, prevEx);
+      const lastReps = entryTotalReps(lastEntry);
+      const prevReps = entryTotalReps(prevEntry);
+      if (lastBest && prevBest) {
+        if (lastKg >= prevKg - 0.049 && lastBest.reps > prevBest.reps) {
+          return { kind: "reps", delta: lastBest.reps - prevBest.reps };
+        }
+        if (lastBest.load > prevBest.load + 0.049) {
+          const repDelta = lastBest.reps - prevBest.reps;
+          return { kind: repDelta > 0 ? "reps" : "load", delta: repDelta > 0 ? repDelta : lastBest.load - prevBest.load };
+        }
+      }
+      if (lastKg >= prevKg - 0.049 && lastReps > prevReps) return { kind: "reps", delta: lastReps - prevReps };
+      const lastRm = lastBest ? epley1RM(lastBest.kg, lastBest.reps) : 0;
+      const prevRm = prevBest ? epley1RM(prevBest.kg, prevBest.reps) : 0;
+      if (lastRm > prevRm + 0.049) return { kind: "load", delta: lastRm - prevRm };
+      return null;
+    }
+
     function allExerciseSessions(id) {
       return (state.sessions || []).filter(function (s) {
         return s.exercises && s.exercises[id] && loggedSets(s.exercises[id]).length;
@@ -6334,10 +6410,29 @@
       const ex = resolveExercise(last, id);
       const lastKg = heaviestKgOf(last.exercises[id], ex);
       const prevKg = prev ? heaviestKgOf(prev.exercises[id], resolveExercise(prev, id)) : null;
+      const moved = prev ? sessionMovedForward(prev, last, id) : null;
       let dir = "same";
       let delta = 0;
-      if (prevKg != null && lastKg > prevKg + 0.049) { dir = "up"; delta = lastKg - prevKg; }
-      else if (prevKg != null && lastKg < prevKg - 0.049) { dir = "down"; delta = prevKg - lastKg; }
+      let moveKind = "weight";
+      if (moved) {
+        dir = "up";
+        delta = moved.delta;
+        moveKind = moved.kind;
+      } else if (prev) {
+        const lastBest = bestSetOf(last.exercises[id], ex);
+        const prevBest = bestSetOf(prev.exercises[id], resolveExercise(prev, id));
+        const lastReps = entryTotalReps(last.exercises[id]);
+        const prevReps = entryTotalReps(prev.exercises[id]);
+        if (prevKg != null && lastKg < prevKg - 0.049) {
+          dir = "down";
+          delta = prevKg - lastKg;
+          moveKind = "weight";
+        } else if (lastBest && prevBest && lastBest.reps < prevBest.reps && lastReps <= prevReps) {
+          dir = "down";
+          delta = prevBest.reps - lastBest.reps;
+          moveKind = "reps";
+        }
+      }
       const sets = loggedSets(last.exercises[id]);
       const reps = sets.reduce(function (n, row) { return n + (Number(row.reps) || 0); }, 0);
       return {
@@ -6347,7 +6442,8 @@
         lastKg: lastKg,
         dir: dir,
         delta: delta,
-        top: sessionTopOfRange(last, id),
+        moveKind: moveKind,
+        top: sessionReadyToAddWeight(last, id),
         sets: sets.length,
         reps: reps,
         best: bestSetOf(last.exercises[id], ex)
@@ -6393,26 +6489,63 @@
       });
     }
 
-    function cueHtml(trend, isPr) {
+    function prKindLabel(rec, startStamp, endStamp) {
+      if (!rec) return "";
+      const fresh = function (item) { return item && item.date >= startStamp && item.date <= endStamp; };
+      const heavy = fresh(rec.heavy);
+      const reps = fresh(rec.repsAt);
+      const other = fresh(rec.oneRm) || fresh(rec.load);
+      // A heavier top set also refreshes 1RM/load, and more reps at the same weight does too.
+      // Label by whether the heaviest weight or the rep high is new, not those side effects.
+      if (heavy && !reps) return "Weight PR";
+      if (reps && !heavy) return "Rep PR";
+      if (heavy || reps || other) return "PR";
+      return "";
+    }
+
+    function prBadgeHtml(label) {
+      return label ? '<span class="cue-badge pr">' + escapeHtml(label) + "</span>" : "";
+    }
+
+    function trendUpCue(trend) {
+      if (trend.moveKind === "reps") {
+        const n = Math.max(1, Math.round(Math.abs(trend.delta) || 1));
+        return '<span class="cue-up">↑ +' + n + (n === 1 ? " rep" : " reps") + "</span>";
+      }
+      if (trend.moveKind === "load") return '<span class="cue-up">↑ better set</span>';
+      return '<span class="cue-up">↑ ' + escapeHtml(formatDeltaKg(trend.delta, true)) + "</span>";
+    }
+
+    function trendDownCue(trend) {
+      if (trend.moveKind === "reps") {
+        const n = Math.max(1, Math.round(Math.abs(trend.delta) || 1));
+        return '<span class="cue-down">↓ ' + n + (n === 1 ? " rep" : " reps") + "</span>";
+      }
+      return '<span class="cue-down">↓ ' + escapeHtml(formatDeltaKg(trend.delta, false)) + "</span>";
+    }
+
+    function cueHtml(trend, isPr, prLabel) {
       const parts = [];
-      if (trend && trend.prev && trend.dir === "up") parts.push('<span class="cue-up">↑ ' + escapeHtml(formatDeltaKg(trend.delta, true)) + "</span>");
-      else if (trend && trend.prev && trend.dir === "down") parts.push('<span class="cue-down">↓ ' + escapeHtml(formatDeltaKg(trend.delta, false)) + "</span>");
+      if (trend && trend.prev && trend.dir === "up") parts.push(trendUpCue(trend));
+      else if (trend && trend.prev && trend.dir === "down") parts.push(trendDownCue(trend));
       else if (trend && trend.prev) parts.push('<span class="cue-same">=</span>');
       if (trend && trend.top) parts.push('<span class="cue-badge top">Top of range</span>');
-      if (isPr) parts.push('<span class="cue-badge pr">PR</span>');
+      if (isPr) parts.push(prBadgeHtml(prLabel || "PR"));
       return parts.length ? '<div class="summary-cues">' + parts.join("") + "</div>" : "";
     }
 
-    function primaryCueHtml(trend, isPr, preferTrend) {
+    function primaryCueHtml(trend, isPr, preferTrend, prLabel) {
+      const badge = prBadgeHtml(prLabel || "PR");
       if (preferTrend && trend && trend.prev) {
-        if (trend.dir === "up") return '<span class="cue-up">↑ ' + escapeHtml(formatDeltaKg(trend.delta, true)) + "</span>";
-        if (trend.dir === "down") return '<span class="cue-down">↓ ' + escapeHtml(formatDeltaKg(trend.delta, false)) + "</span>";
+        if (trend.dir === "up") return trendUpCue(trend);
+        if (trend.dir === "down") return trendDownCue(trend);
+        if (isPr) return badge;
         return '<span class="cue-same">=</span>';
       }
-      if (isPr) return '<span class="cue-badge pr">PR</span>';
+      if (isPr) return badge;
       if (trend && trend.top) return '<span class="cue-badge top">Top of range</span>';
-      if (trend && trend.prev && trend.dir === "up") return '<span class="cue-up">↑ ' + escapeHtml(formatDeltaKg(trend.delta, true)) + "</span>";
-      if (trend && trend.prev && trend.dir === "down") return '<span class="cue-down">↓ ' + escapeHtml(formatDeltaKg(trend.delta, false)) + "</span>";
+      if (trend && trend.prev && trend.dir === "up") return trendUpCue(trend);
+      if (trend && trend.prev && trend.dir === "down") return trendDownCue(trend);
       if (trend && trend.prev) return '<span class="cue-same">=</span>';
       return "";
     }
@@ -6434,7 +6567,7 @@
         const entry = last.exercises[id];
         const sets = loggedSets(entry);
         if (!sets.length || !ex.maxReps) return;
-        if (sessionTopOfRange(last, id)) {
+        if (sessionReadyToAddWeight(last, id)) {
           if (!topHit || last.date > topHit.date) {
             const inc = formatWeightWithUnit(weightIncrement(ex));
             topHit = {
@@ -6463,21 +6596,20 @@
       if (topHit) cards.push(topHit);
       else if (close) cards.push(close);
 
-      // Stalled: no weight increase across 3+ sessions spanning 2+ weeks, not at top of range.
+      // Stalled: no weight or rep progress across 3+ sessions spanning 2+ weeks, and not ready to add weight.
       let stalled = null;
       ids.forEach(function (id) {
         const all = allExerciseSessions(id);
         if (all.length < 3) return;
         const last = all[all.length - 1];
-        if (sessionTopOfRange(last, id)) return;
+        if (sessionReadyToAddWeight(last, id)) return;
         const ex = resolveExercise(last, id);
         const lastKg = heaviestKgOf(last.exercises[id], ex);
-        // Walk back while weight did not increase
+        const lastBest = bestSetOf(last.exercises[id], ex);
+        // Walk back while there was no forward movement (weight, reps, or a better set).
         let i = all.length - 1;
         while (i > 0) {
-          const prev = all[i - 1];
-          const prevKg = heaviestKgOf(prev.exercises[id], resolveExercise(prev, id));
-          if (lastKg > prevKg + 0.049) break;
+          if (sessionMovedForward(all[i - 1], all[i], id)) break;
           i -= 1;
         }
         const streak = all.slice(i);
@@ -6486,13 +6618,15 @@
         const days = Math.round((new Date(last.date + "T12:00:00") - new Date(first.date + "T12:00:00")) / 86400000);
         if (days < 14) return;
         const weeks = Math.max(2, Math.round(days / 7));
-        const wtxt = lastKg > 0 ? " at " + formatWeightWithUnit(lastKg) : "";
+        const stay = lastKg > 0
+          ? " at " + formatWeightWithUnit(lastKg) + (lastBest && lastBest.reps ? " × " + lastBest.reps : "")
+          : (lastBest && lastBest.reps ? " at " + lastBest.reps + " reps" : "");
         const cand = {
           kind: "stall",
           tone: "amber",
           priority: 3,
           days: days,
-          text: ex.name + " has stayed" + wtxt + " for " + streak.length + " sessions over " + weeks + " weeks."
+          text: ex.name + " has stayed" + stay + " for " + streak.length + " sessions over " + weeks + " weeks."
         };
         if (!stalled || cand.days > stalled.days) stalled = cand;
       });
@@ -6521,7 +6655,7 @@
         }
       }
       if (!cards.some(function (c) { return c.kind === "lag"; })) {
-        // Fallback: a muscle with no weight increases while others progressed.
+        // Fallback: a muscle with no weight or rep progress while others moved forward.
         const progressed = [];
         const flat = [];
         MUSCLE_ORDER.forEach(function (m) {
@@ -6530,13 +6664,15 @@
             const all = allExerciseSessions(id).filter(function (s) { return s.date >= from && s.date <= today; });
             if (all.length < 2) return;
             const last = all[all.length - 1];
-            const ex = resolveExercise(last, id);
             if (muscleGroupFor(id) !== m.id) return;
             had = true;
             sessions += all.length;
-            const firstKg = heaviestKgOf(all[0].exercises[id], resolveExercise(all[0], id));
-            const lastKg = heaviestKgOf(last.exercises[id], ex);
-            if (lastKg > firstKg + 0.049) up = true;
+            if (sessionMovedForward(all[0], last, id)) up = true;
+            else {
+              for (let s = 1; s < all.length; s += 1) {
+                if (sessionMovedForward(all[s - 1], all[s], id)) { up = true; break; }
+              }
+            }
           });
           if (had && sessions >= 2) {
             if (up) progressed.push(m);
@@ -6548,7 +6684,7 @@
             kind: "lag",
             tone: "amber",
             priority: 4,
-            text: flat[0].name + " hasn't gone up in weight, unlike your other lifts."
+            text: flat[0].name + " hasn't progressed, unlike your other lifts."
           });
         }
       }
@@ -6629,16 +6765,20 @@
         const meta = formatSetCount(item.quarters) + " sets · " + formatVolume(item.volume);
         const helper = item.quarters > 0 && !item.direct ? '<p class="summary-card-meta subtle">From other lifts</p>' : "";
         const recs = uniqueExerciseIds().filter(function (id) { return muscleGroupFor(id) === muscle.id; });
-        let best = null, anyTop = false, anyPr = false;
+        let best = null, anyTop = false, anyPr = false, prLabel = "";
         recs.forEach(function (id) {
           const trend = sessionTrend(id, period.startStamp, period.endStamp);
           if (!trend) return;
           if (trend.top) anyTop = true;
-          if (recordIsNew(recordBook(id), period.startStamp, period.endStamp)) anyPr = true;
+          const rec = recordBook(id);
+          if (recordIsNew(rec, period.startStamp, period.endStamp)) {
+            anyPr = true;
+            if (!prLabel) prLabel = prKindLabel(rec, period.startStamp, period.endStamp);
+          }
           if (trend.prev && (!best || (trend.dir === "up" && trend.delta > (best.delta || 0)) || (!best.prev))) best = trend;
         });
         const fakeTrend = best ? best : (anyTop ? { top: true } : null);
-        const cue = primaryCueHtml(fakeTrend, anyPr, false);
+        const cue = primaryCueHtml(fakeTrend, anyPr, false, prLabel);
         return '<article class="summary-card summary-row" data-group="' + muscle.id + '"><div class="summary-card-head"><strong>' + muscle.name + "</strong>" + cue + "</div>" +
           '<p class="summary-card-meta">' + meta + "</p>" + helper +
           '<div class="summary-bar thin" aria-hidden="true"><i style="width:' + width + "%;background:" + muscle.color + '"></i></div></article>';
@@ -6652,15 +6792,20 @@
       const rows = uniqueExerciseIds().map(function (id) {
         const trend = sessionTrend(id, period.startStamp, period.endStamp);
         if (!trend) return "";
-        const isPr = recordIsNew(recordBook(id), period.startStamp, period.endStamp);
+        const rec = recordBook(id);
+        const isPr = recordIsNew(rec, period.startStamp, period.endStamp);
+        const prLabel = prKindLabel(rec, period.startStamp, period.endStamp);
         const best = trend.best;
         const bestTxt = best
           ? (best.kg > 0 ? formatWeightWithUnit(best.kg) + " × " + best.reps : best.reps + " reps")
           : "—";
-        const cue = primaryCueHtml(trend, isPr, true);
+        const cue = primaryCueHtml(trend, isPr, true, prLabel);
+        const toward = (!trend.top && trend.ex.maxReps && best && best.reps < trend.ex.maxReps)
+          ? " · toward " + trend.ex.maxReps
+          : "";
         return '<article class="summary-card summary-row" data-exercise="' + id + '"><div class="summary-card-head"><strong>' + escapeHtml(trend.ex.name) + "</strong>" + cue + "</div>" +
           '<p class="summary-best">' + escapeHtml(bestTxt) + "</p>" +
-          '<p class="summary-card-meta">' + trend.sets + (trend.sets === 1 ? " set" : " sets") + " · " + trend.reps + " reps · " + displaySessionDate(trend.last.date, false) + "</p></article>";
+          '<p class="summary-card-meta">' + trend.sets + (trend.sets === 1 ? " set" : " sets") + " · " + trend.reps + " reps" + toward + " · " + displaySessionDate(trend.last.date, false) + "</p></article>";
       }).join("");
       if (!rows.replace(/\s/g, "")) return '<p class="insight-empty">No workouts logged in this period.</p>';
       return '<section class="week-summary" aria-label="Exercises">' + rows + "</section>";
@@ -6677,13 +6822,14 @@
       if (!recs.length) return '<p class="insight-empty">No lifts logged yet.</p>';
       const rows = recs.map(function (rec) {
         const isNew = recordIsNew(rec, period.startStamp, period.endStamp);
+        const prLabel = prKindLabel(rec, period.startStamp, period.endStamp);
         function line(item, label, text) {
           if (!item) return "";
           const fresh = item.date >= period.startStamp && item.date <= period.endStamp;
           return '<div class="record-line' + (fresh ? " new" : "") + '"><span>' + label + "</span><strong>" + escapeHtml(text) + "</strong><em>" + displaySessionDate(item.date, false) + (fresh ? " · New" : "") + "</em></div>";
         }
         return '<article class="summary-card' + (isNew ? " has-pr" : "") + '" data-exercise="' + rec.id + '"><div class="summary-card-head"><strong>' + escapeHtml(rec.name) + "</strong>" +
-          (isNew ? '<span class="cue-badge pr">PR</span>' : "") + "</div>" +
+          (isNew ? prBadgeHtml(prLabel || "PR") : "") + "</div>" +
           line(rec.heavy, "Heaviest", rec.heavy && rec.heavy.kg > 0 ? formatWeightWithUnit(rec.heavy.kg) : "—") +
           line(rec.oneRm, "Est. 1RM", rec.oneRm && rec.oneRm.rm > 0 ? formatWeightWithUnit(rec.oneRm.rm) : "—") +
           line(rec.load, "Best set", rec.load ? (rec.load.kg > 0 ? formatWeightWithUnit(rec.load.kg) + " × " + rec.load.reps : rec.load.reps + " reps") : "—") +
@@ -6694,7 +6840,7 @@
     }
 
     function summaryLegendHtml() {
-      return '<p class="summary-legend"><span class="cue-up">↑ +2.5 kg</span> weight went up · <span class="cue-same">=</span> same weight · <span class="cue-down">↓</span> weight went down · <span class="cue-badge top">Top of range</span> all working sets hit the max reps, so add weight next time · <span class="cue-badge pr">PR</span> a new personal best in this period</p>';
+      return '<p class="summary-legend"><span class="cue-up">↑</span> weight or reps went up · <span class="cue-same">=</span> no change · <span class="cue-down">↓</span> went down · <span class="cue-badge top">Top of range</span> a set hit the max reps, so the next session is already a step heavier · <span class="cue-badge pr">PR</span> a new personal best (weight or reps) in this period</p>';
     }
 
     function renderExerciseSummary() {
