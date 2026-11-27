@@ -1369,7 +1369,9 @@
     .hd-ex li { display: flex; justify-content: space-between; gap: 10px; font-size: 14px; font-weight: 600; }
     .hd-ex small { opacity: .65; font-size: 12px; white-space: nowrap; }
     .hd-note { margin: 0; font-size: 13px; opacity: .7; }
-    .hd-primary { width: 100%; }
+    .hd-primary { width: 100%; position: relative; border: 0; border-radius: 12px; min-height: 48px; padding: 0 28px 0 16px; text-align: left; font-weight: 800; font-size: 16px; }
+    .hd-primary[data-hd-open]::after { content: ""; position: absolute; top: 50%; right: 14px; width: 8px; height: 8px; box-sizing: border-box; border-top: 2px solid currentColor; border-right: 2px solid currentColor; transform: translateY(-50%) rotate(45deg); opacity: 0.72; pointer-events: none; }
+    .hd-primary:active { filter: brightness(0.96); }
     .hd-sleep { margin: 0 0 10px; }
     .hd-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .month-cell.rest { cursor: pointer; }
@@ -4727,7 +4729,9 @@
         if (list.length) html += '<ul class="hd-ex">' + list.map(function (ex) {
           return "<li><span>" + escapeHtml(ex.name) + "</span><small>" + escapeHtml(ex.minReps + "–" + ex.maxReps + " reps") + "</small></li>";
         }).join("") + "</ul>";
-        html += '<button type="button" class="data-btn hd-primary" data-hd-open="' + slot.dayKey + '">Open workout to log or edit exercises</button>';
+        const typeColor = (DAY_META[slot.dayKey] && DAY_META[slot.dayKey].color) || "";
+        const openStyle = typeColor ? ' style="background:' + typeColor + ';color:#101820"' : "";
+        html += '<button type="button" class="data-btn hd-primary"' + openStyle + ' data-hd-open="' + slot.dayKey + '">Open workout to log or edit exercises</button>';
       } else {
         html += '<p class="hd-line"><strong>' + escapeHtml(slot && slot.workBlocked ? "Work day" : "Rest day") + "</strong><span>No workout planned</span></p>";
         html += '<p class="hd-note">To train on this day, press and hold a workout on the home calendar and drag it here, or drag this rest day onto a workout day.</p>';
