@@ -2791,6 +2791,15 @@
       return year + "-" + month + "-" + day;
     }
 
+    // Tests may pin the clock with window.__sleepNow. Production leaves it unset.
+    function appNow() {
+      if (typeof window !== "undefined" && window.__sleepNow) {
+        const d = new Date(window.__sleepNow);
+        if (Number.isFinite(d.getTime())) return d;
+      }
+      return new Date();
+    }
+
     function buildExportPayload() {
       const exportedAt = new Date().toISOString();
       const history = {};
@@ -4524,6 +4533,11 @@
       return String(Math.round(quarters) / 4);
     }
 
+    function formatSetsPhrase(quarters) {
+      const n = Math.round(quarters) / 4;
+      return n === 1 ? "1 set" : formatSetCount(quarters) + " sets";
+    }
+
     function weeklyMuscleSummary(monday, endDate) {
       const start = fileStamp(monday);
       const end = fileStamp(endDate || addCalendarDays(monday, 6));
@@ -4576,7 +4590,7 @@
         const item = totals[muscle.id] || { quarters: 0, direct: 0, reps: 0, volume: 0, directVolume: 0 };
         const width = item.volume > 0 ? Math.max(8, Math.round((item.volume / maxVolume) * 100)) : 0;
         const volumeText = formatVolume(item.volume) + (item.volume > 0 && Math.abs(item.volume - item.directVolume) > 0.01 ? (item.directVolume > 0 ? ' (' + formatVolume(item.directVolume) + ' direct)' : '') : '');
-        const setsText = formatSetCount(item.quarters) + ' sets';
+        const setsText = formatSetsPhrase(item.quarters);
         const meta = item.quarters > 0 && !item.direct
           ? setsText + ' · ' + formatVolume(item.volume) + ' (from other lifts)'
           : setsText + (item.quarters !== item.direct * 4 ? ' (' + item.direct + ' direct)' : '') + ' · ' + item.reps + ' reps · ' + volumeText;
@@ -6273,7 +6287,7 @@
     let summaryRange = null;
 
     function summaryTodayStamp() {
-      return fileStamp(new Date());
+      return fileStamp(appNow());
     }
 
     function resolveExercise(session, id) {
@@ -6312,18 +6326,40 @@
       return max;
     }
 
+    // Heavier always beats lighter, regardless of reps. At the same weight, more reps wins.
+    function setRankCmp(a, b) {
+      const aKg = a && Number(a.kg) || 0;
+      const bKg = b && Number(b.kg) || 0;
+      const aReps = a && Number(a.reps) || 0;
+      const bReps = b && Number(b.reps) || 0;
+      if (aKg > bKg + 0.001) return 1;
+      if (bKg > aKg + 0.001) return -1;
+      if (aReps > bReps) return 1;
+      if (bReps > aReps) return -1;
+      return 0;
+    }
+
     function bestSetOf(entry, exercise) {
       let best = null;
       loggedSets(entry).forEach(function (row) {
         const kg = setKg(row, exercise, entry.variant);
         const reps = Number(row.reps);
         if (!Number.isFinite(reps) || reps <= 0) return;
-        const load = kg * reps;
-        if (!best || load > best.load || (load === best.load && kg > best.kg)) {
-          best = { kg: kg, reps: reps, load: load };
-        }
+        const cand = { kg: kg, reps: reps, load: kg * reps };
+        if (!best || setRankCmp(cand, best) > 0) best = cand;
       });
       return best;
+    }
+
+    function repsAtHeaviest(entry, exercise, heaviestKg) {
+      let total = 0;
+      loggedSets(entry).forEach(function (row) {
+        const kg = setKg(row, exercise, entry.variant);
+        const reps = Number(row.reps);
+        if (!Number.isFinite(reps) || reps <= 0) return;
+        if (Math.abs(kg - heaviestKg) <= 0.049) total += reps;
+      });
+      return total;
     }
 
     function entrySetCount(entry) {
@@ -6349,7 +6385,8 @@
       return loggedSets(entry).reduce(function (n, row) { return n + (Number(row.reps) || 0); }, 0);
     }
 
-    // Weight up, or more reps at the same or heavier load, or a better top set, counts as forward movement.
+    // Heavier weight is progress. At the same heaviest weight, more reps (on the top set, or in total at that weight) is progress.
+    // A lighter high-rep set never counts as moving forward.
     function sessionMovedForward(prevSess, lastSess, id) {
       if (!prevSess || !lastSess || !prevSess.exercises || !lastSess.exercises) return null;
       const lastEntry = lastSess.exercises[id];
@@ -6360,23 +6397,15 @@
       const lastKg = heaviestKgOf(lastEntry, lastEx);
       const prevKg = heaviestKgOf(prevEntry, prevEx);
       if (lastKg > prevKg + 0.049) return { kind: "weight", delta: lastKg - prevKg };
+      if (lastKg < prevKg - 0.049) return null;
       const lastBest = bestSetOf(lastEntry, lastEx);
       const prevBest = bestSetOf(prevEntry, prevEx);
-      const lastReps = entryTotalReps(lastEntry);
-      const prevReps = entryTotalReps(prevEntry);
-      if (lastBest && prevBest) {
-        if (lastKg >= prevKg - 0.049 && lastBest.reps > prevBest.reps) {
-          return { kind: "reps", delta: lastBest.reps - prevBest.reps };
-        }
-        if (lastBest.load > prevBest.load + 0.049) {
-          const repDelta = lastBest.reps - prevBest.reps;
-          return { kind: repDelta > 0 ? "reps" : "load", delta: repDelta > 0 ? repDelta : lastBest.load - prevBest.load };
-        }
+      if (lastBest && prevBest && lastBest.reps > prevBest.reps) {
+        return { kind: "reps", delta: lastBest.reps - prevBest.reps };
       }
-      if (lastKg >= prevKg - 0.049 && lastReps > prevReps) return { kind: "reps", delta: lastReps - prevReps };
-      const lastRm = lastBest ? epley1RM(lastBest.kg, lastBest.reps) : 0;
-      const prevRm = prevBest ? epley1RM(prevBest.kg, prevBest.reps) : 0;
-      if (lastRm > prevRm + 0.049) return { kind: "load", delta: lastRm - prevRm };
+      const lastAt = repsAtHeaviest(lastEntry, lastEx, lastKg);
+      const prevAt = repsAtHeaviest(prevEntry, prevEx, prevKg);
+      if (lastAt > prevAt) return { kind: "reps", delta: lastAt - prevAt };
       return null;
     }
 
@@ -6421,16 +6450,22 @@
       } else if (prev) {
         const lastBest = bestSetOf(last.exercises[id], ex);
         const prevBest = bestSetOf(prev.exercises[id], resolveExercise(prev, id));
-        const lastReps = entryTotalReps(last.exercises[id]);
-        const prevReps = entryTotalReps(prev.exercises[id]);
         if (prevKg != null && lastKg < prevKg - 0.049) {
           dir = "down";
           delta = prevKg - lastKg;
           moveKind = "weight";
-        } else if (lastBest && prevBest && lastBest.reps < prevBest.reps && lastReps <= prevReps) {
+        } else if (lastBest && prevBest && lastBest.reps < prevBest.reps) {
           dir = "down";
           delta = prevBest.reps - lastBest.reps;
           moveKind = "reps";
+        } else if (prevKg != null && Math.abs(lastKg - prevKg) <= 0.049) {
+          const lastAt = repsAtHeaviest(last.exercises[id], ex, lastKg);
+          const prevAt = repsAtHeaviest(prev.exercises[id], resolveExercise(prev, id), prevKg);
+          if (lastAt < prevAt) {
+            dir = "down";
+            delta = prevAt - lastAt;
+            moveKind = "reps";
+          }
         }
       }
       const sets = loggedSets(last.exercises[id]);
@@ -6469,13 +6504,13 @@
           const kg = setKg(row, ex, entry.variant);
           const reps = Number(row.reps);
           if (!Number.isFinite(reps) || reps <= 0) return;
+          const cand = { kg: kg, reps: reps, date: s.date };
           if (!rec.heavy || kg > rec.heavy.kg + 0.001) rec.heavy = { kg: kg, reps: reps, date: s.date };
-          const rm = epley1RM(kg, reps);
-          if (!rec.oneRm || rm > rec.oneRm.rm + 0.001) rec.oneRm = { rm: rm, kg: kg, reps: reps, date: s.date };
-          const load = kg * reps;
-          if (!rec.load || load > rec.load.load + 0.001) rec.load = { load: load, kg: kg, reps: reps, date: s.date };
-          if (!rec.repsAt || reps > rec.repsAt.reps || (reps === rec.repsAt.reps && kg > rec.repsAt.kg)) {
+          // Best set, most reps, and Est. 1RM all follow heaviest weight first, then more reps.
+          if (!rec.load || setRankCmp(cand, rec.load) > 0) {
+            rec.load = { load: kg * reps, kg: kg, reps: reps, date: s.date };
             rec.repsAt = { kg: kg, reps: reps, date: s.date };
+            rec.oneRm = { rm: epley1RM(kg, reps), kg: kg, reps: reps, date: s.date };
           }
         });
       });
@@ -6495,11 +6530,10 @@
       const heavy = fresh(rec.heavy);
       const reps = fresh(rec.repsAt);
       const other = fresh(rec.oneRm) || fresh(rec.load);
-      // A heavier top set also refreshes 1RM/load, and more reps at the same weight does too.
-      // Label by whether the heaviest weight or the rep high is new, not those side effects.
-      if (heavy && !reps) return "Weight PR";
-      if (reps && !heavy) return "Rep PR";
-      if (heavy || reps || other) return "PR";
+      // A new heaviest weight is a Weight PR even when best-set / 1RM lines also update.
+      if (heavy) return "Weight PR";
+      if (reps) return "Rep PR";
+      if (other) return "PR";
       return "";
     }
 
@@ -6632,13 +6666,30 @@
       });
       if (stalled) cards.push(stalled);
 
-      // Lagging muscle over the last 4 weeks.
+      function muscleProgressInWindow(muscleId) {
+        let had = false, up = false, sessions = 0;
+        ids.forEach(function (id) {
+          if (muscleGroupFor(id) !== muscleId) return;
+          const all = allExerciseSessions(id).filter(function (s) { return s.date >= from && s.date <= today; });
+          if (all.length < 2) return;
+          had = true;
+          sessions += all.length;
+          if (sessionMovedForward(all[0], all[all.length - 1], id)) up = true;
+          else {
+            for (let s = 1; s < all.length; s += 1) {
+              if (sessionMovedForward(all[s - 1], all[s], id)) { up = true; break; }
+            }
+          }
+        });
+        return { had: had, up: up, sessions: sessions };
+      }
+
+      // Lagging muscle over the last 4 weeks: less volume only counts if those lifts also had no progress.
       const totals = weeklyMuscleSummary(fromDate, new Date(today + "T12:00:00"));
       const trained = MUSCLE_ORDER.filter(function (m) { return totals[m.id] && totals[m.id].direct > 0; });
       if (trained.length >= 3) {
         const vols = trained.map(function (m) { return totals[m.id].directVolume || 0; });
         const sum = vols.reduce(function (a, b) { return a + b; }, 0);
-        const avg = sum / vols.length;
         let worst = null;
         trained.forEach(function (m) {
           const v = totals[m.id].directVolume || 0;
@@ -6646,12 +6697,15 @@
         });
         const others = (sum - worst.v) / Math.max(1, trained.length - 1);
         if (worst && others > 0 && worst.v < others * 0.5) {
-          cards.push({
-            kind: "lag",
-            tone: "amber",
-            priority: 4,
-            text: worst.m.name + " has had less volume than your other muscles over the last 4 weeks."
-          });
+          const progress = muscleProgressInWindow(worst.m.id);
+          if (progress.had && !progress.up) {
+            cards.push({
+              kind: "lag",
+              tone: "amber",
+              priority: 4,
+              text: worst.m.name + " has had less volume than your other muscles over the last 4 weeks."
+            });
+          }
         }
       }
       if (!cards.some(function (c) { return c.kind === "lag"; })) {
@@ -6659,23 +6713,9 @@
         const progressed = [];
         const flat = [];
         MUSCLE_ORDER.forEach(function (m) {
-          let had = false, up = false, sessions = 0;
-          ids.forEach(function (id) {
-            const all = allExerciseSessions(id).filter(function (s) { return s.date >= from && s.date <= today; });
-            if (all.length < 2) return;
-            const last = all[all.length - 1];
-            if (muscleGroupFor(id) !== m.id) return;
-            had = true;
-            sessions += all.length;
-            if (sessionMovedForward(all[0], last, id)) up = true;
-            else {
-              for (let s = 1; s < all.length; s += 1) {
-                if (sessionMovedForward(all[s - 1], all[s], id)) { up = true; break; }
-              }
-            }
-          });
-          if (had && sessions >= 2) {
-            if (up) progressed.push(m);
+          const progress = muscleProgressInWindow(m.id);
+          if (progress.had && progress.sessions >= 2) {
+            if (progress.up) progressed.push(m);
             else flat.push(m);
           }
         });
@@ -6732,7 +6772,7 @@
       const range = summaryRange || (state.homeRange === "month" ? "month" : "week");
       let start, end, monthLabel = null, heading, usedLast = false;
       if (range === "month") {
-        const month = monthProgress();
+        const month = monthProgress(appNow());
         const thisTotals = weeklyMuscleSummary(month.first, month.last);
         const lastFirst = new Date(month.first.getFullYear(), month.first.getMonth() - 1, 1);
         const lastLast = new Date(month.first.getFullYear(), month.first.getMonth(), 0);
@@ -6743,7 +6783,7 @@
         monthLabel = start.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
         heading = (usedLast ? "Last month" : "This month") + " · " + monthLabel;
       } else {
-        const week = weeklyProgress();
+        const week = weeklyProgress(appNow());
         const thisTotals = weeklyMuscleSummary(week.monday);
         const lastMonday = addCalendarDays(week.monday, -7);
         const lastTotals = weeklyMuscleSummary(lastMonday);
@@ -6762,7 +6802,7 @@
         const item = totals[muscle.id] || { quarters: 0, direct: 0, reps: 0, volume: 0, directVolume: 0 };
         if (!item.quarters) return "";
         const width = item.volume > 0 ? Math.max(8, Math.round((item.volume / maxVolume) * 100)) : 0;
-        const meta = formatSetCount(item.quarters) + " sets · " + formatVolume(item.volume);
+        const meta = formatSetsPhrase(item.quarters) + " · " + formatVolume(item.volume);
         const helper = item.quarters > 0 && !item.direct ? '<p class="summary-card-meta subtle">From other lifts</p>' : "";
         const recs = uniqueExerciseIds().filter(function (id) { return muscleGroupFor(id) === muscle.id; });
         let best = null, anyTop = false, anyPr = false, prLabel = "";
@@ -6836,7 +6876,8 @@
           line(rec.repsAt, "Most reps", rec.repsAt ? rec.repsAt.reps + (rec.repsAt.kg > 0 ? " at " + formatWeightWithUnit(rec.repsAt.kg) : " reps") : "—") +
           "</article>";
       }).join("");
-      return '<section class="week-summary" aria-label="Records">' + rows + "</section>";
+      return '<section class="week-summary" aria-label="Records">' + rows +
+        '<details class="summary-how"><summary>How it’s counted</summary><p>Heaviest weight always comes first: a heavier set beats a lighter one, no matter the reps. At the same weight, more reps wins. Best set and most reps both follow that rule, so a lighter high-rep set never replaces a heavier one. Est. 1RM is estimated from that same heaviest set with the Epley formula (weight × (1 + reps ÷ 30)).</p></details></section>';
     }
 
     function summaryLegendHtml() {
@@ -9295,11 +9336,7 @@
     }
 
     function sleepNowDate() {
-      if (typeof window !== "undefined" && window.__sleepNow) {
-        const d = new Date(window.__sleepNow);
-        if (Number.isFinite(d.getTime())) return d;
-      }
-      return new Date();
+      return appNow();
     }
 
     function sleepToday() {
